@@ -1,0 +1,313 @@
+#! /usr/bin/env python
+
+import os, sys
+import shutil
+import string
+
+# Test for environment variables
+
+if not "CCP4" in sorted(os.environ.keys()):
+    raise RuntimeError('CCP4 not found')
+
+if os.environ.has_key("CCP4_DISPATCHERS"):
+   sys.path.append(os.environ["CCP4_DISPATCHERS"])
+else:
+   sys.stdout.write("Error: CCP4_DISPATCHERS not set\n")
+   sys.stdout.write("\n")
+   sys.exit()
+   
+
+class Dimple:
+
+   def __init__(self):
+       self.hklin=""
+       self.hklout=""
+       self.xyzin=""
+       self.xyzout=""
+
+       self.pdbCell=(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+       self.pdbSymm=""
+
+       self.mtzCell=(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+       self.mtzSymm=""
+       self.mtzSpacegroupNo=0
+       self.lowerResolutionLimit = 0.0
+       self.upperResolutionLimit = 0.0
+
+       self.column_name_list = []
+       self.column_type_list = []
+
+       self.IMEAN="IMEAN"
+       self.SIGIMEAN="SIGIMEAN"
+
+       self.scratchDIR=os.path.join(os.getcwd(), "DIMPLETMPDIR")
+
+   def makeScratch(self):
+      if os.path.isdir(self.scratchDIR):
+         shutil.rmtree(self.scratchDIR)
+      os.mkdir(self.scratchDIR)
+
+   def usage(self):
+      sys.stdout.write("Error: Incorrectly formatted command line\n")
+      sys.stdout.write("Usage: dimple HKLIN <input mtz> XYZIN <input pdb> " + \
+                   "HKLOUT <output mtz> XYZOUT <output pdb>\n" + \
+                   "\n" + \
+                   "\n")
+      sys.exit()
+
+   def readCommandLine(self, arguments):
+      """ A function to read in the command line arguments. """
+      
+      # Create the command_line string so it can be scanned for relavent details
+      command_line=string.joinfields(arguments, " ")
+
+      sys.stdout.write("Parsing command line arguments....\n") 
+      sys.stdout.write("\n") 
+  
+      if "HKLIN" in command_line.upper() and "XYZIN" in command_line.upper() and "HKLOUT" in command_line.upper() and "XYZOUT" in command_line.upper(): 
+         # Grab the HKLIN file (account for spaces)
+         self.hklin = self.getFileName(arguments, "HKLIN", ["XYZIN", "HKLOUT", "XYZOUT"])
+         # Grab the XYZIN file (account for spaces)
+         self.xyzin = self.getFileName(arguments, "XYZIN", ["HKLIN", "HKLOUT", "XYZOUT"])
+         # Grab the HKLOUT file (account for spaces)
+         self.hklout = self.getFileName(arguments, "HKLOUT", ["HKLIN", "XYZIN", "XYZOUT"])
+         # Grab the XYZOUT file (account for spaces)
+         self.xyzout = self.getFileName(arguments, "XYZOUT", ["HKLIN", "XYZIN", "HKLOUT"])
+ 
+      else:
+         sys.stdout.write("Command line Error: The command line appears to be incorrect, please check it\n")
+         self.usage()
+      sys.stdout.write("\n")
+      
+   # Get the names of the input files
+   def getFileName(self, arguments, flag, flag_list=[]):
+      """ Get the File name for a given flag from the command_line. """
+      # Loop over the command line and pick out the filename (accounting for spaces)
+      name=[]
+      for i in range(len(arguments)):
+         if arguments[i].upper() == flag:
+            j=i+1
+            while j<len(arguments):
+               if arguments[j].upper() not in flag_list:
+                  name.append(arguments[j])
+               else:
+                  break
+               j=j+1
+            flagname=os.path.abspath(string.joinfields(name, " "))
+
+      # Check to see that the file was found
+      if name == []:
+         sys.stdout.write("Input file error: File not found: %s\n" % flag)
+         sys.stdout.write("                  %s must be specified.\n" % flag)
+         sys.stdout.write("\n")
+         sys.exit()
+
+      # Check to see that the file/directory exists (only applies to input files/directories):
+      if flag in ["HKLIN", "XYZIN"]:
+         if os.path.isdir(flagname) == False and os.path.isfile(flagname) == False:
+            sys.stdout.write("Input file error: File specified by %s does not appear to exist.\n" % flag)
+            sys.stdout.write("                    (%s)\n" % flagname)
+            sys.stdout.write("                    Please check that the value for %s is correct in the command line.\n" % flag)
+            sys.stdout.write("\n")
+            sys.exit()
+
+      sys.stdout.write("-> %s = %s\n" % (flag, flagname))
+      return flagname
+
+   def ccp4Run(self, program, key, cmdline, workingDIR, function=""):
+   
+       logfile=os.path.join(workingDIR, "%s%s.log" % (program,function))
+       errfile=os.path.join(workingDIR, "%s%s.err" % (program,function))
+   
+       # Generate a shell script for this job
+       if os.name!="nt":
+          scriptfile=os.path.join(workingDIR, "%s%s.script" % (program,function))
+          s=open(scriptfile,"w")
+          s.write("#!/bin/sh\n")
+          s.write(program + " " + cmdline + " <<eof\n")
+          s.write(key)
+          s.write("eof\n")
+          s.close()
+   
+       # Put this in a try except
+       exec("from %s import *" % program)
+   
+       Dispatch=Dispatcher()
+       Dispatch.set_cmd_args(cmdline)
+       Dispatch.set_keywords(key)
+       Dispatch.call()
+   
+       # Write out the stdout to the log file
+       log=open(logfile, "w")
+       for line in Dispatch.stdout_data:
+          log.write(line + "\n")
+       log.close()
+       
+       # Write out the stderr to the error file
+       err=open(errfile, "w")
+       for line in Dispatch.stderr_data:
+          err.write(line + "\n")
+       err.close()
+    
+       return (Dispatch.stdout_data,Dispatch.stderr_data)
+   
+   def run(self, arguments, directory=""):
+      """ Run dimple """
+
+      # Read the command line
+      self.readCommandLine(arguments)
+   
+      if directory != "":
+         self.scratchDIR=directory
+      
+      self.makeScratch()
+
+      ##########################################################################
+      # Run Pointless
+      ##########################################################################
+      
+      cmdline="HKLIN " + self.hklin + " XYZIN " + self.xyzin + " HKLOUT pointlessHKLOUT.mtz"
+      key="end\n"
+      (stdout,stderr)=self.ccp4Run("pointless", key, cmdline, self.scratchDIR)
+      
+      ##########################################################################
+      # Run PDBDump
+      ##########################################################################
+      
+      pdbFile=open(self.xyzin, "r")
+      line=pdbFile.readline()
+      while line:
+         if "CRYST1" in line:
+            cline=string.split(line)
+            self.pdbCell=(cline[1],cline[2],cline[3],cline[4],cline[5],cline[6])
+            self.pdbSymm=line[55:66].strip()
+         line=pdbFile.readline()
+      
+      pdbFile.close()
+      
+      ##########################################################################
+      # Run MTZDump
+      ##########################################################################
+      
+      cmdline="HKLIN " + self.hklin
+      key="end\n"
+      (stdout,stderr)=self.ccp4Run("mtzdump", key, cmdline, self.scratchDIR)
+      
+      for j, Line in enumerate(stdout):
+          if "* Dataset ID, project/crystal/dataset names, cell dimensions, wavelength:" in Line:
+              self.mtzCell = tuple(map(float, stdout[j + 5].split()))
+          if " * Space group = " in Line:
+              self.mtzSymm = Line.split("'")[1].strip()
+              self.mtzSpacegroupNo = int(Line.replace("(", " ").replace(")", " ").split()[-1])
+          if "*  Resolution Range" in Line:
+              self.lowerResolutionLimit = float(((stdout[j + 2].split("(")[1]).split())[0])
+              self.upperResolutionLimit = float(((stdout[j + 2].split("(")[1]).split())[2])
+          if "* Column Labels" in Line:
+              self.column_name_list = stdout[j + 2].split()
+          if "* Column Types" in Line:
+              self.column_type_list = stdout[j + 2].split()
+      
+      # Get IMEAN and SIGIMEAN
+      self.IMEAN=self.column_name_list[self.column_type_list.index("J")]
+      self.SIGIMEAN=self.column_name_list[self.column_type_list.index("Q")]
+
+      sys.stdout.write("I=%s SIGI=%s\n" % (self.IMEAN, self.SIGIMEAN))
+
+      ##########################################################################
+      # Run Unique
+      ##########################################################################
+      
+      cmdline="HKLOUT unique.mtz"
+      key ="cell %s %s %s %s %s %s\n" % (self.pdbCell[0],self.pdbCell[1],self.pdbCell[2],self.pdbCell[3],self.pdbCell[4],self.pdbCell[5])
+      key+="symmetry '%s'\n" % self.mtzSymm 
+      key+="resolution %.3f\n" % self.upperResolutionLimit
+      key+="labout F=F_UNIQUE SIGF=SIGF_UNIQUE\n"
+      key+="end\n"
+      (stdout,stderr)=self.ccp4Run("unique", key, cmdline, self.scratchDIR)
+      
+      ##########################################################################
+      # Run FreeRflag
+      ##########################################################################
+      
+      cmdline="HKLIN unique.mtz HKLOUT free.mtz"
+      key ="end\n"
+      (stdout,stderr)=self.ccp4Run("freerflag", key, cmdline, self.scratchDIR)
+      
+      ##########################################################################
+      # Run Reindex
+      ##########################################################################
+      
+      cmdline="HKLIN pointlessHKLOUT.mtz HKLOUT spacegroup.mtz"
+      key ="symmetry '%s'\n" % self.pdbSymm 
+      key+="reindex h,k,l\n"
+      key+="end\n"
+      (stdout,stderr)=self.ccp4Run("reindex", key, cmdline, self.scratchDIR)
+      
+      ##########################################################################
+      # Run Truncate
+      ##########################################################################
+      
+      cmdline="HKLIN spacegroup.mtz HKLOUT truncate.mtz"
+      key ="labin IMEAN=%s SIGIMEAN=%s\n" % (self.IMEAN, self.SIGIMEAN) 
+      key+="labout F=F SIGF=SIGF\n"
+      key+="end\n"
+      (stdout,stderr)=self.ccp4Run("truncate", key, cmdline, self.scratchDIR)
+      
+      ##########################################################################
+      # Run CAD
+      ##########################################################################
+      
+      cmdline="HKLIN1 truncate.mtz HKLIN2 free.mtz HKLOUT prepared.mtz"
+      key ="labin file 1 ALL\n"  
+      key+="labin file 2 ALL\n"  
+      key+="end\n"
+      (stdout,stderr)=self.ccp4Run("cad", key, cmdline, self.scratchDIR)
+      
+      ##########################################################################
+      # Run PDBSET
+      ##########################################################################
+      
+      cmdline="XYZIN %s XYZOUT prepared.pdb" % self.xyzin
+      key ="cell %s %s %s %s %s %s\n" % (self.mtzCell[0],self.mtzCell[1],self.mtzCell[2],self.mtzCell[3],self.mtzCell[4],self.mtzCell[5])
+      key+="end\n"
+      (stdout,stderr)=self.ccp4Run("pdbset", key, cmdline, self.scratchDIR)
+      
+      ##########################################################################
+      # Run Refmac Rigid Body
+      ##########################################################################
+      
+      cmdline="HKLIN prepared.mtz XYZIN prepared.pdb HKLOUT refmacRB.mtz XYZOUT refmacRB.pdb"
+      key ="labin FP=F SIGFP=SIGF FREE=FreeR_flag\n"
+      key+="labout FC=FC PHIC=PHIC FWT=2FOFCWT PHWT=PH2FOFCWT DELFWT=FOFCWT PHDELWT=PHFOFCWT\n"
+      key+="refinement type rigidbody resolution 15 3.5\n"
+      key+="scale type simple lssc anisotropic experimental\n"
+      key+="solvent yes vdwprob 1.4 ionprob 0.8 mshrink 0.8\n"
+      key+="rigidbody ncycle 10\n"
+      key+="end\n"
+      (stdout,stderr)=self.ccp4Run("refmac5", key, cmdline, self.scratchDIR, function="RB")
+      
+      ##########################################################################
+      # Run Refmac Restrained Refinement
+      ##########################################################################
+      
+      cmdline="HKLIN prepared.mtz XYZIN refmacRB.pdb HKLOUT %s XYZOUT %s" %(self.hklout,self.xyzout)
+      key ="labin FP=F SIGFP=SIGF FREE=FreeR_flag\n"
+      key+="labout FC=FC PHIC=PHIC FWT=2FOFCWT PHWT=PH2FOFCWT DELFWT=FOFCWT PHDELWT=PHFOFCWT\n"
+      key+="make hydrogen all hout no cispeptide yes ssbridge yes\n"
+      key+="refinement type restrained\n"
+      key+="weight matrix 0.2\n"
+      key+="scale type simple lssc anisotropic experimental\n"
+      key+="solvent yes vdwprob 1.4 ionprob 0.8 mshrink 0.8\n"
+      key+="ncycle 8\n"
+      key+="end\n"
+      (stdout,stderr)=self.ccp4Run("refmac5", key, cmdline, self.scratchDIR, function="RR")
+
+if __name__=="__main__":
+
+   dimple=Dimple()   
+
+   # Check command line is right length
+   if len(sys.argv) != 9:
+     dimple.usage()
+
+   dimple.run(sys.argv)
