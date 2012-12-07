@@ -6,7 +6,7 @@ import string
 
 # Test for environment variables
 
-if not "CCP4" in sorted(os.environ.keys()):
+if "CCP4" not in os.environ:
     raise RuntimeError('CCP4 not found')
 
 if os.environ.has_key("CCP4_DISPATCHERS"):
@@ -218,8 +218,8 @@ class Dimple:
       ##########################################################################
       
       cmdline="HKLOUT unique.mtz"
-      key ="cell %s %s %s %s %s %s\n" % (self.pdbCell[0],self.pdbCell[1],self.pdbCell[2],self.pdbCell[3],self.pdbCell[4],self.pdbCell[5])
-      key+="symmetry '%s'\n" % self.mtzSymm 
+      key ="cell %s %s %s %s %s %s\n" % (self.mtzCell[0],self.mtzCell[1],self.mtzCell[2],self.mtzCell[3],self.mtzCell[4],self.mtzCell[5])
+      key+="symmetry '%s'\n" % self.pdbSymm 
       key+="resolution %.3f\n" % self.upperResolutionLimit
       key+="labout F=F_UNIQUE SIGF=SIGF_UNIQUE\n"
       key+="end\n"
