@@ -57,7 +57,7 @@ def run_pipeline(wf, pdb, mtz):
                        rigidbody ncycle 10""").run()
     if wf.jobs[-1].data["free_r"] > 0.4:
         put("Run MR for R_free > 0.4\n")
-        wf.molrep(f="prepared.mtz", m="refmacRB.pdb")
+        wf.molrep(f="prepared.mtz", m="refmacRB.pdb").run()
         refmac_xyzin="molrep.pdb"
     else:
         put("No MR for R_free < 0.4\n")
@@ -90,11 +90,15 @@ def main():
             assert os.path.isdir(output_dir), "Not a directory: " + output_dir
         for filename in [mtz, pdb]:
             assert os.path.isfile(filename), "File not found: " + filename
-    except AssertionError, e:
+    except AssertionError as e:
         put_error(e, __doc__)
         sys.exit(1)
     wf = Workflow(output_dir)
-    run_pipeline(wf=wf, mtz=os.path.abspath(mtz), pdb=os.path.abspath(pdb))
+    try:
+        run_pipeline(wf=wf, mtz=os.path.abspath(mtz), pdb=os.path.abspath(pdb))
+    except RuntimeError as e:
+        put_error(e, "")
+        sys.exit(1)
     wf.pickle_jobs()
 
 if __name__ == "__main__":

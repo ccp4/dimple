@@ -217,11 +217,15 @@ class Workflow:
 
         job.total_time = time.time() - job.started
         retcode = p.poll()
-        if retcode:
-            raise RuntimeError("Program failed: %s" % job.args)
         put(_elapsed_fmt % job.total_time)
         put((final_mesg or "")+ "\n")
+        self._write_logs(job)
+        if retcode:
+            raise RuntimeError("`%s' failed. All args:\n%s" % (
+                        job.args[0], " ".join('"%s"' % a for a in job.args)))
+        return job
 
+    def _write_logs(self, job):
         log_basename = "%02d-%s" % (len(self.jobs), job.name.replace(" ","_"))
         if job.out:
             _write_output(job.out, "%s.log" % log_basename)
@@ -229,8 +233,6 @@ class Workflow:
         if job.err:
             _write_output(job.err, "%s.err" % log_basename)
             job.err = "-> %s.err" % log_basename
-
-        return job
 
     def change_pdb_cell(self, xyzin, xyzout, cell):
         #for now using pdbset
@@ -243,7 +245,7 @@ class Workflow:
         return c4.mtz.read_metadata(hklin)
 
     def molrep(self, f, m):
-        job = Job("molrep")
+        job = Job(self, "molrep")
         job.args.extend(["-f", f, "-m", m])
         return job
 
