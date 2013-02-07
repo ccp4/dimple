@@ -113,7 +113,9 @@ def ccp4_job(workflow, prog, logical=None, input="", add_end=True):
     input string or list of lines that are to be passed though stdin
     add_end adds "end" as the last line of stdin
     """
-    job = Job(workflow, prog)
+    assert os.environ.get("CCP4")
+    full_path = os.path.join(os.environ["CCP4"], "bin", prog)
+    job = Job(workflow, full_path)
     if logical:
         for a in ["hklin", "hklout", "hklref", "xyzin", "xyzout"]:
             if logical.get(a):
@@ -124,7 +126,7 @@ def ccp4_job(workflow, prog, logical=None, input="", add_end=True):
         stripped.append("end")
     if job.std_input:
         job.std_input += "\n"
-    job.std_input += "\n".join(lines)
+    job.std_input += "\n".join(stripped)
     return job
 
 
@@ -187,7 +189,13 @@ class Workflow:
         sys.stdout.flush()
         job.started = time.time()
         #job.args[0] = "true" # for debugging
-        p = Popen(job.args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        try:
+            p = Popen(job.args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        except OSError as e:
+            if e.errno == errno.ENOENT:
+                raise RuntimeError("Program not found: %s\n" % job.args[0])
+            else:
+                raise
 
         if show_progress:
             event = threading.Event()
@@ -315,7 +323,8 @@ class Workflow:
         return job
 
     def find_blobs(self, mtz, pdb, sigma=1.0):
-        job = Job(self, os.path.join(os.path.dirname(__file__), "find-blobs"))
+        this_dir = os.path.abspath(os.path.dirname(__file__))
+        job = Job(self, os.path.join(this_dir, "find-blobs"))
         job.args += ["-s%g" % sigma, mtz, pdb]
         job.parser = "_find_blobs_parser"
         return job
@@ -324,25 +333,25 @@ class Workflow:
 if __name__ == '__main__':
     usage = "Usage: python -m c4.workflow output_dir [N]\n"
     if len(sys.argv) < 2:
-        sys.write.stderr(usage)
+        sys.stderr.write(usage)
         sys.exit(0)
     if os.path.isdir(sys.argv[1]):
         pkl = os.path.join(sys.argv[1], "workflow.pickle")
     elif os.path.exists(sys.argv[1]):
         pkl = sys.argv[1]
     else:
-        sys.write.stderr("No such file: %s\n" % sys.argv[1])
+        sys.stderr.write("No such file: %s\n" % sys.argv[1])
         sys.exit(1)
     with open(pkl) as f:
         wf = pickle.load(f)
     if len(sys.argv) == 2:
         sys.stdout.write("%s\n" % wf)
         for n, job in enumerate(wf.jobs):
-            sys.stdout.write("%3d %s\n" % (n, job))
-        sys.write.stderr("To see details, add job number(s).")
+            sys.stdout.write("%3d %s\n" % (n+1, job))
+        sys.stderr.write("To see details, add job number(s).\n")
     else:
         for job_str in sys.argv[2:]:
-            job_nr = int(job_str)
+            job_nr = int(job_str) - 1
             job = wf.jobs[job_nr]
             sys.stdout.write("%s\n" % job)
             sys.stdout.write(" ".join('"%s"' % a for a in job.args))
