@@ -41,6 +41,13 @@ class Job:
         self.parser = None
         self.data = {} # parsing helpers
 
+    def __str__(self):
+        desc = "Job %s" % self.name
+        if self.started:
+            desc += time.strftime(" %Y-%m-%d %H:%M",
+                                            time.localtime(self.started))
+        return desc
+
     def run(self):
         return self.workflow.run_job(job=self, show_progress=True)
 
@@ -56,10 +63,13 @@ class Job:
                 if not out:               return "-"
                 elif type(out) is list:   return "%dL" % len(out)
                 else:                     return "%.1fkB" % (len(out) / 1024.)
-            return "stdout:%7s stderr: %s" % (size(self.out), size(self.err))
+            ret = "stdout:%7s" % size(self.out)
+            if self.err:
+                ret += " stderr: %s" % size(self.err)
+            return ret
 
     def _read_output(self):
-        while True:
+        while True and self.data['out_q'] is not None:
             try:
                 line = self.data['out_q'].get_nowait()
             except Queue.Empty:
@@ -159,10 +169,13 @@ class Workflow:
         if not os.path.isdir(self.output_dir):
             os.mkdir(self.output_dir)
 
-    def pickle_jobs(self, filename="jobs.pickle"):
+    def __str__(self):
+        return "Workflow with %d jobs @ %s" % (len(self.jobs), self.output_dir)
+
+    def pickle_jobs(self, filename="workflow.pickle"):
         os.chdir(self.output_dir)
         with open(filename, "wb") as f:
-            pickle.dump(self.jobs, f, -1)
+            pickle.dump(self, f, -1)
 
     def run_job(self, job, show_progress):
         if not hasattr(sys.stdout, 'isatty') or not sys.stdout.isatty():
@@ -173,7 +186,6 @@ class Workflow:
         put_green(_jobname_fmt % job.name)
         sys.stdout.flush()
         job.started = time.time()
-        final_mesg = None
         #job.args[0] = "true" # for debugging
         p = Popen(job.args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
 
@@ -199,7 +211,7 @@ class Workflow:
             p.wait()
             # nothing is written to the queues at this point
             # parse what's left in the queues
-            final_mesg = job.parse()
+            job.parse()
             # take care of what is left by the parser
             while not job.data['out_q'].empty():
                 job.out.append(job.data['out_q'].get_nowait())
@@ -209,7 +221,6 @@ class Workflow:
             job.data['err_q'] = None
         else:
             job.out, job.err = p.communicate(input=job.std_input)
-            final_mesg = job.parse()
 
         if show_progress:
             event.set()
@@ -218,7 +229,7 @@ class Workflow:
         job.total_time = time.time() - job.started
         retcode = p.poll()
         put(_elapsed_fmt % job.total_time)
-        put((final_mesg or "")+ "\n")
+        put("%s\n" % (job.parse() or ""))
         self._write_logs(job)
         if retcode:
             raise RuntimeError("`%s' failed. All args:\n%s" % (
@@ -309,3 +320,37 @@ class Workflow:
         job.parser = "_find_blobs_parser"
         return job
 
+
+if __name__ == '__main__':
+    usage = "Usage: python -m c4.workflow output_dir [N]\n"
+    if len(sys.argv) < 2:
+        sys.write.stderr(usage)
+        sys.exit(0)
+    if os.path.isdir(sys.argv[1]):
+        pkl = os.path.join(sys.argv[1], "workflow.pickle")
+    elif os.path.exists(sys.argv[1]):
+        pkl = sys.argv[1]
+    else:
+        sys.write.stderr("No such file: %s\n" % sys.argv[1])
+        sys.exit(1)
+    with open(pkl) as f:
+        wf = pickle.load(f)
+    if len(sys.argv) == 2:
+        sys.stdout.write("%s\n" % wf)
+        for n, job in enumerate(wf.jobs):
+            sys.stdout.write("%3d %s\n" % (n, job))
+        sys.write.stderr("To see details, add job number(s).")
+    else:
+        for job_str in sys.argv[2:]:
+            job_nr = int(job_str)
+            job = wf.jobs[job_nr]
+            sys.stdout.write("%s\n" % job)
+            sys.stdout.write(" ".join('"%s"' % a for a in job.args))
+            if job.std_input:
+                sys.stdout.write(" << EOF\n%s\nEOF" % job.std_input)
+            sys.stdout.write("\nTotal time: %.1fs\n" % job.total_time)
+            sys.stdout.write("Parser: %s\n" % job.parser)
+            if job.out and type(job.out) is str and len(job.out) < 160:
+                sys.stdout.write("stdout: %s\n" % job.out)
+            if job.err and type(job.err) is str and len(job.err) < 160:
+                sys.stdout.write("stderr: %s\n" % job.err)

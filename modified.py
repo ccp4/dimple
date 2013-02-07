@@ -8,6 +8,8 @@ import os
 import sys
 from c4.workflow import Workflow, put, put_error
 
+RFREE_FOR_MOLREP = 0.4
+
 def run_pipeline(wf, pdb, mtz):
     put("Change mtz symmetry if needed. Use pdb as reference.\n")
     wf.pointless(hklin=mtz, xyzin=pdb, hklout="pointless.mtz").run()
@@ -34,7 +36,8 @@ def run_pipeline(wf, pdb, mtz):
     wf.freerflag(hklin="unique.mtz", hklout="free.mtz").run()
     wf.cad(hklin=["truncate.mtz", "free.mtz"], hklout="prepared.mtz",
            keys="""labin file 1 ALL
-                   labin file 2 ALL""").run()
+                   labin file 2 E1=FreeR_flag
+                   """).run()
     if all(pdb_meta.cell[i] - mtz_meta.cell[i] < 1e-3 for i in range(6)):
         put("Cell dimensions in pdb and mtz are the same.\n")
         refmac_rigid_xyzin = pdb
@@ -55,14 +58,15 @@ def run_pipeline(wf, pdb, mtz):
                        scale type simple lssc anisotropic experimental
                        solvent yes vdwprob 1.4 ionprob 0.8 mshrink 0.8
                        rigidbody ncycle 10""").run()
-    if wf.jobs[-1].data["free_r"] > 0.4:
-        put("Run MR for R_free > 0.4\n")
+    if wf.jobs[-1].data["free_r"] > RFREE_FOR_MOLREP:
+        put("Run MR for R_free > %g\n" % RFREE_FOR_MOLREP)
         wf.molrep(f="prepared.mtz", m="refmacRB.pdb").run()
         refmac_xyzin="molrep.pdb"
+        # we may add refmac (restr,ncyc=5) and findwaters here
     else:
-        put("No MR for R_free < 0.4\n")
+        put("No MR for R_free < %g\n" % RFREE_FOR_MOLREP)
         refmac_xyzin="refmacRB.pdb"
-    put("Finally, restrained refinement.\n")
+    put("Final restrained refinement.\n")
     wf.refmac5(hklin="prepared.mtz", xyzin=refmac_xyzin,
                hklout="final.mtz", xyzout="final.pdb",
                labin=refmac_labin, labout=refmac_labout,
@@ -98,6 +102,7 @@ def main():
         run_pipeline(wf=wf, mtz=os.path.abspath(mtz), pdb=os.path.abspath(pdb))
     except RuntimeError as e:
         put_error(e, "")
+        wf.pickle_jobs()
         sys.exit(1)
     wf.pickle_jobs()
 
