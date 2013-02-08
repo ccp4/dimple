@@ -163,6 +163,8 @@ def _write_output(output, filename):
         else:
             f.write(output)
 
+_c4_dir = os.path.abspath(os.path.dirname(__file__))
+
 
 class Workflow:
     def __init__(self, output_dir):
@@ -323,8 +325,7 @@ class Workflow:
         return job
 
     def find_blobs(self, mtz, pdb, sigma=1.0):
-        this_dir = os.path.abspath(os.path.dirname(__file__))
-        job = Job(self, os.path.join(this_dir, "find-blobs"))
+        job = Job(self, os.path.join(_c4_dir, "find-blobs"))
         job.args += ["-s%g" % sigma, mtz, pdb]
         job.parser = "_find_blobs_parser"
         return job
@@ -358,8 +359,10 @@ if __name__ == '__main__':
             if job.std_input:
                 sys.stdout.write(" << EOF\n%s\nEOF" % job.std_input)
             sys.stdout.write("\nTotal time: %.1fs\n" % job.total_time)
-            sys.stdout.write("Parser: %s\n" % job.parser)
+            if job.parser and job.parse():
+                sys.stdout.write("Output summary: %s\n" % job.parse())
             if job.out and type(job.out) is str and len(job.out) < 160:
                 sys.stdout.write("stdout: %s\n" % job.out)
             if job.err and type(job.err) is str and len(job.err) < 160:
                 sys.stdout.write("stderr: %s\n" % job.err)
+
