@@ -10,12 +10,15 @@ class PdbMeta:
         self.gamma = float(cryst1_line[47:54])
         self.cell = (self.a, self.b, self.c, self.alpha, self.beta, self.gamma)
         self.symmetry = cryst1_line[55:66].strip()
-        self.z = int(cryst1_line[66:70])
+        try:
+            self.z = int(cryst1_line[66:70])
+        except ValueError:
+            self.z = None
+
     def __str__(self):
-        return """\
+        return '''\
 cell: %(cell)s
-symmetry: "%(symmetry)s"
-z: %(z)d""" % self.__dict__
+symmetry: "%(symmetry)s"''' % self.__dict__
 
 
 def read_metadata(pdb):
