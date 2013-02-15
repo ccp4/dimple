@@ -10,6 +10,11 @@ import cPickle as pickle
 import c4.mtz
 import c4.pdb
 
+class JobError(Exception):
+    def __init__(self, msg, note=None):
+        self.msg = msg
+        self.note = note
+
 def put(text):
     sys.stdout.write(text)
 
@@ -19,12 +24,12 @@ def put_green(text):
     else:
         put(text)
 
-def put_error(err, comment=""):
+def put_error(err, comment=None):
     if hasattr(sys.stderr, 'isatty') and sys.stderr.isatty():
-        error_line = "Error: \033[91m%s\033[0m." % err # in bold red
-    else:
-        error_line = "Error: %s." % err
-    sys.stderr.write(error_line + "\n" + comment)
+        err = "\033[91m%s\033[0m" % err # in bold red
+    sys.stderr.write("Error: %s.\n" % err)
+    if comment is not None:
+        sys.stderr.write(comment + "\n")
 
 
 class Job:
@@ -170,6 +175,7 @@ class Workflow:
     def __init__(self, output_dir):
         self.output_dir = os.path.abspath(output_dir)
         self.jobs = []
+        self.dry_run = False
         if not os.path.isdir(self.output_dir):
             os.mkdir(self.output_dir)
 
@@ -195,9 +201,12 @@ class Workflow:
             p = Popen(job.args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
         except OSError as e:
             if e.errno == errno.ENOENT:
-                raise RuntimeError("Program not found: %s\n" % job.args[0])
+                raise JobError("Program not found: %s\n" % job.args[0])
             else:
                 raise
+
+        if self.dry_run:
+            return job
 
         if show_progress:
             event = threading.Event()
@@ -242,8 +251,12 @@ class Workflow:
         put("%s\n" % (job.parse() or ""))
         self._write_logs(job)
         if retcode:
-            raise RuntimeError("`%s' failed. All args:\n%s" % (
-                        job.args[0], " ".join('"%s"' % a for a in job.args)))
+            all_args = " ".join('"%s"' % a for a in job.args)
+            out_files = [f[3:] for f in (job.err, job.out)
+                               if f and f.startswith("-> ")]
+            note = "\n".join("Check %s" % os.path.join(self.output_dir, f)
+                             for f in out_files)
+            raise JobError("Non-zero return value from:\n%s" % all_args, note)
         return job
 
     def _write_logs(self, job):

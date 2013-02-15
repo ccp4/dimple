@@ -6,7 +6,7 @@ Usage: dimple input.mtz input.pdb output_dir
 
 import os
 import sys
-from c4.workflow import Workflow, put, put_error
+from c4.workflow import Workflow, JobError, put, put_error
 
 RFREE_FOR_MOLREP = 0.4
 
@@ -24,10 +24,12 @@ def run_pipeline(wf, pdb, mtz):
         wf.reindex(hklin="pointless.mtz", hklout="spacegroup.mtz",
                    symmetry=pdb_meta.symmetry).run()
         truncate_hklin = "spacegroup.mtz"
+
     put("Obtain structure factor amplitudes\n")
     wf.truncate(hklin=truncate_hklin, hklout="truncate.mtz",
                 labin="IMEAN=IMEAN SIGIMEAN=SIGIMEAN",
                 labout="F=F SIGF=SIGF").run()
+
     put("Add missing reflections and flag for cross-validation\n")
     wf.unique(hklout="unique.mtz",
               cell=mtz_meta.cell, symmetry=pdb_meta.symmetry,
@@ -38,6 +40,7 @@ def run_pipeline(wf, pdb, mtz):
            keys="""labin file 1 ALL
                    labin file 2 E1=FreeR_flag
                    """).run()
+
     if all(pdb_meta.cell[i] - mtz_meta.cell[i] < 1e-3 for i in range(6)):
         put("Cell dimensions in pdb and mtz are the same.\n")
         refmac_rigid_xyzin = pdb
@@ -47,6 +50,7 @@ def run_pipeline(wf, pdb, mtz):
         wf.change_pdb_cell(xyzin=pdb, xyzout="prepared.pdb",
                            cell=mtz_meta.cell)
         refmac_rigid_xyzin = "prepared.pdb"
+
     refmac_labin = "FP=F SIGFP=SIGF FREE=FreeR_flag"
     refmac_labout = ("FC=FC PHIC=PHIC FWT=2FOFCWT PHWT=PH2FOFCWT "
                      "DELFWT=FOFCWT PHDELWT=PHFOFCWT")
@@ -58,7 +62,11 @@ def run_pipeline(wf, pdb, mtz):
                        scale type simple lssc anisotropic experimental
                        solvent yes vdwprob 1.4 ionprob 0.8 mshrink 0.8
                        rigidbody ncycle 10""").run()
-    if wf.jobs[-1].data["free_r"] > RFREE_FOR_MOLREP:
+
+    if "free_r" not in wf.jobs[-1].data:
+        put("WARNING: unknown free_r, something went wrong.\n")
+        refmac_xyzin="refmacRB.pdb"
+    elif wf.jobs[-1].data["free_r"] > RFREE_FOR_MOLREP:
         put("Run MR for R_free > %g\n" % RFREE_FOR_MOLREP)
         wf.molrep(f="prepared.mtz", m="refmacRB.pdb").run()
         refmac_xyzin="molrep.pdb"
@@ -66,6 +74,7 @@ def run_pipeline(wf, pdb, mtz):
     else:
         put("No MR for R_free < %g\n" % RFREE_FOR_MOLREP)
         refmac_xyzin="refmacRB.pdb"
+
     put("Final restrained refinement.\n")
     wf.refmac5(hklin="prepared.mtz", xyzin=refmac_xyzin,
                hklout="final.mtz", xyzout="final.pdb",
@@ -95,13 +104,13 @@ def main():
         for filename in [mtz, pdb]:
             assert os.path.isfile(filename), "File not found: " + filename
     except AssertionError as e:
-        put_error(e, __doc__)
+        put_error(e, __doc__.rstrip())
         sys.exit(1)
     wf = Workflow(output_dir)
     try:
         run_pipeline(wf=wf, mtz=os.path.abspath(mtz), pdb=os.path.abspath(pdb))
-    except RuntimeError as e:
-        put_error(e, "")
+    except JobError as e:
+        put_error(e.msg, comment=e.note)
         wf.pickle_jobs()
         sys.exit(1)
     wf.pickle_jobs()
