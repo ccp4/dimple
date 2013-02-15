@@ -49,11 +49,12 @@ struct Config
   double sigma_level;
   double min_volume;
   double mask_radius; // [A]
+  double min_score;
   const char* write_map_to_file;
   const char* write_1_1_map_to_file;
   // default values for min_volume and mask_radius
   // are the same as in coot/findligand
-  Config() : sigma_level(1.), min_volume(11.), mask_radius(2.),
+  Config() : sigma_level(1.), min_volume(11.), mask_radius(2.), min_score(50),
              write_map_to_file(NULL), write_1_1_map_to_file(NULL) {}
 };
 
@@ -67,6 +68,16 @@ struct Cluster
   MeanVariance mean_variance[3];
   float score; // compatible with coot
 };
+
+static
+float calculate_cluster_score(const Xmap<float>& xmap, const Cluster& cluster)
+{
+  float score = 0;
+  for (vector<Coord_grid>::const_iterator i =
+                  cluster.points.begin(); i != cluster.points.end(); ++i)
+    score += xmap.get_data(*i);
+  return score;
+}
 
 static
 bool compare_clusters_by_score(const Cluster &a, const Cluster &b)
@@ -179,14 +190,12 @@ RTop_orth nearest_to_coords(const vector<RTop_orth>& orth_rts,
 static
 void calculate_cluster_props(const Xmap<float>& xmap, Cluster& cluster)
 {
-  cluster.score = 0;
   for (vector<Coord_grid>::const_iterator i =
                   cluster.points.begin(); i != cluster.points.end(); ++i) {
     Coord_orth co = corth(xmap, *i);
     cluster.mean_variance[0].add(co.x());
     cluster.mean_variance[1].add(co.y());
     cluster.mean_variance[2].add(co.z());
-    cluster.score += xmap.get_data(*i);
   }
 
   clipper::Mat33<double> mat(0,0,0, 0,0,0, 0,0,0);
@@ -333,8 +342,16 @@ vector<Cluster> find_clusters(const string& pdb_filename,
   float cut_off = config.sigma_level * map_stddev;
   printf("Density std.dev: %g, cut-off: %g (%g sigma)\n",
          map_stddev, cut_off, config.sigma_level);
-  vector<Cluster> clusters = find_clusters_by_flood_fill(*xmap,
+  vector<Cluster> all_clusters = find_clusters_by_flood_fill(*xmap,
                                                    config.min_volume, cut_off);
+
+  vector<Cluster> clusters; // for clusters with big enough score
+  for (vector<Cluster>::iterator i = all_clusters.begin();
+                                 i != all_clusters.end(); ++i) {
+    i->score = calculate_cluster_score(*xmap, *i);
+    if (i->score >= config.min_score)
+      clusters.push_back(*i);
+  }
 
   CAtom **atoms;
   int n_atoms;
