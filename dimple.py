@@ -6,7 +6,8 @@ Usage: dimple input.mtz input.pdb output_dir
 
 import os
 import sys
-from c4.workflow import Workflow, JobError, put, put_error
+from c4.workflow import Workflow, JobError, put, put_error, \
+                        show_info, open_pickled_workflow
 
 RFREE_FOR_MOLREP = 0.4
 
@@ -92,6 +93,13 @@ def main():
     if "CCP4" not in os.environ:
         sys.stderr.write('$CCP4 not found, giving up\n')
         sys.exit(1)
+
+    if len(sys.argv) >= 3 and sys.argv[1] == "info":
+        wf = open_pickled_workflow(sys.argv[2])
+        job_numbers = [int(job_str)-1 for job_str in sys.argv[3:]]
+        show_info(wf, job_numbers)
+        return
+
     try:
         assert len(sys.argv) == 4, "3 arguments expected"
         mtz, pdb, output_dir = sys.argv[1:]

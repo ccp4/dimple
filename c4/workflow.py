@@ -53,6 +53,12 @@ class Job:
                                             time.localtime(self.started))
         return desc
 
+    def args_as_str(self):
+        s = " ".join('"%s"' % a for a in self.args)
+        if self.std_input:
+            s += " << EOF\n%s\nEOF" % self.std_input
+        return s
+
     def run(self):
         return self.workflow.run_job(job=self, show_progress=True)
 
@@ -65,7 +71,7 @@ class Job:
             if self.total_time is None:
                 return ""
             def size(out):
-                if not out:               return "-"
+                if not out:               return "-    "
                 elif type(out) is list:   return "%dL" % len(out)
                 else:                     return "%.1fkB" % (len(out) / 1024.)
             ret = "stdout:%7s" % size(self.out)
@@ -160,6 +166,34 @@ def _start_enqueue_thread(file_obj):
     thr.start()
     return thr, que
 
+def _run_and_parse(process, job):
+    if job.parser:
+        # data[*_q] can be used by parsers (via job._read_output() or directly)
+        out_t, job.data['out_q'] = _start_enqueue_thread(process.stdout)
+        err_t, job.data['err_q'] = _start_enqueue_thread(process.stderr)
+        try:
+            process.stdin.write(job.std_input)
+        except IOError as e:
+            put("\nWarning: passing std input to %s failed.\n" % job.name)
+            if e.errno not in (errno.EPIPE, e.errno != errno.EINVAL):
+                raise
+        process.stdin.close()
+        out_t.join()
+        err_t.join()
+        process.wait()
+        # nothing is written to the queues at this point
+        # parse what's left in the queues
+        job.parse()
+        # take care of what is left by the parser
+        while not job.data['out_q'].empty():
+            job.out.append(job.data['out_q'].get_nowait())
+        while not job.data['err_q'].empty():
+            job.err.append(job.data['err_q'].get_nowait())
+        job.data['out_q'] = None
+        job.data['err_q'] = None
+    else:
+        job.out, job.err = process.communicate(input=job.std_input)
+
 def _write_output(output, filename):
     with open(filename, "w") as f:
         if type(output) is list:
@@ -198,7 +232,7 @@ class Workflow:
         job.started = time.time()
         #job.args[0] = "true" # for debugging
         try:
-            p = Popen(job.args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+            process = Popen(job.args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
         except OSError as e:
             if e.errno == errno.ENOENT:
                 raise JobError("Program not found: %s\n" % job.args[0])
@@ -215,58 +249,47 @@ class Workflow:
             progress_thread.daemon = True
             progress_thread.start()
 
-        if job.parser:
-            out_t, job.data['out_q'] = _start_enqueue_thread(p.stdout)
-            err_t, job.data['err_q'] = _start_enqueue_thread(p.stderr)
-            try:
-                p.stdin.write(job.std_input)
-            except IOError as e:
-                put("\nWarning: passing std input to %s failed.\n" % job.name)
-                if e.errno not in (errno.EPIPE, e.errno != errno.EINVAL):
-                    raise
-            p.stdin.close()
-            out_t.join()
-            err_t.join()
-            p.wait()
-            # nothing is written to the queues at this point
-            # parse what's left in the queues
-            job.parse()
-            # take care of what is left by the parser
-            while not job.data['out_q'].empty():
-                job.out.append(job.data['out_q'].get_nowait())
-            while not job.data['err_q'].empty():
-                job.err.append(job.data['err_q'].get_nowait())
-            job.data['out_q'] = None
-            job.data['err_q'] = None
-        else:
-            job.out, job.err = p.communicate(input=job.std_input)
+        try:
+            _run_and_parse(process, job)
+        except KeyboardInterrupt:
+            self._write_logs(job)
+            raise JobError("\nKeyboardInterrupt while running %s" % job.name,
+                           note=job.args_as_str())
 
         if show_progress:
             event.set()
             progress_thread.join()
 
         job.total_time = time.time() - job.started
-        retcode = p.poll()
+        retcode = process.poll()
         put(_elapsed_fmt % job.total_time)
         put("%s\n" % (job.parse() or ""))
+        err_s = ("\n".join(job.err) if isinstance(job.err, list) else job.err)
         self._write_logs(job)
         if retcode:
             all_args = " ".join('"%s"' % a for a in job.args)
-            out_files = [f[3:] for f in (job.err, job.out)
-                               if f and f.startswith("-> ")]
-            note = "\n".join("Check %s" % os.path.join(self.output_dir, f)
-                             for f in out_files)
-            raise JobError("Non-zero return value from:\n%s" % all_args, note)
+            notes = []
+            if isinstance(job.out, basestring) and job.out.startswith("-> "):
+                notes = ["stdout -> %s/%s" % (self.output_dir, job.out[3:])]
+            if err_s:
+                notes += ["stderr:", err_s]
+            raise JobError("Non-zero return value from:\n%s" % all_args,
+                           note="\n".join(notes))
         return job
 
     def _write_logs(self, job):
         log_basename = "%02d-%s" % (len(self.jobs), job.name.replace(" ","_"))
+        def _output_is_long(out):
+            if type(out) is list: return len(out) > 5
+            else:                 return len(out) > 50
         if job.out:
             _write_output(job.out, "%s.log" % log_basename)
-            job.out = "-> %s.log" % log_basename
+            if _output_is_long(job.out):
+                job.out = "-> %s.log" % log_basename
         if job.err:
             _write_output(job.err, "%s.err" % log_basename)
-            job.err = "-> %s.err" % log_basename
+            if _output_is_long(job.err):
+                job.err = "-> %s.err" % log_basename
 
     def change_pdb_cell(self, xyzin, xyzout, cell):
         #for now using pdbset
@@ -344,38 +367,44 @@ class Workflow:
         return job
 
 
+def open_pickled_workflow(file_or_dir):
+    if os.path.isdir(file_or_dir):
+        pkl = os.path.join(file_or_dir, "workflow.pickle")
+    elif os.path.exists(file_or_dir):
+        pkl = file_or_dir
+    else:
+        sys.stderr.write("No such file: %s\n" % file_or_dir)
+        sys.exit(1)
+    f = open(pkl)
+    return pickle.load(f)
+
+def show_info(wf, job_numbers):
+    if not job_numbers:
+        sys.stdout.write("%s\n" % wf)
+        for n, job in enumerate(wf.jobs):
+            sys.stdout.write("%3d %s\n" % (n+1, job))
+        sys.stderr.write("To see details, add job number(s).\n")
+    for job_nr in job_numbers:
+        show_job_info(wf.jobs[job_nr])
+
+def show_job_info(job):
+    sys.stdout.write("%s\n" % job)
+    sys.stdout.write(job.args_as_str())
+    sys.stdout.write("\nTotal time: %.1fs\n" % job.total_time)
+    if job.parser and job.parse():
+        sys.stdout.write("Output summary: %s\n" % job.parse())
+    if job.out and type(job.out) is str and len(job.out) < 160:
+        sys.stdout.write("stdout: %s\n" % job.out)
+    if job.err and type(job.err) is str and len(job.err) < 160:
+        sys.stdout.write("stderr: %s\n" % job.err)
+
+
 if __name__ == '__main__':
     usage = "Usage: python -m c4.workflow output_dir [N]\n"
     if len(sys.argv) < 2:
         sys.stderr.write(usage)
         sys.exit(0)
-    if os.path.isdir(sys.argv[1]):
-        pkl = os.path.join(sys.argv[1], "workflow.pickle")
-    elif os.path.exists(sys.argv[1]):
-        pkl = sys.argv[1]
-    else:
-        sys.stderr.write("No such file: %s\n" % sys.argv[1])
-        sys.exit(1)
-    with open(pkl) as f:
-        wf = pickle.load(f)
-    if len(sys.argv) == 2:
-        sys.stdout.write("%s\n" % wf)
-        for n, job in enumerate(wf.jobs):
-            sys.stdout.write("%3d %s\n" % (n+1, job))
-        sys.stderr.write("To see details, add job number(s).\n")
-    else:
-        for job_str in sys.argv[2:]:
-            job_nr = int(job_str) - 1
-            job = wf.jobs[job_nr]
-            sys.stdout.write("%s\n" % job)
-            sys.stdout.write(" ".join('"%s"' % a for a in job.args))
-            if job.std_input:
-                sys.stdout.write(" << EOF\n%s\nEOF" % job.std_input)
-            sys.stdout.write("\nTotal time: %.1fs\n" % job.total_time)
-            if job.parser and job.parse():
-                sys.stdout.write("Output summary: %s\n" % job.parse())
-            if job.out and type(job.out) is str and len(job.out) < 160:
-                sys.stdout.write("stdout: %s\n" % job.out)
-            if job.err and type(job.err) is str and len(job.err) < 160:
-                sys.stdout.write("stderr: %s\n" % job.err)
+    wf = open_pickled_workflow(sys.argv[1])
+    job_numbers = [int(job_str)-1 for job_str in sys.argv[2:]]
+    show_info(wf, job_numbers)
 
