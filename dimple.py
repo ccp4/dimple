@@ -7,9 +7,10 @@ Usage: dimple input.mtz input.pdb output_dir
 import os
 import sys
 from c4.workflow import Workflow, JobError, put, put_error, \
-                        show_info, open_pickled_workflow
+                        show_info, open_pickled_workflow, repeat_jobs
 
 RFREE_FOR_MOLREP = 0.4
+
 
 def run_pipeline(wf, pdb, mtz):
     put("Change mtz symmetry if needed. Use pdb as reference.\n")
@@ -66,15 +67,15 @@ def run_pipeline(wf, pdb, mtz):
 
     if "free_r" not in wf.jobs[-1].data:
         put("WARNING: unknown free_r, something went wrong.\n")
-        refmac_xyzin="refmacRB.pdb"
+        refmac_xyzin = "refmacRB.pdb"
     elif wf.jobs[-1].data["free_r"] > RFREE_FOR_MOLREP:
         put("Run MR for R_free > %g\n" % RFREE_FOR_MOLREP)
         wf.molrep(f="prepared.mtz", m="refmacRB.pdb").run()
-        refmac_xyzin="molrep.pdb"
+        refmac_xyzin = "molrep.pdb"
         # we may add refmac (restr,ncyc=5) and findwaters here
     else:
         put("No MR for R_free < %g\n" % RFREE_FOR_MOLREP)
-        refmac_xyzin="refmacRB.pdb"
+        refmac_xyzin = "refmacRB.pdb"
 
     put("Final restrained refinement.\n")
     wf.refmac5(hklin="prepared.mtz", xyzin=refmac_xyzin,
@@ -90,20 +91,30 @@ def run_pipeline(wf, pdb, mtz):
 
 
 def main():
-    if "CCP4" not in os.environ:
-        sys.stderr.write('$CCP4 not found, giving up\n')
-        sys.exit(1)
-
     if len(sys.argv) >= 3 and sys.argv[1] == "info":
         wf = open_pickled_workflow(sys.argv[2])
         job_numbers = [int(job_str)-1 for job_str in sys.argv[3:]]
         show_info(wf, job_numbers)
         return
 
+    if len(sys.argv) >= 3 and sys.argv[1] == "repeat":
+        wf = open_pickled_workflow(sys.argv[2])
+        job_numbers = [int(job_str)-1 for job_str in sys.argv[3:]]
+        try:
+            repeat_jobs(wf, job_numbers)
+        except JobError as e:
+            put_error(e.msg, comment=e.note)
+            sys.exit(1)
+        return
+
+    if "CCP4" not in os.environ:
+        sys.stderr.write('$CCP4 not found, giving up\n')
+        sys.exit(1)
+
     try:
         assert len(sys.argv) == 4, "3 arguments expected"
         mtz, pdb, output_dir = sys.argv[1:]
-        if mtz.endswith(".pdb") and pdb.endswith(".mtz"): # no problem
+        if mtz.endswith(".pdb") and pdb.endswith(".mtz"):  # no problem
             mtz, pdb = pdb, mtz
         assert mtz.endswith(".mtz"), "1st arg should be mtz file"
         assert pdb.endswith(".pdb"), "2nd arg should be pdb file"
@@ -125,4 +136,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
