@@ -328,6 +328,10 @@ class Workflow:
         #for now using pdbset
         self.pdbset(xyzin=xyzin, xyzout=xyzout, cell=cell).run()
 
+    def remove_hetatm(self, xyzin, xyzout):
+        with open(xyzout, "wb") as out:
+            return c4.pdb.remove_hetatm(xyzin, out)
+
     def read_pdb_metadata(self, xyzin):
         return c4.pdb.read_metadata(xyzin)
 

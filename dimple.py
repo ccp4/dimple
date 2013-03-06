@@ -45,19 +45,26 @@ def run_pipeline(wf, pdb, mtz):
 
     if all(pdb_meta.cell[i] - mtz_meta.cell[i] < 1e-3 for i in range(6)):
         put("Cell dimensions in pdb and mtz are the same.\n")
-        refmac_rigid_xyzin = pdb
+        correct_cell_pdb = pdb
     else:
         put("Different cell in pdb %s ...\n" % str(pdb_meta.cell))
         put("              and mtz %s, changing pdb\n" % str(mtz_meta.cell))
         wf.change_pdb_cell(xyzin=pdb, xyzout="prepared.pdb",
                            cell=mtz_meta.cell)
-        refmac_rigid_xyzin = "prepared.pdb"
+        correct_cell_pdb = "prepared.pdb"
+
+    if False:
+        rb_xyzin = "prepared_nohet.pdb"
+        n_het = wf.remove_hetatm(xyzin=correct_cell_pdb, xyzout=rb_xyzin)
+        put("Removed %s atoms marked as HETATM in pdb.\n" % n_het)
+    else:
+        rb_xyzin = correct_cell_pdb
 
     refmac_labin = "FP=F SIGFP=SIGF FREE=FreeR_flag"
     refmac_labout = ("FC=FC PHIC=PHIC FWT=2FOFCWT PHWT=PH2FOFCWT "
                      "DELFWT=FOFCWT PHDELWT=PHFOFCWT")
     put("Rigid-body refinement.\n")
-    wf.refmac5(hklin="prepared.mtz", xyzin=refmac_rigid_xyzin,
+    wf.refmac5(hklin="prepared.mtz", xyzin=rb_xyzin,
                hklout="refmacRB.mtz", xyzout="refmacRB.pdb",
                labin=refmac_labin, labout=refmac_labout,
                keys="""refinement type rigidbody resolution 15 3.5
