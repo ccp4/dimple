@@ -6,7 +6,6 @@ import threading
 import Queue
 import time
 import cPickle as pickle
-#import pickle
 import c4.mtz
 import c4.pdb
 
@@ -215,31 +214,31 @@ def _start_enqueue_thread(file_obj):
     thr.start()
     return thr, que
 
+def _just_run(process, job):
+    out, err = process.communicate(input=job.std_input)
+    job.out.lines = out.splitlines(True)
+    job.err.lines = err.splitlines(True)
+
 def _run_and_parse(process, job):
-    if job.parser or True: #XXX
-        # job.*.que can be used by parsers (via Output.read_line() or directly)
-        out_t, job.out.que = _start_enqueue_thread(process.stdout)
-        err_t, job.err.que = _start_enqueue_thread(process.stderr)
-        try:
-            process.stdin.write(job.std_input)
-        except IOError as e:
-            put("\nWarning: passing std input to %s failed.\n" % job.name)
-            if e.errno not in (errno.EPIPE, e.errno != errno.EINVAL):
-                raise
-        process.stdin.close()
-        out_t.join()
-        err_t.join()
-        process.wait()
-        # nothing is written to the queues at this point
-        # parse what's left in the queues
-        job.parse()
-        # take care of what is left by the parser
-        job.out.finish_que()
-        job.err.finish_que()
-    else:
-        out, err = process.communicate(input=job.std_input)
-        job.out.lines = out.splitlines(True)
-        job.err.lines = err.splitlines(True)
+    # job.*.que can be used by parsers (via Output.read_line() or directly)
+    out_t, job.out.que = _start_enqueue_thread(process.stdout)
+    err_t, job.err.que = _start_enqueue_thread(process.stderr)
+    try:
+        process.stdin.write(job.std_input)
+    except IOError as e:
+        put("\nWarning: passing std input to %s failed.\n" % job.name)
+        if e.errno not in (errno.EPIPE, e.errno != errno.EINVAL):
+            raise
+    process.stdin.close()
+    out_t.join()
+    err_t.join()
+    process.wait()
+    # nothing is written to the queues at this point
+    # parse what's left in the queues
+    job.parse()
+    # take care of what is left by the parser
+    job.out.finish_que()
+    job.err.finish_que()
 
 _c4_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -289,7 +288,10 @@ class Workflow:
             progress_thread.start()
 
         try:
-            _run_and_parse(process, job)
+            if job.parser is not None or show_progress:
+                _run_and_parse(process, job)
+            else:
+                _just_run(process, job)
         except KeyboardInterrupt:
             self._write_logs(job)
             # Queues could cause PicklingError, empty and delete them
@@ -431,9 +433,9 @@ def show_job_info(job):
     if job.parser and job.parse():
         sys.stdout.write("Output summary: %s\n" % job.parse())
     if job.out.saved_to:
-        sys.stdout.write("stdout: %s\n" % job.summary())
+        sys.stdout.write("stdout: %s\n" % job.out.summary())
     if job.err.saved_to:
-        sys.stdout.write("stderr: %s\n" % job.summary())
+        sys.stdout.write("stderr: %s\n" % job.err.summary())
 
 
 def repeat_jobs(wf, job_numbers):
@@ -445,14 +447,25 @@ def repeat_jobs(wf, job_numbers):
         job.run()
 
 
-def main():
-    usage = "Usage: python -m c4.workflow output_dir [N]\n"
-    if len(sys.argv) < 2:
-        sys.stderr.write(usage)
-        sys.exit(0)
-    wf = open_pickled_workflow(sys.argv[1])
-    job_numbers = [int(job_str)-1 for job_str in sys.argv[2:]]
-    show_info(wf, job_numbers)
+def parse_workflow_commands(args):
+    if len(args) >= 2 and args[0] == "info":
+        wf = open_pickled_workflow(args[1])
+        job_numbers = [int(job_str)-1 for job_str in args[2:]]
+        show_info(wf, job_numbers)
+        return True
+
+    if len(args) >= 2 and args[0] == "repeat":
+        wf = open_pickled_workflow(args[1])
+        job_numbers = [int(job_str)-1 for job_str in args[2:]]
+        try:
+            repeat_jobs(wf, job_numbers)
+        except JobError as e:
+            put_error(e.msg, comment=e.note)
+            sys.exit(1)
+        return True
+
+
 
 if __name__ == '__main__':
-    main()
+    parse_workflow_commands(sys.argv[1:]) or sys.stderr.write(
+            "Usage: python -m c4.workflow {info|repeat} output_dir [N]\n")

@@ -7,19 +7,22 @@ Usage: dimple input.mtz input.pdb output_dir
 import os
 import sys
 from c4.workflow import Workflow, JobError, put, put_error, \
-                        show_info, open_pickled_workflow, repeat_jobs
+                        parse_workflow_commands
 
 RFREE_FOR_MOLREP = 0.4
 
-# can be changed in special cases
-final_pdb = "final.pdb"
-final_mtz = "final.mtz"
+class Options:
+    def __init__(self):
+        self.pdb = None
+        self.mtz = None
+        self.final_pdb = "final.pdb"
+        self.final_mtz = "final.mtz"
 
-def run_pipeline(wf, pdb, mtz):
+def run_pipeline(wf, opt):
     put("Change mtz symmetry if needed. Use pdb as reference.\n")
-    wf.pointless(hklin=mtz, xyzin=pdb, hklout="pointless.mtz").run()
-    pdb_meta = wf.read_pdb_metadata(pdb)
-    mtz_meta = wf.read_mtz_metadata(mtz)
+    wf.pointless(hklin=opt.mtz, xyzin=opt.pdb, hklout="pointless.mtz").run()
+    pdb_meta = wf.read_pdb_metadata(opt.pdb)
+    mtz_meta = wf.read_mtz_metadata(opt.mtz)
     if mtz_meta.symmetry == pdb_meta.symmetry:
         put(" Same symmetry in pdb and mtz (%s).\n" % pdb_meta.symmetry)
         truncate_hklin = "pointless.mtz"
@@ -48,11 +51,11 @@ def run_pipeline(wf, pdb, mtz):
 
     if all(pdb_meta.cell[i] - mtz_meta.cell[i] < 1e-3 for i in range(6)):
         put("Cell dimensions in pdb and mtz are the same.\n")
-        correct_cell_pdb = pdb
+        correct_cell_pdb = opt.pdb
     else:
         put("Different cell in pdb %s ...\n" % str(pdb_meta.cell))
         put("              and mtz %s, changing pdb\n" % str(mtz_meta.cell))
-        wf.change_pdb_cell(xyzin=pdb, xyzout="prepared.pdb",
+        wf.change_pdb_cell(xyzin=opt.pdb, xyzout="prepared.pdb",
                            cell=mtz_meta.cell)
         correct_cell_pdb = "prepared.pdb"
 
@@ -89,7 +92,7 @@ def run_pipeline(wf, pdb, mtz):
 
     put("Final restrained refinement.\n")
     wf.refmac5(hklin="prepared.mtz", xyzin=refmac_xyzin,
-               hklout=final_mtz, xyzout=final_pdb,
+               hklout=opt.final_mtz, xyzout=opt.final_pdb,
                labin=refmac_labin, labout=refmac_labout,
                keys="""make hydrogen all hout no cispeptide yes ssbridge yes
                        refinement type restrained
@@ -97,46 +100,29 @@ def run_pipeline(wf, pdb, mtz):
                        scale type simple lssc anisotropic experimental
                        solvent yes vdwprob 1.4 ionprob 0.8 mshrink 0.8
                        ncycle 8""").run()
-    wf.find_blobs(final_mtz, final_pdb, sigma=0.8).run()
-
-
-def parse_workflow_commands(args):
-    if len(sys.argv) >= 3 and sys.argv[1] == "info":
-        wf = open_pickled_workflow(sys.argv[2])
-        job_numbers = [int(job_str)-1 for job_str in sys.argv[3:]]
-        show_info(wf, job_numbers)
-        return True
-
-    if len(sys.argv) >= 3 and sys.argv[1] == "repeat":
-        wf = open_pickled_workflow(sys.argv[2])
-        job_numbers = [int(job_str)-1 for job_str in sys.argv[3:]]
-        try:
-            repeat_jobs(wf, job_numbers)
-        except JobError as e:
-            put_error(e.msg, comment=e.note)
-            sys.exit(1)
-        return True
+    wf.find_blobs(opt.final_mtz, opt.final_pdb, sigma=0.8).run()
 
 
 def parse_dimple_commands(args):
+    opt = Options()
     # special mode for compatibility with ccp4i
-    global final_mtz, final_pdb
     if len(args) == 8 and args[::2] == ["HKLIN", "XYZIN", "HKLOUT", "XYZOUT"]:
-        mtz, pdb, final_mtz, final_pdb = sys.args[1::2]
+        mtz, pdb, opt.final_mtz, opt.final_pdb = args[1::2]
         output_dir = os.path.join(os.environ["CCP4_SCR"], "dimple_out")
-        return mtz, pdb, output_dir
-
-    assert len(args) == 3, "3 arguments expected"
-    mtz, pdb, output_dir = args
-    if mtz.endswith(".pdb") and pdb.endswith(".mtz"):  # no problem
-        mtz, pdb = pdb, mtz
-    assert mtz.endswith(".mtz"), "1st arg should be mtz file"
-    assert pdb.endswith(".pdb"), "2nd arg should be pdb file"
-    if os.path.exists(output_dir):
-        assert os.path.isdir(output_dir), "Not a directory: " + output_dir
-    for filename in [mtz, pdb]:
-        assert os.path.isfile(filename), "File not found: " + filename
-    return mtz, pdb, output_dir
+    else:
+        assert len(args) == 3, "3 arguments expected"
+        mtz, pdb, output_dir = args
+        if mtz.endswith(".pdb") and pdb.endswith(".mtz"):  # no problem
+            mtz, pdb = pdb, mtz
+        assert mtz.endswith(".mtz"), "1st arg should be mtz file"
+        assert pdb.endswith(".pdb"), "2nd arg should be pdb file"
+        if os.path.exists(output_dir):
+            assert os.path.isdir(output_dir), "Not a directory: " + output_dir
+        for filename in [mtz, pdb]:
+            assert os.path.isfile(filename), "File not found: " + filename
+    opt.mtz = os.path.abspath(mtz)
+    opt.pdb = os.path.abspath(pdb)
+    return opt, output_dir
 
 
 def main():
@@ -146,20 +132,20 @@ def main():
 
     for necessary_var in ("CCP4", "CCP4_SCR"):
         if necessary_var not in os.environ:
-            put_error('$%s not found, giving up\n' % necessary_var)
+            put_error('$%s not found, giving up' % necessary_var)
             sys.exit(1)
     if not os.path.isdir(os.environ["CCP4_SCR"]):
         put_error('No such directory: $CCP4_SCR, refmac shall not work!')
 
     try:
-        mtz, pdb, output_dir = parse_dimple_commands(sys.argv[1:])
+        opt, output_dir = parse_dimple_commands(args)
     except AssertionError as e:
         put_error(e, __doc__.rstrip())
         sys.exit(1)
 
     wf = Workflow(output_dir)
     try:
-        run_pipeline(wf=wf, mtz=os.path.abspath(mtz), pdb=os.path.abspath(pdb))
+        run_pipeline(wf=wf, opt=opt)
     except JobError as e:
         put_error(e.msg, comment=e.note)
         wf.pickle_jobs()
