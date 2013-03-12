@@ -9,11 +9,14 @@ import time
 import cPickle as pickle
 import c4.mtz
 import c4.pdb
+import c4.coot
 
 
 _jobindex_fmt = "%3d "
 _jobname_fmt = "%-15s"
 _elapsed_fmt = "%5.1fs  "
+
+_c4_dir = os.path.abspath(os.path.dirname(__file__))
 
 
 class JobError(Exception):
@@ -76,9 +79,9 @@ class Output:
             self.lines.append(self.que.get_nowait())
         self.que = None
 
-    def save_output(self, filename, remove_long_list=True):
+    def save_output(self, output_dir, filename, remove_long_list=True):
         if self.lines:
-            with open(filename, "w") as f:
+            with open(os.path.join(output_dir, filename), "w") as f:
                 for line in self.lines:
                     f.write(line)
             self.saved_to = filename
@@ -171,15 +174,26 @@ def _refmac_parser(job):
         job.data["cycle"], job.ncyc, job.data["free_r"], job.data["overall_r"])
 
 
+def full_path_of(prog):
+    """If prog/prog.exe is not in c4/ then $CCP4/bin is assumed.
+    Return value: path with filename without extension.
+    """
+    assert os.environ.get("CCP4")
+    exe = '.exe' if os.name == 'nt' else ''
+    c4_path = os.path.join(_c4_dir, prog + exe)
+    if os.path.exists(c4_path + exe):
+        return c4_path
+    else:
+        return os.path.join(os.environ["CCP4"], "bin", prog)  # no extension
+
+
 def ccp4_job(workflow, prog, logical=None, input="", add_end=True):
     """Handle traditional convention for arguments of CCP4 programs.
     logical is dictionary with where keys are so-called logical names,
     input string or list of lines that are to be passed though stdin
     add_end adds "end" as the last line of stdin
     """
-    assert os.environ.get("CCP4")
-    full_path = os.path.join(os.environ["CCP4"], "bin", prog)
-    job = Job(workflow, full_path)
+    job = Job(workflow, full_path_of(prog))
     if logical:
         for a in ["hklin", "hklout", "hklref", "xyzin", "xyzout"]:
             if logical.get(a):
@@ -241,8 +255,6 @@ def _run_and_parse(process, job):
     job.out.finish_que()
     job.err.finish_que()
 
-_c4_dir = os.path.abspath(os.path.dirname(__file__))
-
 
 class Workflow:
     def __init__(self, output_dir):
@@ -256,14 +268,12 @@ class Workflow:
         return "Workflow with %d jobs @ %s" % (len(self.jobs), self.output_dir)
 
     def pickle_jobs(self, filename="workflow.pickle"):
-        os.chdir(self.output_dir)
-        with open(filename, "wb") as f:
+        with open(os.path.join(self.output_dir, filename), "wb") as f:
             pickle.dump(self, f, -1)
 
     def run_job(self, job, show_progress):
         if not hasattr(sys.stdout, 'isatty') or not sys.stdout.isatty():
             show_progress = False
-        os.chdir(self.output_dir)
         self.jobs.append(job)
         put(_jobindex_fmt % len(self.jobs))
         put_green(_jobname_fmt % job.name)
@@ -271,7 +281,8 @@ class Workflow:
         job.started = time.time()
         #job.args[0] = "true"  # for debugging
         try:
-            process = Popen(job.args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+            process = Popen(job.args, stdin=PIPE, stdout=PIPE, stderr=PIPE,
+                            cwd=self.output_dir)
         except OSError as e:
             if e.errno == errno.ENOENT:
                 raise JobError("Program not found: %s\n" % job.args[0])
@@ -324,8 +335,8 @@ class Workflow:
 
     def _write_logs(self, job):
         log_basename = "%02d-%s" % (len(self.jobs), job.name.replace(" ","_"))
-        job.out.save_output("%s.log" % log_basename)
-        job.err.save_output("%s.err" % log_basename)
+        job.out.save_output(self.output_dir, "%s.log" % log_basename)
+        job.err.save_output(self.output_dir, "%s.err" % log_basename)
 
     def change_pdb_cell(self, xyzin, xyzout, cell):
         #for now using pdbset
@@ -401,15 +412,19 @@ class Workflow:
         return job
 
     def find_blobs(self, mtz, pdb, sigma=1.0):
-        prog = "find-blobs"
-        exe = '.exe' if os.name == 'nt' else ''
-        find_blobs_path = os.path.join(_c4_dir, prog + exe)
-        if not os.path.exists(find_blobs_path):
-            find_blobs_path = os.path.join(os.environ["CCP4"], "bin", prog)
-        job = Job(self, find_blobs_path)
+        job = Job(self, full_path_of("find-blobs"))
         job.args += ["-s%g" % sigma, mtz, pdb]
         job.parser = "_find_blobs_parser"
         return job
+
+
+    def write_coot_script(self, name, pdb=None, mtz=None, center=None):
+        script_filename = os.path.join(self.output_dir, name)
+        with open(script_filename, "w") as f:
+            f.write(c4.coot.basic_script(pdb=pdb, mtz=mtz, center=center))
+
+    def render_coot_script_as_png(self, name, pdb=None, mtz=None, center=None):
+        pass
 
 
 def open_pickled_workflow(file_or_dir):
@@ -469,7 +484,6 @@ def parse_workflow_commands(args):
             put_error(e.msg, comment=e.note)
             sys.exit(1)
         return True
-
 
 
 if __name__ == '__main__':

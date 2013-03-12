@@ -7,7 +7,7 @@ dimple() { $test_dir/../dimple.py "$@"; }
 export PYTHONPATH=$test_dir/..${PYTHONPATH:+:${PYTHONPATH}}
 
 echo "Run dimple on artificial thaumatin example"
-#dimple $test_dir/thaumatin.* $test_dir/th_out/
+dimple $test_dir/thaumatin.* $test_dir/th_out/
 
 # the rest in not essential
 # workflow is pickled as workflow.pickle in output dir, let's check it

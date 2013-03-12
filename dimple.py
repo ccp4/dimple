@@ -102,10 +102,11 @@ def run_pipeline(wf, opt):
                        ncycle 8""").run()
     fb_job = wf.find_blobs(opt.final_mtz, opt.final_pdb, sigma=0.8).run()
     blobs = fb_job.data["blobs"]
-    with open("coot.py", "wb") as f:
-        f.write(coot_py_template % (opt.final_pdb, opt.final_mtz))
-        if blobs:
-            f.write("set_rotation_centre(%g,%g,%g)" % blobs[0])
+    largest_blob = blobs[0] if blobs else None
+    wf.write_coot_script("coot.py", pdb=opt.final_pdb, mtz=opt.final_mtz,
+                         center=largest_blob)
+    wf.run_coot_raster3d()
+
 
 
 def parse_dimple_commands(args):
@@ -129,16 +130,6 @@ def parse_dimple_commands(args):
     opt.pdb = os.path.abspath(pdb)
     return opt, output_dir
 
-coot_py_template = """
-pdb = "%s"
-mtz = "%s"
-center = (34.28,  31.86,  57.20)
-
-set_nomenclature_errors_on_read("ignore")
-molecule = read_pdb(pdb)
-map21 = make_and_draw_map(mtz, "2FOFCWT", "PH2FOFCWT", "", 0, 0)
-map11 = make_and_draw_map(mtz, "FOFCWT", "PHFOFCWT", "", 0, 1)
-"""
 
 def main():
     args = sys.argv[1:]
