@@ -2,6 +2,7 @@ import os
 import sys
 from subprocess import Popen, PIPE
 import errno
+import pipes
 import threading
 import Queue
 import time
@@ -118,7 +119,7 @@ class Job:
         return desc
 
     def args_as_str(self):
-        s = " ".join('"%s"' % a for a in self.args)
+        s = " ".join(pipes.quote(a) for a in self.args)
         if self.std_input:
             s += " << EOF\n%s\nEOF" % self.std_input
         return s
