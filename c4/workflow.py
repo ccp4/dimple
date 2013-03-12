@@ -401,7 +401,12 @@ class Workflow:
         return job
 
     def find_blobs(self, mtz, pdb, sigma=1.0):
-        job = Job(self, os.path.join(_c4_dir, "find-blobs"))
+        prog = "find-blobs"
+        exe = '.exe' if os.name == 'nt' else ''
+        find_blobs_path = os.path.join(_c4_dir, prog + exe)
+        if not os.path.exists(find_blobs_path):
+            find_blobs_path = os.path.join(os.environ["CCP4"], "bin", prog)
+        job = Job(self, find_blobs_path)
         job.args += ["-s%g" % sigma, mtz, pdb]
         job.parser = "_find_blobs_parser"
         return job

@@ -52,10 +52,13 @@ struct Config
   double min_score;
   const char* write_map_to_file;
   const char* write_1_1_map_to_file;
+  bool print_mass_center;
+
   // default values for min_volume and mask_radius
   // are the same as in coot/findligand
   Config() : sigma_level(1.), min_volume(11.), mask_radius(2.), min_score(50),
-             write_map_to_file(NULL), write_1_1_map_to_file(NULL) {}
+             write_map_to_file(NULL), write_1_1_map_to_file(NULL),
+             print_mass_center(false) {}
 };
 
 // unlike Blob, Cluster is for internal use and can contain clipper classes
@@ -336,6 +339,7 @@ vector<Cluster> find_clusters(const string& pdb_filename,
     throw std::runtime_error("Flat density map");
 
   CMMDBManager *mm = read_pdb(pdb_filename);
+
   density_map.mask_by_atoms(mm, config.mask_radius);
   const clipper::Xmap<float>* xmap = density_map.xmap();
 
@@ -374,6 +378,12 @@ vector<Cluster> find_clusters(const string& pdb_filename,
 
   std::sort(clusters.begin(), clusters.end(), compare_clusters_by_score);
 
+  if (config.print_mass_center) {
+    realtype x, y, z;
+    GetMassCenter(atoms, n_atoms, x, y, z);
+    printf("Protein mass center: %s\n", Coord_orth(x,y,z).format().c_str());
+  }
+
   return clusters;
 }
 
@@ -411,7 +421,8 @@ const char* usage =
 " Options:\n"
 "  -s SIGMA        sigma level\n"
 "  -w FILE         write 2-1 map (that is used to find blobs) to file\n"
-"  -e FILE         write 1-1 map to file\n";
+"  -e FILE         write 1-1 map to file\n"
+"  -c              print protein mass center\n";
 
 static
 bool endswith(std::string const& s, std::string const& p)
@@ -456,6 +467,9 @@ int main(int argc, char **argv)
       // '-' ends options to allow filenames starting with '-'
       if (arg[1] == '\0')
         handle_options = false;
+      else if (strcmp(arg+1, "c") == 0) {
+        config.print_mass_center = true;
+      }
       else if (arg[2] == '\0') {
         if (i+1 == argc)
           err("Missing arg for option: " + string(arg));
