@@ -15,7 +15,6 @@ def basic_script(pdb, mtz, center):
            molecule = read_pdb(pdb)"""
     if center: text += """
            set_rotation_centre(%g, %g, %g)
-           #set_view_quaternion(0., 0., 0., 1.)
            set_zoom(30.)""" % center
     if mtz: text += """
            map21 = make_and_draw_map(mtz, "2FOFCWT", "PH2FOFCWT", "", 0, 0)
@@ -24,20 +23,37 @@ def basic_script(pdb, mtz, center):
 
 
 def generate_r3d(scene_script, basename, cwd, render_png=False):
+    M_SQRT2 = 0.5**0.5
+    predefined_quaternions = [ (0., 0., 0., 1.),
+                               (0., -M_SQRT2, 0., M_SQRT2),
+                               (0.5, -0.5, 0.5, 0.5),
+                               #(M_SQRT2, 0., 0., M_SQRT2),
+                               #(0.5, 0.5, 0.5, 0.5),
+                               #(0.5, -0.5, 0.5, 0.5)
+                             ]
+            #set_view_quaternion(0., 0., 0., 1.)
     coot_process = Popen(["coot", "--python", "--no-graphics", "--no-guano"],
                          stdin=PIPE,
                          #stdout=PIPE, stderr=PIPE,
                          cwd=cwd)
     # In coot, raster3d() creates file.r3d, make_image_raster3d() additionally
     # calls render program and opens image (convenient for testing)
-    coot_process.communicate(input=scene_script+"""
-raster3d("%s.r3d")
+    script = scene_script
+    for n, quat in enumerate(predefined_quaternions):
+        script += """
+set_view_quaternion(%g, %g, %g, %g)""" % quat
+        script += """
+graphics_draw() # this is needed only for coot in --no-graphics mode
+raster3d("%sv%d.r3d")""" % (basename, n+1)
+    coot_process.communicate(input=script+"""
 coot_real_exit(0)
-""" % basename)
+""")
     if render_png:
-        r3d_script = open(os.path.join(cwd, basename+".r3d")).read()
-        render_process = Popen(["render", "-png", basename+".png"],
-                               stdin=PIPE, stdout=PIPE, stderr=PIPE, cwd=cwd)
-        render_process.communicate(input=r3d_script)
-    #Popen(["xdg-open",  os.path.join(cwd, basename+".png")]).wait()
+        for n, _ in enumerate(predefined_quaternions):
+            vname = "%sv%d" % (basename, n+1)
+            r3d_script = open(os.path.join(cwd, vname+".r3d")).read()
+            render_process = Popen(["render", "-png", vname+".png"],
+                                stdin=PIPE, stdout=PIPE, stderr=PIPE, cwd=cwd)
+            render_process.communicate(input=r3d_script)
+    #Popen(["xdg-open",  os.path.join(cwd, basename+"v1.png")]).wait()
 

@@ -92,10 +92,10 @@ def run_pipeline(wf, opt):
                        ncycle 8""").run()
     fb_job = wf.find_blobs(opt.hklout, opt.xyzout, sigma=0.8).run()
     blobs = fb_job.data["blobs"]
-    largest_blob = blobs[0] if blobs else None
     wf.write_coot_script("coot.py", pdb=opt.xyzout, mtz=opt.hklout,
-                         center=largest_blob)
-    wf.make_png("blob1", pdb=opt.xyzout, mtz=opt.hklout, center=largest_blob)
+                         center=(blobs[0] if blobs else None))
+    for n, b in enumerate(blobs):
+        wf.make_png("blob%s" % (n+1), pdb=opt.xyzout, mtz=opt.hklout, center=b)
 
 
 
