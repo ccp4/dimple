@@ -1,22 +1,12 @@
 #!/usr/bin/env python
 
-"""\
-Usage: dimple input.mtz input.pdb output_dir
-"""
-
 import os
 import sys
+import argparse
 from c4.workflow import Workflow, JobError, put, put_error, \
                         parse_workflow_commands
 
 RFREE_FOR_MOLREP = 0.4
-
-class Options:
-    def __init__(self):
-        self.pdb = None
-        self.mtz = None
-        self.final_pdb = "final.pdb"
-        self.final_mtz = "final.mtz"
 
 def run_pipeline(wf, opt):
     put("Change mtz symmetry if needed. Use pdb as reference.\n")
@@ -92,7 +82,7 @@ def run_pipeline(wf, opt):
 
     put("Final restrained refinement.\n")
     wf.refmac5(hklin="prepared.mtz", xyzin=refmac_xyzin,
-               hklout=opt.final_mtz, xyzout=opt.final_pdb,
+               hklout=opt.hklout, xyzout=opt.xyzout,
                labin=refmac_labin, labout=refmac_labout,
                keys="""make hydrogen all hout no cispeptide yes ssbridge yes
                        refinement type restrained
@@ -100,40 +90,65 @@ def run_pipeline(wf, opt):
                        scale type simple lssc anisotropic experimental
                        solvent yes vdwprob 1.4 ionprob 0.8 mshrink 0.8
                        ncycle 8""").run()
-    fb_job = wf.find_blobs(opt.final_mtz, opt.final_pdb, sigma=0.8).run()
+    fb_job = wf.find_blobs(opt.hklout, opt.xyzout, sigma=0.8).run()
     blobs = fb_job.data["blobs"]
     largest_blob = blobs[0] if blobs else None
-    wf.write_coot_script("coot.py", pdb=opt.final_pdb, mtz=opt.final_mtz,
+    wf.write_coot_script("coot.py", pdb=opt.xyzout, mtz=opt.hklout,
                          center=largest_blob)
-    wf.run_coot_raster3d()
+    wf.make_png("blob1", pdb=opt.xyzout, mtz=opt.hklout, center=largest_blob)
 
 
 
-def parse_dimple_commands(args):
-    opt = Options()
+def parse_dimple_commands():
+    parser = argparse.ArgumentParser(
+                              usage="dimple input.mtz input.pdb output_dir")
+    parser.add_argument('mtz', metavar='input.mtz')
+    parser.add_argument('pdb', metavar='input.pdb')
+    parser.add_argument('output_dir')
+    parser.add_argument('--from-job', metavar='N', type=int, default=0)
+    parser.add_argument('--hklout', metavar='out.mtz', default='final.mtz')
+    parser.add_argument('--xyzout', metavar='out.pdb', default='final.pdb')
+    # get rid of 'positional arguments' in the usage method
+    parser._action_groups[:1] = []
+
+    args = sys.argv[1:]
+
     # special mode for compatibility with ccp4i
-    if len(args) == 8 and args[::2] == ["HKLIN", "XYZIN", "HKLOUT", "XYZOUT"]:
-        mtz, pdb, opt.final_mtz, opt.final_pdb = args[1::2]
+    legacy_args = { "HKLIN": "", "XYZIN": "",
+                    "HKLOUT": "--hklout", "XYZOUT": "--xyzout" }
+    if len(args) == 8 and args[0] in legacy_args:
+        args = [legacy_args.get(a) or a
+                for a in args if legacy_args.get(a) != ""]
         output_dir = os.path.join(os.environ["CCP4_SCR"], "dimple_out")
-    else:
-        assert len(args) == 3, "3 arguments expected"
-        mtz, pdb, output_dir = args
-        if mtz.endswith(".pdb") and pdb.endswith(".mtz"):  # no problem
-            mtz, pdb = pdb, mtz
-        assert mtz.endswith(".mtz"), "1st arg should be mtz file"
-        assert pdb.endswith(".pdb"), "2nd arg should be pdb file"
-        if os.path.exists(output_dir):
-            assert os.path.isdir(output_dir), "Not a directory: " + output_dir
-        for filename in [mtz, pdb]:
-            assert os.path.isfile(filename), "File not found: " + filename
-    opt.mtz = os.path.abspath(mtz)
-    opt.pdb = os.path.abspath(pdb)
-    return opt, output_dir
+        args.append(output_dir)
+
+    opt = parser.parse_args(args)
+    if opt.mtz.endswith(".pdb") and opt.pdb.endswith(".mtz"):  # no problem
+        opt.mtz, opt.pdb = opt.pdb, opt.mtz
+
+    # extra checks
+    if not opt.mtz.endswith(".mtz"):
+        put_error("1st arg should be mtz file")
+        sys.exit(1)
+    if not opt.pdb.endswith(".pdb"):
+        put_error("2nd arg should be pdb file")
+        sys.exit(1)
+    for filename in [opt.mtz, opt.pdb]:
+        if not os.path.isfile(filename):
+            put_error("File not found: " + filename)
+            sys.exit(1)
+    if os.path.exists(opt.output_dir) and not os.path.isdir(opt.output_dir):
+        put_error("Not a directory: " + opt.output_dir)
+        sys.exit(1)
+
+    opt.mtz = os.path.relpath(opt.mtz, opt.output_dir)
+    opt.pdb = os.path.relpath(opt.pdb, opt.output_dir)
+
+    return opt
 
 
 def main():
-    args = sys.argv[1:]
-    if parse_workflow_commands(args):
+    if parse_workflow_commands():
         return
 
     for necessary_var in ("CCP4", "CCP4_SCR"):
@@ -143,15 +158,12 @@ def main():
     if not os.path.isdir(os.environ["CCP4_SCR"]):
         put_error('No such directory: $CCP4_SCR, refmac shall not work!')
 
-    try:
-        opt, output_dir = parse_dimple_commands(args)
-    except AssertionError as e:
-        put_error(e, __doc__.rstrip())
-        sys.exit(1)
+    options = parse_dimple_commands()
 
-    wf = Workflow(output_dir)
+    wf = Workflow(options.output_dir)
+    wf.from_job = options.from_job
     try:
-        run_pipeline(wf=wf, opt=opt)
+        run_pipeline(wf=wf, opt=options)
     except JobError as e:
         put_error(e.msg, comment=e.note)
         wf.pickle_jobs()

@@ -1,5 +1,6 @@
 
-import subprocess
+import os
+from subprocess import Popen, PIPE
 import textwrap
 
 
@@ -9,26 +10,34 @@ def basic_script(pdb, mtz, center):
            pdb = "%s"
            mtz = "%s"
 
-           #set_nomenclature_errors_on_read("ignore")
-           """ % (pdb, mtz)
-    if pdb: text += """\
-           molecule = read_pdb(pdb)
-           """
-    if mtz: text += """\
-           molecule = read_pdb(pdb)
-           map21 = make_and_draw_map(mtz, "2FOFCWT", "PH2FOFCWT", "", 0, 0)
-           map11 = make_and_draw_map(mtz, "FOFCWT", "PHFOFCWT", "", 0, 1)
-           """
-    if center: text += """\
+           #set_nomenclature_errors_on_read("ignore")""" % (pdb, mtz)
+    if pdb: text += """
+           molecule = read_pdb(pdb)"""
+    if center: text += """
            set_rotation_centre(%g, %g, %g)
-           """ % center
+           #set_view_quaternion(0., 0., 0., 1.)
+           set_zoom(30.)""" % center
+    if mtz: text += """
+           map21 = make_and_draw_map(mtz, "2FOFCWT", "PH2FOFCWT", "", 0, 0)
+           map11 = make_and_draw_map(mtz, "FOFCWT", "PHFOFCWT", "", 0, 1)"""
     return textwrap.dedent(text)
 
 
-def generate_r3d(scene_script, filename):
-    coot_process = subprocess.Popen(["coot", "--python", "--no-graphics"])
-    coot_process.communicate(input=scene_script+
-    """\
-make_image_raster3d(filename) # adds .r3d
+def generate_r3d(scene_script, basename, cwd, render_png=False):
+    coot_process = Popen(["coot", "--python", "--no-graphics", "--no-guano"],
+                         stdin=PIPE,
+                         #stdout=PIPE, stderr=PIPE,
+                         cwd=cwd)
+    # In coot, raster3d() creates file.r3d, make_image_raster3d() additionally
+    # calls render program and opens image (convenient for testing)
+    coot_process.communicate(input=scene_script+"""
+raster3d("%s.r3d")
 coot_real_exit(0)
-""")
+""" % basename)
+    if render_png:
+        r3d_script = open(os.path.join(cwd, basename+".r3d")).read()
+        render_process = Popen(["render", "-png", basename+".png"],
+                               stdin=PIPE, stdout=PIPE, stderr=PIPE, cwd=cwd)
+        render_process.communicate(input=r3d_script)
+    #Popen(["xdg-open",  os.path.join(cwd, basename+".png")]).wait()
+

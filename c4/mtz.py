@@ -33,7 +33,7 @@ def read_metadata(xyzin):
         if not line.startswith(" * "):
             continue
         if line.startswith(" * Dataset ID, project/crystal/dataset names, ce"):
-            cell = tuple(map(float, lines[n + 5].split()))
+            cell = tuple(float(x) for x in lines[n + 5].split())
         elif line.startswith(" * Space group = "):
             symmetry = line.split("'")[1].strip()
             sg_number = int(line.split()[-1].rstrip(")"))

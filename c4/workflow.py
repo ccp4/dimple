@@ -260,6 +260,7 @@ class Workflow:
     def __init__(self, output_dir):
         self.output_dir = os.path.abspath(output_dir)
         self.jobs = []
+        self.from_job = 0 # skip jobs before N (useful for testing)
         self.dry_run = False
         if not os.path.isdir(self.output_dir):
             os.mkdir(self.output_dir)
@@ -278,6 +279,11 @@ class Workflow:
         put(_jobindex_fmt % len(self.jobs))
         put_green(_jobname_fmt % job.name)
         sys.stdout.flush()
+
+        if self.from_job >= len(self.jobs) + 1:
+            put("skipped\n")
+            return job
+
         job.started = time.time()
         #job.args[0] = "true"  # for debugging
         try:
@@ -322,7 +328,7 @@ class Workflow:
         put("%s\n" % (job.parse() or ""))
         self._write_logs(job)
         if retcode:
-            all_args = " ".join('"%s"' % a for a in job.args)
+            all_args = " ".join(pipes.quote(a) for a in job.args)
             notes = []
             if job.out.saved_to:
                 notes = ["stdout -> %s/%s" % (self.output_dir,
@@ -347,10 +353,10 @@ class Workflow:
             return c4.pdb.remove_hetatm(xyzin, out)
 
     def read_pdb_metadata(self, xyzin):
-        return c4.pdb.read_metadata(xyzin)
+        return c4.pdb.read_metadata(os.path.join(self.output_dir, xyzin))
 
     def read_mtz_metadata(self, hklin):
-        return c4.mtz.read_metadata(hklin)
+        return c4.mtz.read_metadata(os.path.join(self.output_dir, hklin))
 
     def molrep(self, f, m):
         job = Job(self, "molrep")
@@ -419,12 +425,14 @@ class Workflow:
 
 
     def write_coot_script(self, name, pdb=None, mtz=None, center=None):
-        script_filename = os.path.join(self.output_dir, name)
-        with open(script_filename, "w") as f:
+        path = os.path.join(self.output_dir, name)
+        with open(path, "w") as f:
             f.write(c4.coot.basic_script(pdb=pdb, mtz=mtz, center=center))
 
-    def render_coot_script_as_png(self, name, pdb=None, mtz=None, center=None):
-        pass
+    def make_png(self, basename, pdb=None, mtz=None, center=None):
+        scene_script = c4.coot.basic_script(pdb=pdb, mtz=mtz, center=center)
+        c4.coot.generate_r3d(scene_script, basename, cwd=self.output_dir,
+                             render_png=True)
 
 
 def open_pickled_workflow(file_or_dir):
@@ -468,7 +476,8 @@ def repeat_jobs(wf, job_numbers):
         job.run()
 
 
-def parse_workflow_commands(args):
+def parse_workflow_commands():
+    args = sys.argv[1:]
     if len(args) >= 2 and args[0] == "info":
         wf = open_pickled_workflow(args[1])
         job_numbers = [int(job_str)-1 for job_str in args[2:]]
