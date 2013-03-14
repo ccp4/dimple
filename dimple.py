@@ -94,7 +94,8 @@ def run_pipeline(wf, opt):
     blobs = fb_job.data["blobs"]
     wf.write_coot_script("coot.py", pdb=opt.xyzout, mtz=opt.hklout,
                          center=(blobs[0] if blobs else None))
-    for n, b in enumerate(blobs):
+    # For now not more than two blobs, in future better blob/ligand scoring
+    for n, b in enumerate(blobs[:2]):
         wf.make_png("blob%s" % (n+1), pdb=opt.xyzout, mtz=opt.hklout, center=b)
 
 

@@ -154,7 +154,7 @@ def _find_blobs_parser(job):
         if line.startswith("#"):
             sp = line.split()
             score = float(sp[5])
-            if score > 150:
+            if True: #score > 150: XXX: better scoring may be needed
                 xyz = tuple(float(x.strip(",()")) for x in sp[-3:])
                 job.data["blobs"].append(xyz)
 

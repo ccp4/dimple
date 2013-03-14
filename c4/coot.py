@@ -31,11 +31,8 @@ def generate_r3d(scene_script, basename, cwd, render_png=False):
                                #(0.5, 0.5, 0.5, 0.5),
                                #(0.5, -0.5, 0.5, 0.5)
                              ]
-            #set_view_quaternion(0., 0., 0., 1.)
     coot_process = Popen(["coot", "--python", "--no-graphics", "--no-guano"],
-                         stdin=PIPE,
-                         #stdout=PIPE, stderr=PIPE,
-                         cwd=cwd)
+                         stdin=PIPE, stdout=PIPE, stderr=PIPE, cwd=cwd)
     # In coot, raster3d() creates file.r3d, make_image_raster3d() additionally
     # calls render program and opens image (convenient for testing)
     script = scene_script
@@ -51,6 +48,7 @@ coot_real_exit(0)
     if render_png:
         for n, _ in enumerate(predefined_quaternions):
             vname = "%sv%d" % (basename, n+1)
+            print "rendering %s/%s.png" % (cwd, vname)
             r3d_script = open(os.path.join(cwd, vname+".r3d")).read()
             render_process = Popen(["render", "-png", vname+".png"],
                                 stdin=PIPE, stdout=PIPE, stderr=PIPE, cwd=cwd)
