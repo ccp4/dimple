@@ -360,6 +360,13 @@ vector<Cluster> find_clusters(const string& pdb_filename,
   CAtom **atoms;
   int n_atoms;
   mm->GetAtomTable(atoms, n_atoms);
+
+  if (config.print_mass_center) {
+    realtype x, y, z;
+    GetMassCenter(atoms, n_atoms, x, y, z);
+    printf("Protein mass center: %s\n", Coord_orth(x,y,z).format().c_str());
+  }
+
   vector<Coord_orth> pdb_coords;
   pdb_coords.reserve(n_atoms);
   for (int i = 0; i < n_atoms; ++i)
@@ -377,13 +384,6 @@ vector<Cluster> find_clusters(const string& pdb_filename,
     i->loc = nearest_to_coords(orth_rts, i->loc, pdb_coords);
 
   std::sort(clusters.begin(), clusters.end(), compare_clusters_by_score);
-
-  if (config.print_mass_center) {
-    realtype x, y, z;
-    GetMassCenter(atoms, n_atoms, x, y, z);
-    printf("Protein mass center: %s\n", Coord_orth(x,y,z).format().c_str());
-  }
-
   return clusters;
 }
 
@@ -472,7 +472,7 @@ int main(int argc, char **argv)
       }
       else if (arg[2] == '\0') {
         if (i+1 == argc)
-          err("Missing arg for option: " + string(arg));
+          err("Unknown option or missing arg for option: " + string(arg));
         parse_option(arg[1], argv[++i], &config);
       }
       else
