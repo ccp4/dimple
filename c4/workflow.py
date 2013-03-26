@@ -157,6 +157,10 @@ def _find_blobs_parser(job):
             if True: #score > 150: XXX: better scoring may be needed
                 xyz = tuple(float(x.strip(",()")) for x in sp[-3:])
                 job.data["blobs"].append(xyz)
+        elif line.startswith("Protein mass center:"):
+            sp = line.split("(")[1].rstrip("\r\n )").split(",")
+            ctr = tuple(float(x) for x in sp)
+            job.data["center"] = ctr
 
 def _refmac_parser(job):
     if "cycle" not in job.data:
@@ -417,31 +421,39 @@ class Workflow:
         job.parser = "_refmac_parser"
         return job
 
+    def findwaters(self, pdbin, hklin, f, phi, pdbout, sigma=2.0):
+        job = Job(self, "findwaters")
+        job.args += ["--pdbin", pdbin, "--hklin", hklin, "--f", f, "--phi", phi,
+                     "--pdbout", pdbout, "--sigma", "%g" % sigma]
+        return job
+
     def find_blobs(self, mtz, pdb, sigma=1.0):
         job = Job(self, full_path_of("find-blobs"))
-        job.args += ["-s%g" % sigma, mtz, pdb]
+        job.args += ["-c", "-s%g" % sigma, mtz, pdb]
         job.parser = "_find_blobs_parser"
         return job
 
 
-    def write_coot_script(self, name, pdb=None, mtz=None, center=None):
+    def write_coot_script(self, name, pdb=None, mtz=None,
+                          center=None, toward=None):
         path = os.path.join(self.output_dir, name)
         with open(path, "w") as f:
-            f.write(c4.coot.basic_script(pdb=pdb, mtz=mtz, center=center))
+            f.write(c4.coot.basic_script(pdb=pdb, mtz=mtz,
+                                         center=center, toward=toward))
 
-    def make_png(self, basename, pdb=None, mtz=None, center=None):
-        scene_script = c4.coot.basic_script(pdb=pdb, mtz=mtz, center=center)
-        c4.coot.generate_r3d(scene_script, basename, cwd=self.output_dir,
-                             render_png=True)
+    def make_png(self, basename, pdb=None, mtz=None, center=None, toward=None):
+        c4.coot.generate_r3d(pdb=pdb, mtz=mtz, center=center,
+                             basename=basename, cwd=self.output_dir,
+                             render_png=True, toward=toward)
 
 
 def open_pickled_workflow(file_or_dir):
     if os.path.isdir(file_or_dir):
         pkl = os.path.join(file_or_dir, "workflow.pickle")
-    elif os.path.exists(file_or_dir):
-        pkl = file_or_dir
     else:
-        sys.stderr.write("No such file: %s\n" % file_or_dir)
+        pkl = file_or_dir
+    if not os.path.exists(pkl):
+        put_error("Workflow data file not found", "No such file: %s" % pkl)
         sys.exit(1)
     f = open(pkl)
     return pickle.load(f)

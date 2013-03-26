@@ -75,10 +75,14 @@ def run_pipeline(wf, opt):
         put("Run MR for R_free > %g\n" % RFREE_FOR_MOLREP)
         wf.molrep(f="prepared.mtz", m="refmacRB.pdb").run()
         refmac_xyzin = "molrep.pdb"
-        # we may add refmac (restr,ncyc=5) and findwaters here
     else:
         put("No MR for R_free < %g\n" % RFREE_FOR_MOLREP)
         refmac_xyzin = "refmacRB.pdb"
+
+    if False:
+        wf.findwaters(pdbin=refmac_xyzin, hklin="refmacRB.mtz",
+                      f="FC", phi="PHIC", pdbout="prepared_wat.pdb", sigma=2)
+        refmac_xyzin = "prepared_wat.pdb"
 
     put("Final restrained refinement.\n")
     wf.refmac5(hklin="prepared.mtz", xyzin=refmac_xyzin,
@@ -92,11 +96,13 @@ def run_pipeline(wf, opt):
                        ncycle 8""").run()
     fb_job = wf.find_blobs(opt.hklout, opt.xyzout, sigma=0.8).run()
     blobs = fb_job.data["blobs"]
+    com = fb_job.data["center"]
     wf.write_coot_script("coot.py", pdb=opt.xyzout, mtz=opt.hklout,
-                         center=(blobs[0] if blobs else None))
+                         center=(blobs[0] if blobs else None), toward=com)
     # For now not more than two blobs, in future better blob/ligand scoring
     for n, b in enumerate(blobs[:2]):
-        wf.make_png("blob%s" % (n+1), pdb=opt.xyzout, mtz=opt.hklout, center=b)
+        wf.make_png("blob%s" % (n+1), pdb=opt.xyzout, mtz=opt.hklout,
+                    center=b, toward=com)
 
 
 
