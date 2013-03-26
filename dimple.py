@@ -94,6 +94,16 @@ def run_pipeline(wf, opt):
                        scale type simple lssc anisotropic experimental
                        solvent yes vdwprob 1.4 ionprob 0.8 mshrink 0.8
                        ncycle 8""").run()
+    # show summary, e.g.
+    # $TEXT:Result: $$ Final results $$
+    #                      Initial    Final
+    #           R factor    0.3348   0.1831
+    #             R free    0.3447   0.2355
+    #     Rms BondLength    0.0145   0.0136
+    #      Rms BondAngle    1.6383   1.4333
+    #     Rms ChirVolume    0.1557   0.0880
+    # $$
+
     fb_job = wf.find_blobs(opt.hklout, opt.xyzout, sigma=0.8).run()
     blobs = fb_job.data["blobs"]
     com = fb_job.data["center"]
@@ -115,6 +125,8 @@ def parse_dimple_commands():
     parser.add_argument('--from-job', metavar='N', type=int, default=0)
     parser.add_argument('--hklout', metavar='out.mtz', default='final.mtz')
     parser.add_argument('--xyzout', metavar='out.pdb', default='final.pdb')
+    parser.add_argument('-s', '--summary', action="store_true",
+                        help="show refmac summary")
     # get rid of 'positional arguments' in the usage method
     parser._action_groups[:1] = []
 

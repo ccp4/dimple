@@ -3,8 +3,10 @@ import os
 import math
 from subprocess import Popen, PIPE
 import textwrap
+import c4.workflow
 
 M_SQRT1_2 = 0.5**0.5
+
 
 def basic_script(pdb, mtz, center, toward=None):
     text = """\
@@ -25,6 +27,7 @@ def basic_script(pdb, mtz, center, toward=None):
            map11 = make_and_draw_map(mtz, "FOFCWT", "PHFOFCWT", "", 0, 1)"""
     return textwrap.dedent(text)
 
+
 def as_quat(p1, p2):
     d = (p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2])
     length = math.sqrt(d[0]*d[0] + d[1]*d[1] + d[2]*d[2])
@@ -43,6 +46,16 @@ def mult_quat(q1, q2):
             w*ay + y*aw + z*ax - x*az,
             w*az + z*aw + x*ay - y*ax,
             w*aw - x*ax - y*ay - z*az)
+
+
+def render_r3d(basename, cwd):
+    print "rendering %s/%s.jpg" % (cwd, basename)
+    render_path = c4.workflow.find_in_path("render")
+    r3d_script = open(os.path.join(cwd, basename+".r3d")).read()
+    render_process = Popen([render_path, "-jpeg", basename+".jpg"],
+                           stdin=PIPE, stdout=PIPE, stderr=PIPE, cwd=cwd)
+    render_process.communicate(input=r3d_script)
+
 
 def generate_r3d(pdb, mtz, center, basename, cwd, render_png, toward=None):
     if toward is None:
@@ -69,11 +82,7 @@ coot_real_exit(0)
 """)
     if render_png:
         for n, _ in enumerate(quaternions):
-            vname = "%sv%d" % (basename, n+1)
-            print "rendering %s/%s.png" % (cwd, vname)
-            r3d_script = open(os.path.join(cwd, vname+".r3d")).read()
-            render_process = Popen(["render", "-png", vname+".png"],
-                                stdin=PIPE, stdout=PIPE, stderr=PIPE, cwd=cwd)
-            render_process.communicate(input=r3d_script)
+            render_r3d("%sv%d" % (basename, n+1), cwd=cwd)
     #Popen(["xdg-open",  os.path.join(cwd, basename+"v1.png")]).wait()
+
 

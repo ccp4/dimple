@@ -178,17 +178,33 @@ def _refmac_parser(job):
         job.data["cycle"], job.ncyc, job.data["free_r"], job.data["overall_r"])
 
 
+def check_prog(dirname, prog):
+    """If prog(.exe) is in dirname return the path (without extension)."""
+    exe = '.exe' if os.name == 'nt' else ''
+    path = os.path.join(dirname, prog)
+    if os.path.exists(path + exe):
+        return path
+
+
 def full_path_of(prog):
     """If prog/prog.exe is not in c4/ then $CCP4/bin is assumed.
     Return value: path with filename without extension.
     """
     assert os.environ.get("CCP4")
-    exe = '.exe' if os.name == 'nt' else ''
-    c4_path = os.path.join(_c4_dir, prog + exe)
-    if os.path.exists(c4_path + exe):
-        return c4_path
-    else:
-        return os.path.join(os.environ["CCP4"], "bin", prog)  # no extension
+    return check_prog(_c4_dir, prog) or \
+            os.path.join(os.environ["CCP4"], "bin", prog)
+
+
+def find_in_path(prog):
+    """If prog/prog.exe is not in c4/ then search in $PATH.
+    Return value: path with filename without extension.
+    """
+    dirs = [_c4_dir] + os.environ["PATH"].split(os.pathsep)
+    for d in dirs:
+        path = check_prog(d, prog)
+        if path:
+            return path
+    put_error("Program not found: %s" % prog)
 
 
 def ccp4_job(workflow, prog, logical=None, input="", add_end=True):
@@ -506,7 +522,3 @@ def parse_workflow_commands():
             sys.exit(1)
         return True
 
-
-if __name__ == '__main__':
-    parse_workflow_commands(sys.argv[1:]) or sys.stderr.write(
-            "Usage: python -m c4.workflow {info|repeat} output_dir [N]\n")
