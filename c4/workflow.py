@@ -166,6 +166,8 @@ def _refmac_parser(job):
     if "cycle" not in job.data:
         job.data["cycle"] = 0
         job.data["free_r"] = job.data["overall_r"] = 0.
+        job.data["summary"] = []
+    summary = job.data["summary"]
     for line in job.out.read_line():
         if line.startswith("Free R factor"):
             job.data['free_r'] = float(line.split('=')[-1])
@@ -174,6 +176,9 @@ def _refmac_parser(job):
         elif (line.startswith("     Rigid body cycle =") or
               line.startswith("     CGMAT cycle number =")):
             job.data['cycle'] = int(line.split('=')[-1])
+        elif line.startswith(" $TEXT:Result: $$ Final results $$") or (
+                summary and not summary[-1].startswith(" $$")):
+            summary.append(line)
     return "cycle %2d/%d   R-free / R = %.4f / %.4f" % (
         job.data["cycle"], job.ncyc, job.data["free_r"], job.data["overall_r"])
 
@@ -457,10 +462,21 @@ class Workflow:
             f.write(c4.coot.basic_script(pdb=pdb, mtz=mtz,
                                          center=center, toward=toward))
 
-    def make_png(self, basename, pdb=None, mtz=None, center=None, toward=None):
-        c4.coot.generate_r3d(pdb=pdb, mtz=mtz, center=center,
-                             basename=basename, cwd=self.output_dir,
-                             render_png=True, toward=toward)
+
+    def make_img(self, blobname, pdb=None, mtz=None, center=None, toward=None,
+                 format="png"):
+        names = c4.coot.generate_r3d(pdb=pdb, mtz=mtz, center=center,
+                                     blobname=blobname, cwd=self.output_dir,
+                                     toward=toward)
+        for basename in names:
+            print "rendering %s/%s.%s" % (self.output_dir, basename, format)
+            render_path = find_in_path("render")
+            r3d = open(os.path.join(self.output_dir, basename+".r3d")).read()
+            render = Popen([render_path, "-%s" % format,
+                                         "%s.%s" % (basename, format)],
+                           stdin=PIPE, stdout=PIPE, stderr=PIPE,
+                           cwd=self.output_dir)
+            render.communicate(input=r3d)
 
 
 def open_pickled_workflow(file_or_dir):

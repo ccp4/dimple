@@ -3,7 +3,6 @@ import os
 import math
 from subprocess import Popen, PIPE
 import textwrap
-import c4.workflow
 
 M_SQRT1_2 = 0.5**0.5
 
@@ -48,16 +47,7 @@ def mult_quat(q1, q2):
             w*aw - x*ax - y*ay - z*az)
 
 
-def render_r3d(basename, cwd):
-    print "rendering %s/%s.jpg" % (cwd, basename)
-    render_path = c4.workflow.find_in_path("render")
-    r3d_script = open(os.path.join(cwd, basename+".r3d")).read()
-    render_process = Popen([render_path, "-jpeg", basename+".jpg"],
-                           stdin=PIPE, stdout=PIPE, stderr=PIPE, cwd=cwd)
-    render_process.communicate(input=r3d_script)
-
-
-def generate_r3d(pdb, mtz, center, basename, cwd, render_png, toward=None):
+def generate_r3d(pdb, mtz, center, blobname, cwd, toward=None):
     if toward is None:
         quat0 = (0., 0., 0., 1.)
     else:
@@ -71,18 +61,17 @@ def generate_r3d(pdb, mtz, center, basename, cwd, render_png, toward=None):
     # In coot, raster3d() creates file.r3d, make_image_raster3d() additionally
     # calls render program and opens image (convenient for testing)
     script = basic_script(pdb=pdb, mtz=mtz, center=center)
+    basenames = []
     for n, quat in enumerate(quaternions):
         script += """
 set_view_quaternion(%g, %g, %g, %g)""" % quat
+        basename = "%sv%d" % (blobname, n+1)
         script += """
 graphics_draw() # this is needed only for coot in --no-graphics mode
-raster3d("%sv%d.r3d")""" % (basename, n+1)
+raster3d("%s.r3d")""" % basename
+        basenames.append(basename)
     coot_process.communicate(input=script+"""
 coot_real_exit(0)
 """)
-    if render_png:
-        for n, _ in enumerate(quaternions):
-            render_r3d("%sv%d" % (basename, n+1), cwd=cwd)
-    #Popen(["xdg-open",  os.path.join(cwd, basename+"v1.png")]).wait()
-
+    return basenames
 

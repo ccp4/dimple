@@ -85,24 +85,17 @@ def run_pipeline(wf, opt):
         refmac_xyzin = "prepared_wat.pdb"
 
     put("Final restrained refinement.\n")
-    wf.refmac5(hklin="prepared.mtz", xyzin=refmac_xyzin,
-               hklout=opt.hklout, xyzout=opt.xyzout,
-               labin=refmac_labin, labout=refmac_labout,
-               keys="""make hydrogen all hout no cispeptide yes ssbridge yes
-                       refinement type restrained
-                       weight matrix 0.2
-                       scale type simple lssc anisotropic experimental
-                       solvent yes vdwprob 1.4 ionprob 0.8 mshrink 0.8
-                       ncycle 8""").run()
-    # show summary, e.g.
-    # $TEXT:Result: $$ Final results $$
-    #                      Initial    Final
-    #           R factor    0.3348   0.1831
-    #             R free    0.3447   0.2355
-    #     Rms BondLength    0.0145   0.0136
-    #      Rms BondAngle    1.6383   1.4333
-    #     Rms ChirVolume    0.1557   0.0880
-    # $$
+    restr_job = wf.refmac5(hklin="prepared.mtz", xyzin=refmac_xyzin,
+                 hklout=opt.hklout, xyzout=opt.xyzout,
+                 labin=refmac_labin, labout=refmac_labout,
+                 keys="""make hydrogen all hout no cispeptide yes ssbridge yes
+                         refinement type restrained
+                         weight matrix 0.2
+                         scale type simple lssc anisotropic experimental
+                         solvent yes vdwprob 1.4 ionprob 0.8 mshrink 0.8
+                         ncycle 8""").run()
+    if opt.summary:
+        put("".join(restr_job.data["summary"]))
 
     fb_job = wf.find_blobs(opt.hklout, opt.xyzout, sigma=0.8).run()
     blobs = fb_job.data["blobs"]
@@ -111,8 +104,8 @@ def run_pipeline(wf, opt):
                          center=(blobs[0] if blobs else None), toward=com)
     # For now not more than two blobs, in future better blob/ligand scoring
     for n, b in enumerate(blobs[:2]):
-        wf.make_png("blob%s" % (n+1), pdb=opt.xyzout, mtz=opt.hklout,
-                    center=b, toward=com)
+        wf.make_img("blob%s" % (n+1), pdb=opt.xyzout, mtz=opt.hklout,
+                    center=b, toward=com, format=opt.format)
 
 
 
@@ -127,6 +120,9 @@ def parse_dimple_commands():
     parser.add_argument('--xyzout', metavar='out.pdb', default='final.pdb')
     parser.add_argument('-s', '--summary', action="store_true",
                         help="show refmac summary")
+    parser.add_argument('-f', choices=["png", "jpeg", "tiff"], default="png",
+                        dest="format",
+                        help="format of generated images [default: png]")
     # get rid of 'positional arguments' in the usage method
     parser._action_groups[:1] = []
 
