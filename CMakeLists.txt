@@ -8,7 +8,11 @@ add_definitions(-DBUILD_EXE)
 add_executable(find-blobs c4/find-blobs.cc)
 target_link_libraries(find-blobs ${CCP4_LIBRARIES})
 
+if (WIN32)
+    install(PROGRAMS dimple.bat DESTINATION bin)
+endif()
 install(TARGETS find-blobs DESTINATION bin)
+install(PROGRAMS dimple DESTINATION bin)
 install(FILES dimple.py DESTINATION lib/python2.7/site-packages)
 install(DIRECTORY c4 DESTINATION lib/python2.7/site-packages
         FILES_MATCHING PATTERN "*.py")
