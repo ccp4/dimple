@@ -3,8 +3,8 @@
 import os
 import sys
 import argparse
-from c4.workflow import Workflow, JobError, put, put_error, \
-                        parse_workflow_commands
+from c4.utils import put, put_error
+from c4.workflow import Workflow, JobError, parse_workflow_commands
 
 RFREE_FOR_MOLREP = 0.4
 

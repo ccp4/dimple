@@ -7,6 +7,7 @@ import threading
 import Queue
 import time
 import cPickle as pickle
+import c4.utils
 import c4.mtz
 import c4.pdb
 import c4.coot
@@ -16,30 +17,11 @@ _jobindex_fmt = "%3d "
 _jobname_fmt = "%-15s"
 _elapsed_fmt = "%5.1fs  "
 
-_c4_dir = os.path.abspath(os.path.dirname(__file__))
-
 
 class JobError(Exception):
     def __init__(self, msg, note=None):
         self.msg = msg
         self.note = note
-
-
-def put(text):
-    sys.stdout.write(text)
-
-def put_green(text):
-    if hasattr(sys.stdout, 'isatty') and sys.stdout.isatty():
-        put("\033[92m%s\033[0m" % text)
-    else:
-        put(text)
-
-def put_error(err, comment=None):
-    if hasattr(sys.stderr, 'isatty') and sys.stderr.isatty():
-        err = "\033[91m%s\033[0m" % err  # in bold red
-    sys.stderr.write("Error: %s.\n" % err)
-    if comment is not None:
-        sys.stderr.write(comment + "\n")
 
 
 class Output:
@@ -183,42 +165,13 @@ def _refmac_parser(job):
         job.data["cycle"], job.ncyc, job.data["free_r"], job.data["overall_r"])
 
 
-def check_prog(dirname, prog):
-    """If prog(.exe) is in dirname return the path (without extension)."""
-    exe = '.exe' if os.name == 'nt' else ''
-    path = os.path.join(dirname, prog)
-    if os.path.exists(path + exe):
-        return path
-
-
-def full_path_of(prog):
-    """If prog/prog.exe is not in c4/ then $CCP4/bin is assumed.
-    Return value: path with filename without extension.
-    """
-    assert os.environ.get("CCP4")
-    return check_prog(_c4_dir, prog) or \
-            os.path.join(os.environ["CCP4"], "bin", prog)
-
-
-def find_in_path(prog):
-    """If prog/prog.exe is not in c4/ then search in $PATH.
-    Return value: path with filename without extension.
-    """
-    dirs = [_c4_dir] + os.environ["PATH"].split(os.pathsep)
-    for d in dirs:
-        path = check_prog(d, prog)
-        if path:
-            return path
-    put_error("Program not found: %s" % prog)
-
-
 def ccp4_job(workflow, prog, logical=None, input="", add_end=True):
     """Handle traditional convention for arguments of CCP4 programs.
     logical is dictionary with where keys are so-called logical names,
     input string or list of lines that are to be passed though stdin
     add_end adds "end" as the last line of stdin
     """
-    job = Job(workflow, full_path_of(prog))
+    job = Job(workflow, c4.utils.full_path_of(prog))
     if logical:
         for a in ["hklin", "hklout", "hklref", "xyzin", "xyzout"]:
             if logical.get(a):
@@ -238,9 +191,9 @@ def _print_elapsed(job, event):
         p = job.parse()
         if p is not None:
             text = (_elapsed_fmt % (time.time() - job.started)) + p
-            put(text)
+            c4.utils.put(text)
             sys.stdout.flush()
-            put("\b"*len(text))
+            c4.utils.put("\b"*len(text))
 
 
 def _start_enqueue_thread(file_obj):
@@ -266,7 +219,7 @@ def _run_and_parse(process, job):
     try:
         process.stdin.write(job.std_input)
     except IOError as e:
-        put("\nWarning: passing std input to %s failed.\n" % job.name)
+        c4.utils.put("\nWarning: passing std input to %s failed.\n" % job.name)
         if e.errno not in (errno.EPIPE, e.errno != errno.EINVAL):
             raise
     process.stdin.close()
@@ -301,12 +254,12 @@ class Workflow:
         if not hasattr(sys.stdout, 'isatty') or not sys.stdout.isatty():
             show_progress = False
         self.jobs.append(job)
-        put(_jobindex_fmt % len(self.jobs))
-        put_green(_jobname_fmt % job.name)
+        c4.utils.put(_jobindex_fmt % len(self.jobs))
+        c4.utils.put_green(_jobname_fmt % job.name)
         sys.stdout.flush()
 
         if self.from_job >= len(self.jobs) + 1:
-            put("skipped\n")
+            c4.utils.put("skipped\n")
             return job
 
         job.started = time.time()
@@ -349,8 +302,8 @@ class Workflow:
 
         job.total_time = time.time() - job.started
         retcode = process.poll()
-        put(_elapsed_fmt % job.total_time)
-        put("%s\n" % (job.parse() or ""))
+        c4.utils.put(_elapsed_fmt % job.total_time)
+        c4.utils.put("%s\n" % (job.parse() or ""))
         self._write_logs(job)
         if retcode:
             all_args = " ".join(pipes.quote(a) for a in job.args)
@@ -449,7 +402,7 @@ class Workflow:
         return job
 
     def find_blobs(self, mtz, pdb, sigma=1.0):
-        job = Job(self, full_path_of("find-blobs"))
+        job = Job(self, c4.utils.full_path_of("find-blobs"))
         job.args += ["-c", "-s%g" % sigma, mtz, pdb]
         job.parser = "_find_blobs_parser"
         return job
@@ -471,7 +424,7 @@ class Workflow:
                                      toward=toward)
         for basename in names:
             print "rendering %s/%s.%s" % (self.output_dir, basename, format)
-            render_path = find_in_path("render")
+            render_path = c4.utils.find_in_path("render")
             r3d = open(os.path.join(self.output_dir, basename+".r3d")).read()
             render = Popen([render_path, "-%s" % format,
                                          "%s.%s" % (basename, format)],
@@ -486,7 +439,8 @@ def open_pickled_workflow(file_or_dir):
     else:
         pkl = file_or_dir
     if not os.path.exists(pkl):
-        put_error("Workflow data file not found", "No such file: %s" % pkl)
+        c4.utils.put_error("Workflow data file not found",
+                           "No such file: %s" % pkl)
         sys.exit(1)
     f = open(pkl)
     return pickle.load(f)
@@ -535,7 +489,7 @@ def parse_workflow_commands():
         try:
             repeat_jobs(wf, job_numbers)
         except JobError as e:
-            put_error(e.msg, comment=e.note)
+            c4.utils.put_error(e.msg, comment=e.note)
             sys.exit(1)
         return True
 

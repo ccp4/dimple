@@ -3,6 +3,7 @@ import os
 import math
 from subprocess import Popen, PIPE
 import textwrap
+import c4.utils
 
 M_SQRT1_2 = 0.5**0.5
 
@@ -56,7 +57,11 @@ def generate_r3d(pdb, mtz, center, blobname, cwd, toward=None):
     quaternions = [quat0, mult_quat(quat0, (0., M_SQRT1_2, 0., M_SQRT1_2)),
                           mult_quat(quat0, (M_SQRT1_2, 0., 0., M_SQRT1_2))]
 
-    coot_process = Popen(["coot", "--python", "--no-graphics", "--no-guano"],
+    coot_path = c4.utils.find_in_path("coot")
+    if not coot_path:
+        c4.utils.put_error("No coot, no pictures")
+        return []
+    coot_process = Popen([coot_path, "--python", "--no-graphics", "--no-guano"],
                          stdin=PIPE, stdout=PIPE, stderr=PIPE, cwd=cwd)
     # In coot, raster3d() creates file.r3d, make_image_raster3d() additionally
     # calls render program and opens image (convenient for testing)
