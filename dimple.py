@@ -99,13 +99,14 @@ def run_pipeline(wf, opt):
 
     fb_job = wf.find_blobs(opt.hklout, opt.xyzout, sigma=0.8).run()
     blobs = fb_job.data["blobs"]
-    com = fb_job.data["center"]
-    wf.write_coot_script("coot.py", pdb=opt.xyzout, mtz=opt.hklout,
-                         center=(blobs[0] if blobs else None), toward=com)
-    # For now not more than two blobs, in future better blob/ligand scoring
-    for n, b in enumerate(blobs[:2]):
-        wf.make_img("blob%s" % (n+1), pdb=opt.xyzout, mtz=opt.hklout,
-                    center=b, toward=com, format=opt.format)
+    if blobs:
+        com = fb_job.data["center"]
+        wf.write_coot_script("coot.py", pdb=opt.xyzout, mtz=opt.hklout,
+                             center=(blobs[0] if blobs else None), toward=com)
+        # For now not more than two blobs, in future better blob/ligand scoring
+        for n, b in enumerate(blobs[:2]):
+            wf.make_img("blob%s" % (n+1), pdb=opt.xyzout, mtz=opt.hklout,
+                        center=b, toward=com, format=opt.format)
 
 
 

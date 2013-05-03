@@ -457,6 +457,7 @@ class Workflow:
 
     def write_coot_script(self, name, pdb=None, mtz=None,
                           center=None, toward=None):
+        assert center is not None
         path = os.path.join(self.output_dir, name)
         with open(path, "w") as f:
             f.write(c4.coot.basic_script(pdb=pdb, mtz=mtz,
