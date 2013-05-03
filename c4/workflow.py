@@ -129,20 +129,27 @@ class Job:
 # parsers for various programs
 def _find_blobs_parser(job):
     if "blobs" not in job.data:
-        sys.stdout.write("\n")
+        #sys.stdout.write("\n")
         job.data["blobs"] = []
+        job.data["scores"] = []
     for line in job.out.read_line():
-        sys.stdout.write(line)
+        #sys.stdout.write(line)
         if line.startswith("#"):
             sp = line.split()
             score = float(sp[5])
             if True: #score > 150: XXX: better scoring may be needed
                 xyz = tuple(float(x.strip(",()")) for x in sp[-3:])
                 job.data["blobs"].append(xyz)
+                job.data["scores"].append(score)
         elif line.startswith("Protein mass center:"):
             sp = line.split("(")[1].rstrip("\r\n )").split(",")
             ctr = tuple(float(x) for x in sp)
             job.data["center"] = ctr
+    scores = job.data["scores"]
+    if scores:
+        return "Blob scores: " + " ".join("%.0f" % sc for sc in scores)
+    else:
+        return ""
 
 def _refmac_parser(job):
     if "cycle" not in job.data:
