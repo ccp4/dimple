@@ -429,9 +429,12 @@ class Workflow:
         names = c4.coot.generate_r3d(pdb=pdb, mtz=mtz, center=center,
                                      blobname=blobname, cwd=self.output_dir,
                                      toward=toward)
+        render_path = c4.utils.find_in_path("render")
+        if not render_path:
+            c4.utils.put_error("No Raster3d, no pictures")
+            return
         for basename in names:
             print "rendering %s/%s.%s" % (self.output_dir, basename, format)
-            render_path = c4.utils.find_in_path("render")
             r3d = open(os.path.join(self.output_dir, basename+".r3d")).read()
             render = Popen([render_path, "-%s" % format,
                                          "%s.%s" % (basename, format)],
