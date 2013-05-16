@@ -8,7 +8,7 @@ from c4.workflow import Workflow, JobError, parse_workflow_commands
 
 RFREE_FOR_MOLREP = 0.4
 
-def run_pipeline(wf, opt):
+def dimple(wf, opt):
     put("Change mtz symmetry if needed. Use pdb as reference.\n")
     wf.pointless(hklin=opt.mtz, xyzin=opt.pdb, hklout="pointless.mtz").run()
     pdb_meta = wf.read_pdb_metadata(opt.pdb)
@@ -85,15 +85,19 @@ def run_pipeline(wf, opt):
         refmac_xyzin = "prepared_wat.pdb"
 
     put("Final restrained refinement.\n")
+    if opt.weight:
+        refmac_weight = "matrix 0.2"
+    else:
+        refmac_weight = "auto"
     restr_job = wf.refmac5(hklin="prepared.mtz", xyzin=refmac_xyzin,
                  hklout=opt.hklout, xyzout=opt.xyzout,
                  labin=refmac_labin, labout=refmac_labout,
                  keys="""make hydrogen all hout no cispeptide yes ssbridge yes
                          refinement type restrained
-                         weight matrix 0.2
+                         weight %s
                          scale type simple lssc anisotropic experimental
                          solvent yes vdwprob 1.4 ionprob 0.8 mshrink 0.8
-                         ncycle 8""").run()
+                         ncycle 8""" % refmac_weight).run()
     if opt.summary:
         put("".join(restr_job.data["summary"]))
 
@@ -124,6 +128,8 @@ def parse_dimple_commands():
     parser.add_argument('-f', choices=["png", "jpeg", "tiff"], default="png",
                         dest="format",
                         help="format of generated images [default: png]")
+    parser.add_argument('--weight', metavar='VALUE', type=float,
+                        help='refmac matrix weight [default: auto-weight]')
     # get rid of 'positional arguments' in the usage method
     parser._action_groups[:1] = []
 
@@ -179,7 +185,7 @@ def main():
     wf = Workflow(options.output_dir)
     wf.from_job = options.from_job
     try:
-        run_pipeline(wf=wf, opt=options)
+        dimple(wf=wf, opt=options)
     except JobError as e:
         put_error(e.msg, comment=e.note)
         wf.pickle_jobs()
