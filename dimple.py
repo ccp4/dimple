@@ -8,6 +8,10 @@ from c4.workflow import Workflow, JobError, parse_workflow_commands
 
 RFREE_FOR_MOLREP = 0.4
 
+if not sys.version_info[:2] == (2, 7):
+    put_error("Python 2.7 is required.")
+    sys.exit(1)
+
 def dimple(wf, opt):
     put("Change mtz symmetry if needed. Use pdb as reference.\n")
     wf.pointless(hklin=opt.mtz, xyzin=opt.pdb, hklout="pointless.mtz").run()
@@ -28,13 +32,19 @@ def dimple(wf, opt):
                 labin="IMEAN=IMEAN SIGIMEAN=SIGIMEAN",
                 labout="F=F SIGF=SIGF").run()
 
-    put("Add missing reflections and flag for cross-validation\n")
-    wf.unique(hklout="unique.mtz",
-              cell=mtz_meta.cell, symmetry=pdb_meta.symmetry,
-              resolution=mtz_meta.resolution_range[1],
-              labout="F=F_UNIQUE SIGF=SIGF_UNIQUE").run()
-    wf.freerflag(hklin="unique.mtz", hklout="free.mtz").run()
-    wf.cad(hklin=["truncate.mtz", "free.mtz"], hklout="prepared.mtz",
+    if opt.free_r_flags:
+        put("Using provided file for free R flags.\n")
+        free_mtz = opt.free_r_flags
+    else:
+        put("Add missing reflections and flag for cross-validation\n")
+        free_mtz = "free.mtz"
+        wf.unique(hklout="unique.mtz",
+                  cell=mtz_meta.cell, symmetry=pdb_meta.symmetry,
+                  resolution=mtz_meta.resolution_range[1],
+                  labout="F=F_UNIQUE SIGF=SIGF_UNIQUE").run()
+        wf.freerflag(hklin="unique.mtz", hklout=free_mtz).run()
+
+    wf.cad(hklin=["truncate.mtz", free_mtz], hklout="prepared.mtz",
            keys="""labin file 1 ALL
                    labin file 2 E1=FreeR_flag
                    """).run()
@@ -130,6 +140,8 @@ def parse_dimple_commands():
                         help="format of generated images [default: png]")
     parser.add_argument('--weight', metavar='VALUE', type=float,
                         help='refmac matrix weight [default: auto-weight]')
+    parser.add_argument('-R', '--free-r-flags', metavar='MTZ_FILE',
+                    help='reference file with all reflections and freeR flags')
     # get rid of 'positional arguments' in the usage method
     parser._action_groups[:1] = []
 
