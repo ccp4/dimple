@@ -3,11 +3,11 @@
 test_dir=$(dirname $0)
 
 # test local version rather than installed one
-dimple() { $test_dir/../dimple.py "$@"; }
+dimple() { python2.7 $test_dir/../dimple.py "$@"; }
 export PYTHONPATH=$test_dir/..${PYTHONPATH:+:${PYTHONPATH}}
 
 echo "Run dimple on artificial thaumatin example"
-dimple $test_dir/thaumatin.* $test_dir/out/
+dimple "$@" $test_dir/thaumatin.* $test_dir/out/
 exit
 
 # the rest in not essential

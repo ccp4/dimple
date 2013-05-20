@@ -2,15 +2,14 @@
 
 import os
 import sys
+if sys.version_info[:2] != (2, 7):
+    sys.stderr.write("Error. Python 2.7 is required.\n")
+    sys.exit(1)
 import argparse
 from c4.utils import put, put_error
 from c4.workflow import Workflow, JobError, parse_workflow_commands
 
 RFREE_FOR_MOLREP = 0.4
-
-if not sys.version_info[:2] == (2, 7):
-    put_error("Python 2.7 is required.")
-    sys.exit(1)
 
 def dimple(wf, opt):
     put("Change mtz symmetry if needed. Use pdb as reference.\n")
@@ -34,6 +33,8 @@ def dimple(wf, opt):
 
     if opt.free_r_flags:
         put("Using provided file for free R flags.\n")
+        #TODO: check resolution of the reference file
+        #TODO: check if this option actually works
         free_mtz = opt.free_r_flags
     else:
         put("Add missing reflections and flag for cross-validation\n")
@@ -116,11 +117,13 @@ def dimple(wf, opt):
     if blobs:
         com = fb_job.data["center"]
         wf.write_coot_script("coot.py", pdb=opt.xyzout, mtz=opt.hklout,
-                             center=(blobs[0] if blobs else None), toward=com)
+                             center=blobs[0], toward=com)
         # For now not more than two blobs, in future better blob/ligand scoring
         for n, b in enumerate(blobs[:2]):
             wf.make_img("blob%s" % (n+1), pdb=opt.xyzout, mtz=opt.hklout,
                         center=b, toward=com, format=opt.format)
+    else:
+        put("Unmodelled blobs not found.\n")
 
 
 
@@ -198,7 +201,7 @@ def main():
     wf.from_job = options.from_job
     try:
         dimple(wf=wf, opt=options)
-    except JobError as e:
+    except JobError, e: # avoiding "as e" syntax for the sake of Py2.4
         put_error(e.msg, comment=e.note)
         wf.pickle_jobs()
         sys.exit(1)
