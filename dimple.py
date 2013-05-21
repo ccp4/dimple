@@ -7,6 +7,7 @@ if sys.version_info[:2] != (2, 7):
     sys.exit(1)
 import argparse
 from c4.utils import put, put_error
+from c4.mtz import check_freerflags_column
 from c4.workflow import Workflow, JobError, parse_workflow_commands
 
 RFREE_FOR_MOLREP = 0.4
@@ -32,23 +33,28 @@ def dimple(wf, opt):
                 labout="F=F SIGF=SIGF").run()
 
     if opt.free_r_flags:
-        put("Using provided file for free R flags.\n")
-        #TODO: check resolution of the reference file
-        #TODO: check if this option actually works
         free_mtz = opt.free_r_flags
+        try:
+            free_col = check_freerflags_column(free_mtz, mtz_meta)
+        except ValueError as e:
+            put_error(e)
+            sys.exit(1)
+        put("Free R flags from given file, col. %s.\n" % free_col)
     else:
-        put("Add missing reflections and flag for cross-validation\n")
+        put("Add missing reflections and free-R flags\n")
         free_mtz = "free.mtz"
         wf.unique(hklout="unique.mtz",
                   cell=mtz_meta.cell, symmetry=pdb_meta.symmetry,
-                  resolution=mtz_meta.resolution_range[1],
+                  resolution=mtz_meta.dmax,
                   labout="F=F_UNIQUE SIGF=SIGF_UNIQUE").run()
         wf.freerflag(hklin="unique.mtz", hklout=free_mtz).run()
+        free_col = 'FreeR_flag'
 
     wf.cad(hklin=["truncate.mtz", free_mtz], hklout="prepared.mtz",
            keys="""labin file 1 ALL
-                   labin file 2 E1=FreeR_flag
-                   """).run()
+                   labin file 2 E1=%s
+                   reso file 2 1000.0 %g
+                   """ % (free_col, mtz_meta.dmax)).run()
 
     if all(pdb_meta.cell[i] - mtz_meta.cell[i] < 1e-3 for i in range(6)):
         put("Cell dimensions in pdb and mtz are the same.\n")
@@ -67,7 +73,7 @@ def dimple(wf, opt):
     else:
         rb_xyzin = correct_cell_pdb
 
-    refmac_labin = "FP=F SIGFP=SIGF FREE=FreeR_flag"
+    refmac_labin = "FP=F SIGFP=SIGF FREE=%s" % free_col
     refmac_labout = ("FC=FC PHIC=PHIC FWT=2FOFCWT PHWT=PH2FOFCWT "
                      "DELFWT=FOFCWT PHDELWT=PHFOFCWT")
     put("Rigid-body refinement.\n")
@@ -170,8 +176,8 @@ def parse_dimple_commands():
     if not opt.pdb.endswith(".pdb"):
         put_error("2nd arg should be pdb file")
         sys.exit(1)
-    for filename in [opt.mtz, opt.pdb]:
-        if not os.path.isfile(filename):
+    for filename in [opt.mtz, opt.pdb, opt.free_r_flags]:
+        if filename and not os.path.isfile(filename):
             put_error("File not found: " + filename)
             sys.exit(1)
     if os.path.exists(opt.output_dir) and not os.path.isdir(opt.output_dir):
@@ -180,6 +186,8 @@ def parse_dimple_commands():
 
     opt.mtz = os.path.relpath(opt.mtz, opt.output_dir)
     opt.pdb = os.path.relpath(opt.pdb, opt.output_dir)
+    if opt.free_r_flags:
+        opt.free_r_flags = os.path.abspath(opt.free_r_flags)
 
     return opt
 

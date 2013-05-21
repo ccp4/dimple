@@ -3,37 +3,43 @@ import subprocess
 from collections import OrderedDict
 
 class MtzMeta:
-    def __init__(self, cell, symmetry, sg_number, resolution_range, columns):
+    def __init__(self, cell, symmetry, sg_number, dmin, dmax, columns):
         assert type(columns[0]) == tuple
         self.cell = cell
-        self.a, self.b, self.c = cell[0:3]
-        self.alpha, self.beta, self.gamma = cell[3:]
+        if cell:
+            self.a, self.b, self.c = cell[0:3]
+            self.alpha, self.beta, self.gamma = cell[3:]
         self.symmetry = symmetry
         self.sg_number = sg_number
-        self.resolution_range = resolution_range
+        self.dmin = dmin
+        self.dmax = dmax
+        assert dmin >= dmax # yes, min > max here
         self.columns = OrderedDict(columns)
     def __str__(self):
         return """\
 cell: %(cell)s
 symmetry: "%(symmetry)s" (symmetry group no. %(sg_number)d)
-resolution range: %(resolution_range)s
+resolution range: %(dmin)s - %(dmax)s
 columns: %(columns)s""" % self.__dict__
 
 
-def read_metadata(xyzin):
+def read_metadata(hklin):
     "for now using mtzdump, directly calling libccp4/mtzlib would be better"
-    p = subprocess.Popen(["mtzdump", "HKLIN", xyzin],
+    p = subprocess.Popen(["mtzdump", "HKLIN", hklin],
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     stdoutdata, stderrdata = p.communicate(input="HEAD\nEND")
     retcode = p.poll()
     if retcode:
-        raise RuntimeError("mtzdump of %s failed." % xyzin)
+        raise RuntimeError("mtzdump of %s failed." % hklin)
     lines = stdoutdata.splitlines()
     for n, line in enumerate(lines):
         if not line.startswith(" * "):
             continue
         if line.startswith(" * Dataset ID, project/crystal/dataset names, ce"):
-            cell = tuple(float(x) for x in lines[n + 5].split())
+            try:
+                cell = tuple(float(x) for x in lines[n + 5].split())
+            except ValueError:
+                cell = None
         elif line.startswith(" * Space group = "):
             symmetry = line.split("'")[1].strip()
             sg_number = int(line.split()[-1].rstrip(")"))
@@ -48,7 +54,22 @@ def read_metadata(xyzin):
             column_types = lines[n+2].split()
     columns = zip(column_names, column_types)
     return MtzMeta(cell, symmetry=symmetry, sg_number=sg_number,
-                   resolution_range=(lower_resol, upper_resol), columns=columns)
+                   dmin=lower_resol, dmax=upper_resol, columns=columns)
+
+
+def check_freerflags_column(free_mtz, data_mtz_meta):
+    rfree_meta = read_metadata(free_mtz)
+    if rfree_meta.dmax > data_mtz_meta.dmax:
+        raise ValueError("free-R-flags dmax: %g (should be < %g)" %
+                                  (rfree_meta.dmax, data_mtz_meta.dmax))
+    if rfree_meta.dmin < data_mtz_meta.dmin:
+        raise ValueError("free-R-flags dmin: %g (should be >= %g)" %
+                                  (rfree_meta.dmin, data_mtz_meta.dmin))
+    for col_label, col_type in rfree_meta.columns.iteritems():
+        if col_label.lower().startswith('free') and col_type == 'I':
+            return col_label
+    raise ValueError("free-R column not found in %s" % free_mtz)
+
 
 if __name__ == '__main__':
     import sys
