@@ -57,9 +57,10 @@ class Output:
             yield line
 
     def finish_que(self):
-        while not self.que.empty():
-            self.lines.append(self.que.get_nowait())
-        self.que = None
+        if self.que:
+            while not self.que.empty():
+                self.lines.append(self.que.get_nowait())
+            self.que = None
 
     def save_output(self, output_dir, filename, remove_long_list=True):
         if self.lines:
@@ -86,13 +87,14 @@ class Job:
         self.workflow = workflow
         self.args = [prog]
         self.std_input = ""
-        self.std_input_from_file = None
+        self.stdin_file = None # if set, it overwrites std_input
         # the rest is set after the job is run
         self.out = Output("out")
         self.err = Output("err")
         self.started = None  # will be set to time.time() at start
         self.total_time = None  # will be set when job ends
         # output parsing helpers
+        # special case: if parser is 0 (or another int) -> show stdout preview
         self.parser = None
         # job-specific data from output parsing
         self.data = {}
@@ -106,8 +108,8 @@ class Job:
 
     def args_as_str(self):
         s = " ".join(pipes.quote(a) for a in self.args)
-        if self.std_input_from_file:
-            s += " < %s" % self.std_input_from_file
+        if self.stdin_file:
+            s += " < %s" % self.stdin_file
         elif self.std_input:
             s += " << EOF\n%s\nEOF" % self.std_input
         return s
@@ -116,19 +118,23 @@ class Job:
         return self.workflow.run_job(job=self, show_progress=True)
 
     def parse(self):
-        if self.parser in (None, "preview"):
+        preview_mode = (self.parser == "preview")
+        if self.parser is None or preview_mode:
             # generic non-parser
             line = ""
             for line in self.out.read_line():
                 pass
 
-            if self.parser == "preview" and line:
-                return "[%4d] %-42s" % (len(self.out.lines), line[:42].rstrip())
+            if preview_mode and line:
+                ret = "[%d] %s" % (len(self.out.lines), line.rstrip())
+                return ret[:50].ljust(50)
 
             ret = "stdout:%11s" % self.out.size_as_str()
             if self.err:
                 ret += " stderr: %s" % self.err.size_as_str()
-            return ret.ljust(50)
+            if preview_mode:
+                ret = ret.ljust(50)
+            return ret
 
         elif self.parser[0] == ' ':
             return self.parser
@@ -210,7 +216,7 @@ def _print_elapsed(job, event):
             text = (_elapsed_fmt % (time.time() - job.started)) + p
             c4.utils.put(text)
             sys.stdout.flush()
-            c4.utils.put("\b"*len(text))
+            c4.utils.put("\b"*len(text) + "\033[0m")
 
 
 def _start_enqueue_thread(file_obj):
@@ -224,9 +230,16 @@ def _start_enqueue_thread(file_obj):
     thr.start()
     return thr, que
 
+def _handle_std_input_from_file(job):
+    # that's clearly suboptimal, but sufficient for now
+    if job.stdin_file:
+        try:
+            job.std_input = open(job.stdin_file).read()
+        except IOError:
+            raise JobError("cannot read input from: %s" % job.stdin_file)
+
 def _just_run(process, job):
-    if job.std_input_from_file:
-        job.std_input = open(job.std_input_from_file).read()  # suboptimal
+    _handle_std_input_from_file(job)
     out, err = process.communicate(input=job.std_input)
     job.out.lines = out.splitlines(True)
     job.err.lines = err.splitlines(True)
@@ -236,8 +249,7 @@ def _run_and_parse(process, job):
     out_t, job.out.que = _start_enqueue_thread(process.stdout)
     err_t, job.err.que = _start_enqueue_thread(process.stderr)
     try:
-        if job.std_input_from_file:
-            job.std_input = open(job.std_input_from_file).read()  # suboptimal
+        _handle_std_input_from_file(job)
         process.stdin.write(job.std_input)
     except IOError as e:
         c4.utils.put("\nWarning: passing std input to %s failed.\n" % job.name)
@@ -310,16 +322,17 @@ class Workflow:
             else:
                 _just_run(process, job)
         except KeyboardInterrupt:
+            raise JobError("\nKeyboardInterrupt while running %s" % job.name,
+                           note=job.args_as_str())
+        finally:
             self._write_logs(job)
             # Queues could cause PicklingError, empty and delete them
             job.out.finish_que()
             job.err.finish_que()
-            raise JobError("\nKeyboardInterrupt while running %s" % job.name,
-                           note=job.args_as_str())
 
-        if show_progress:
-            event.set()
-            progress_thread.join()
+            if show_progress:
+                event.set()
+                progress_thread.join()
 
         job.total_time = time.time() - job.started
         retcode = process.poll()
@@ -438,7 +451,7 @@ class Workflow:
     def render_r3d(self, name, format="png"):
         job = Job(self, c4.utils.syspath("render"))
         job.args += ["-"+format, "%s.%s" % (name, format)]
-        job.std_input_from_file = os.path.join(self.output_dir, name+".r3d")
+        job.stdin_file = os.path.join(self.output_dir, name+".r3d")
         job.parser = " -> %s.%s" % (name, format)
         return job
 

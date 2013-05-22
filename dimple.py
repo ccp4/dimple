@@ -5,6 +5,7 @@ import sys
 if sys.version_info[:2] != (2, 7):
     sys.stderr.write("Error. Python 2.7 is required.\n")
     sys.exit(1)
+import subprocess
 import argparse
 from c4.utils import put, put_error, syspath
 from c4.mtz import check_freerflags_column
@@ -37,7 +38,7 @@ def dimple(wf, opt):
         free_mtz = opt.free_r_flags
         try:
             free_col = check_freerflags_column(free_mtz, mtz_meta)
-        except ValueError as e:
+        except ValueError, e: # avoiding "as e" syntax for the sake of Py2.4
             put_error(e)
             sys.exit(1)
         put("Free R flags from given file, col. %s.\n" % free_col)
@@ -129,9 +130,18 @@ def dimple(wf, opt):
 
 def _check_picture_tools():
     ok = True
-    if not syspath("coot"):
+    coot_path = syspath("coot")
+    if not coot_path:
         put_error("No coot, no pictures")
         ok = False
+    else:
+        coot_ver = subprocess.check_output([coot_path, "--version"])
+        if "with python" not in coot_ver:
+            put_error("coot with Python support is needed")
+            ok = False
+        if "\n0.6." in coot_ver:
+            put_error("coot 0.7+ is needed (0.6 would crash)")
+            ok = False
     if not syspath("render"):
         put_error("No Raster3d, no pictures")
         ok = False
