@@ -6,9 +6,10 @@ if sys.version_info[:2] != (2, 7):
     sys.stderr.write("Error. Python 2.7 is required.\n")
     sys.exit(1)
 import argparse
-from c4.utils import put, put_error
+from c4.utils import put, put_error, syspath
 from c4.mtz import check_freerflags_column
 from c4.workflow import Workflow, JobError, parse_workflow_commands
+from c4 import coot
 
 RFREE_FOR_MOLREP = 0.4
 
@@ -119,18 +120,48 @@ def dimple(wf, opt):
         put("".join(restr_job.data["summary"]))
 
     fb_job = wf.find_blobs(opt.hklout, opt.xyzout, sigma=0.8).run()
-    blobs = fb_job.data["blobs"]
-    if blobs:
-        com = fb_job.data["center"]
-        wf.write_coot_script("coot.py", pdb=opt.xyzout, mtz=opt.hklout,
-                             center=blobs[0], toward=com)
-        # For now not more than two blobs, in future better blob/ligand scoring
-        for n, b in enumerate(blobs[:2]):
-            wf.make_img("blob%s" % (n+1), pdb=opt.xyzout, mtz=opt.hklout,
-                        center=b, toward=com, format=opt.format)
+    if fb_job.data["blobs"]:
+        if _check_picture_tools():
+            _generate_pictures(wf, opt, fb_job)
     else:
         put("Unmodelled blobs not found.\n")
 
+
+def _check_picture_tools():
+    ok = True
+    if not syspath("coot"):
+        put_error("No coot, no pictures")
+        ok = False
+    if not syspath("render"):
+        put_error("No Raster3d, no pictures")
+        ok = False
+    return ok
+
+
+def _generate_pictures(wf, opt, fb_job):
+    blobs = fb_job.data["blobs"]
+    put("Rendering %d blob(s).\n" % min(len(blobs), 2))
+    com = fb_job.data["center"]
+
+    # write coot script (apart from pictures) that centers on the biggest blob
+    script_path = os.path.join(wf.output_dir, "coot.py")
+    script = coot.basic_script(pdb=opt.xyzout, mtz=opt.hklout,
+                               center=blobs[0], toward=com)
+    open(script_path, "w").write(script)
+
+    # blob images, for now for not more than two blobs
+    basenames = []
+    for n, b in enumerate(blobs[:2]):
+        if n != 0:
+            # workaround for buggy coot: reloading maps
+            script = coot.basic_script(pdb=opt.xyzout, mtz=opt.hklout,
+                                       center=b, toward=com)
+        rs, names = coot.r3d_script(b, com, blobname="blob%s"%(n+1))
+        script += rs
+        basenames += names
+    wf.coot_py(script).run()
+    for basename in basenames:
+        wf.render_r3d(basename, format=opt.format).run()
 
 
 def parse_dimple_commands():

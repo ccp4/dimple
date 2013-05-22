@@ -86,6 +86,7 @@ class Job:
         self.workflow = workflow
         self.args = [prog]
         self.std_input = ""
+        self.std_input_from_file = None
         # the rest is set after the job is run
         self.out = Output("out")
         self.err = Output("err")
@@ -105,7 +106,9 @@ class Job:
 
     def args_as_str(self):
         s = " ".join(pipes.quote(a) for a in self.args)
-        if self.std_input:
+        if self.std_input_from_file:
+            s += " < %s" % self.std_input_from_file
+        elif self.std_input:
             s += " << EOF\n%s\nEOF" % self.std_input
         return s
 
@@ -113,17 +116,26 @@ class Job:
         return self.workflow.run_job(job=self, show_progress=True)
 
     def parse(self):
-        if self.parser:
-            p = globals()[self.parser]
-            return p(self)
-        else:
+        if self.parser in (None, "preview"):
             # generic non-parser
+            line = ""
             for line in self.out.read_line():
                 pass
+
+            if self.parser == "preview" and line:
+                return "[%4d] %-42s" % (len(self.out.lines), line[:42].rstrip())
+
             ret = "stdout:%11s" % self.out.size_as_str()
             if self.err:
                 ret += " stderr: %s" % self.err.size_as_str()
-            return ret
+            return ret.ljust(50)
+
+        elif self.parser[0] == ' ':
+            return self.parser
+
+        else:
+            p = globals()[self.parser]
+            return p(self)
 
 
 # parsers for various programs
@@ -178,7 +190,7 @@ def ccp4_job(workflow, prog, logical=None, input="", add_end=True):
     input string or list of lines that are to be passed though stdin
     add_end adds "end" as the last line of stdin
     """
-    job = Job(workflow, c4.utils.full_path_of(prog))
+    job = Job(workflow, c4.utils.cbin(prog))
     if logical:
         for a in ["hklin", "hklout", "hklref", "xyzin", "xyzout"]:
             if logical.get(a):
@@ -187,9 +199,7 @@ def ccp4_job(workflow, prog, logical=None, input="", add_end=True):
     stripped = [a.strip() for a in lines if a and not a.isspace()]
     if add_end and not (stripped and stripped[-1].lower() == "end"):
         stripped.append("end")
-    if job.std_input:
-        job.std_input += "\n"
-    job.std_input += "\n".join(stripped)
+    job.std_input = "\n".join(stripped)
     return job
 
 
@@ -215,6 +225,8 @@ def _start_enqueue_thread(file_obj):
     return thr, que
 
 def _just_run(process, job):
+    if job.std_input_from_file:
+        job.std_input = open(job.std_input_from_file).read()  # suboptimal
     out, err = process.communicate(input=job.std_input)
     job.out.lines = out.splitlines(True)
     job.err.lines = err.splitlines(True)
@@ -224,6 +236,8 @@ def _run_and_parse(process, job):
     out_t, job.out.que = _start_enqueue_thread(process.stdout)
     err_t, job.err.que = _start_enqueue_thread(process.stderr)
     try:
+        if job.std_input_from_file:
+            job.std_input = open(job.std_input_from_file).read()  # suboptimal
         process.stdin.write(job.std_input)
     except IOError as e:
         c4.utils.put("\nWarning: passing std input to %s failed.\n" % job.name)
@@ -344,7 +358,7 @@ class Workflow:
         return c4.mtz.read_metadata(os.path.join(self.output_dir, hklin))
 
     def molrep(self, f, m):
-        job = Job(self, "molrep")
+        job = Job(self, c4.utils.cbin("molrep"))
         job.args.extend(["-f", f, "-m", m])
         return job
 
@@ -409,38 +423,24 @@ class Workflow:
         return job
 
     def find_blobs(self, mtz, pdb, sigma=1.0):
-        job = Job(self, c4.utils.full_path_of("find-blobs"))
+        job = Job(self, c4.utils.cbin("find-blobs"))
         job.args += ["-c", "-s%g" % sigma, mtz, pdb]
         job.parser = "_find_blobs_parser"
         return job
 
+    def coot_py(self, script_text):
+        job = Job(self, c4.utils.syspath("coot"))
+        job.args.extend(["--python", "--no-graphics", "--no-guano"])
+        job.std_input = script_text + "\ncoot_real_exit(0)"
+        job.parser = "preview"
+        return job
 
-    def write_coot_script(self, name, pdb=None, mtz=None,
-                          center=None, toward=None):
-        assert center is not None
-        path = os.path.join(self.output_dir, name)
-        with open(path, "w") as f:
-            f.write(c4.coot.basic_script(pdb=pdb, mtz=mtz,
-                                         center=center, toward=toward))
-
-
-    def make_img(self, blobname, pdb=None, mtz=None, center=None, toward=None,
-                 format="png"):
-        names = c4.coot.generate_r3d(pdb=pdb, mtz=mtz, center=center,
-                                     blobname=blobname, cwd=self.output_dir,
-                                     toward=toward)
-        render_path = c4.utils.find_in_path("render")
-        if not render_path:
-            c4.utils.put_error("No Raster3d, no pictures")
-            return
-        for basename in names:
-            print "rendering %s/%s.%s" % (self.output_dir, basename, format)
-            r3d = open(os.path.join(self.output_dir, basename+".r3d")).read()
-            render = Popen([render_path, "-%s" % format,
-                                         "%s.%s" % (basename, format)],
-                           stdin=PIPE, stdout=PIPE, stderr=PIPE,
-                           cwd=self.output_dir)
-            render.communicate(input=r3d)
+    def render_r3d(self, name, format="png"):
+        job = Job(self, c4.utils.syspath("render"))
+        job.args += ["-"+format, "%s.%s" % (name, format)]
+        job.std_input_from_file = os.path.join(self.output_dir, name+".r3d")
+        job.parser = " -> %s.%s" % (name, format)
+        return job
 
 
 def open_pickled_workflow(file_or_dir):

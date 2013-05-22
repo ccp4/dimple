@@ -28,7 +28,7 @@ def check_prog(dirname, prog):
         return path
 
 
-def full_path_of(prog):
+def cbin(prog):
     """If prog/prog.exe is not in c4/ then $CCP4/bin is assumed.
     Return value: path with filename without extension.
     """
@@ -37,8 +37,8 @@ def full_path_of(prog):
             os.path.join(os.environ["CCP4"], "bin", prog)
 
 
-def find_in_path(prog):
-    """If prog/prog.exe is not in c4/ then search in $PATH.
+def syspath(prog):
+    """If prog/prog.exe is not in c4/ then search in the system $PATH.
     Return value: path with filename without extension.
     """
     dirs = [_c4_dir] + os.environ["PATH"].split(os.pathsep)
