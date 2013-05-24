@@ -461,7 +461,7 @@ def open_pickled_workflow(file_or_dir):
         c4.utils.put_error("workflow data file not found",
                            "No such file: %s" % pkl)
         sys.exit(1)
-    f = open(pkl)
+    f = open(pkl, "rb")
     try:
         return pickle.load(f)
     except EOFError:
