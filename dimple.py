@@ -164,8 +164,8 @@ def _generate_pictures(wf, opt, fb_job):
     for n, b in enumerate(blobs[:2]):
         if n != 0:
             # workaround for buggy coot: reloading maps
-            script = coot.basic_script(pdb=opt.xyzout, mtz=opt.hklout,
-                                       center=b, toward=com)
+            script += coot.basic_script(pdb=opt.xyzout, mtz=opt.hklout,
+                                        center=b, toward=com)
         rs, names = coot.r3d_script(b, com, blobname="blob%s"%(n+1))
         script += rs
         basenames += names
