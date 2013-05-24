@@ -35,12 +35,6 @@ class Output:
     def __nonzero__(self):
         return bool(self.lines or self.saved_to)
 
-    def clear(self):
-        self.lines = None
-
-    def append(self, line):
-        self.lines.append(line)
-
     def size_as_str(self):
         if self.lines:
             return "%d lines" % len(self.lines)
@@ -93,8 +87,10 @@ class Job:
         self.err = Output("err")
         self.started = None  # will be set to time.time() at start
         self.total_time = None  # will be set when job ends
-        # output parsing helpers
-        # special case: if parser is 0 (or another int) -> show stdout preview
+        # possible values: None (default),
+        #                  'preview' (stdout preview),
+        #                  string starting with space (' ') that is just shown,
+        #                  or name of global function that parses output
         self.parser = None
         # job-specific data from output parsing
         self.data = {}
@@ -246,26 +242,28 @@ def _just_run(process, job):
     job.err.lines = err.splitlines(True)
 
 def _run_and_parse(process, job):
-    # job.*.que can be used by parsers (via Output.read_line() or directly)
-    out_t, job.out.que = _start_enqueue_thread(process.stdout)
-    err_t, job.err.que = _start_enqueue_thread(process.stderr)
     try:
-        _handle_std_input_from_file(job)
-        process.stdin.write(job.std_input)
-    except IOError as e:
-        c4.utils.put("\nWarning: passing std input to %s failed.\n" % job.name)
-        if e.errno not in (errno.EPIPE, e.errno != errno.EINVAL):
-            raise
-    process.stdin.close()
-    out_t.join()
-    err_t.join()
-    process.wait()
-    # nothing is written to the queues at this point
-    # parse what's left in the queues
-    job.parse()
-    # take care of what is left by the parser
-    job.out.finish_que()
-    job.err.finish_que()
+        # job.*.que can be used by parsers (via Output.read_line() or directly)
+        out_t, job.out.que = _start_enqueue_thread(process.stdout)
+        err_t, job.err.que = _start_enqueue_thread(process.stderr)
+        try:
+            _handle_std_input_from_file(job)
+            process.stdin.write(job.std_input)
+        except IOError as e:
+            c4.utils.put("\nWarning: passing input to %s failed.\n" % job.name)
+            if e.errno not in (errno.EPIPE, e.errno != errno.EINVAL):
+                raise
+        process.stdin.close()
+        out_t.join()
+        err_t.join()
+        process.wait()
+        # nothing is written to the queues at this point
+        # parse what's left in the queues
+        job.parse()
+    finally:
+        # take care of what is left by the parser
+        job.out.finish_que()
+        job.err.finish_que()
 
 
 class Workflow:
@@ -326,20 +324,16 @@ class Workflow:
             raise JobError("\nKeyboardInterrupt while running %s" % job.name,
                            note=job.args_as_str())
         finally:
-            self._write_logs(job)
-            # Queues could cause PicklingError, empty and delete them
-            job.out.finish_que()
-            job.err.finish_que()
-
             if show_progress:
                 event.set()
                 progress_thread.join()
 
-        job.total_time = time.time() - job.started
-        retcode = process.poll()
-        c4.utils.put(_elapsed_fmt % job.total_time)
-        c4.utils.put("%s\n" % (job.parse() or ""))
-        self._write_logs(job)
+
+            job.total_time = time.time() - job.started
+            retcode = process.poll()
+            c4.utils.put(_elapsed_fmt % job.total_time)
+            c4.utils.put("%s\n" % (job.parse() or ""))
+            self._write_logs(job)
         if retcode:
             all_args = " ".join(pipes.quote(a) for a in job.args)
             notes = []

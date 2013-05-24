@@ -14,7 +14,7 @@ def find_path():
         else:
             put_error("WinCoot not found.")
     else:
-        return syspath("coot")
+        return c4.utils.syspath("coot")
 
 def basic_script(pdb, mtz, center, toward):
     text = """\
