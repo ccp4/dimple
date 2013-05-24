@@ -462,12 +462,7 @@ def open_pickled_workflow(file_or_dir):
                            "No such file: %s" % pkl)
         sys.exit(1)
     f = open(pkl, "rb")
-    try:
-        return pickle.load(f)
-    except EOFError:
-        c4.utils.put_error("workflow data file is corrupted",
-                           "Cannot unpickle: %s" % pkl)
-        sys.exit(1)
+    return pickle.load(f)
 
 def show_info(wf, job_numbers):
     if not job_numbers:
@@ -480,8 +475,9 @@ def show_info(wf, job_numbers):
 
 def show_job_info(job):
     sys.stdout.write("%s\n" % job)
-    sys.stdout.write(job.args_as_str())
-    sys.stdout.write("\nTotal time: %.1fs\n" % job.total_time)
+    sys.stdout.write(job.args_as_str() + "\n")
+    if job.total_time:
+        sys.stdout.write("Total time: %.1fs\n" % job.total_time)
     if job.parser and job.parse():
         sys.stdout.write("Output summary: %s\n" % job.parse())
     if job.out.saved_to:
