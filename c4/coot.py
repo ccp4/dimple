@@ -2,9 +2,19 @@
 import os
 import math
 import textwrap
+import c4.utils
 
 M_SQRT1_2 = 0.5**0.5
 
+def find_path():
+    if os.name == 'nt':
+        default_path = "C:/WinCoot/runwincoot.bat"
+        if os.path.exists(default_path):
+            return default_path
+        else:
+            put_error("WinCoot not found.")
+    else:
+        return syspath("coot")
 
 def basic_script(pdb, mtz, center, toward):
     text = """\

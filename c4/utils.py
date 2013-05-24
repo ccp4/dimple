@@ -8,13 +8,22 @@ def put(text):
 
 def put_green(text):
     if hasattr(sys.stdout, 'isatty') and sys.stdout.isatty():
-        put("\033[92m%s\033[0m" % text)
+        if os.name != 'nt':
+            put("\033[92m%s\033[0m" % text)
+        else:
+            put(text)
     else:
         put(text)
 
+def reset_color():
+    if hasattr(sys.stdout, 'isatty') and sys.stdout.isatty():
+        if os.name != 'nt':
+            put("\033[0m")
+
 def put_error(err, comment=None):
     if hasattr(sys.stderr, 'isatty') and sys.stderr.isatty():
-        err = "\033[91m%s\033[0m" % err  # in bold red
+        if os.name != 'nt':
+            err = "\033[91m%s\033[0m" % err  # in bold red
     sys.stderr.write("Error: %s.\n" % err)
     if comment is not None:
         sys.stderr.write(comment + "\n")

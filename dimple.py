@@ -130,7 +130,7 @@ def dimple(wf, opt):
 
 def _check_picture_tools():
     ok = True
-    coot_path = syspath("coot")
+    coot_path = coot.find_path()
     if not coot_path:
         put_error("No coot, no pictures")
         ok = False
@@ -154,7 +154,7 @@ def _generate_pictures(wf, opt, fb_job):
     com = fb_job.data["center"]
 
     # write coot script (apart from pictures) that centers on the biggest blob
-    script_path = os.path.join(wf.output_dir, "coot.py")
+    script_path = os.path.join(wf.output_dir, "run-coot.py")
     script = coot.basic_script(pdb=opt.xyzout, mtz=opt.hklout,
                                center=blobs[0], toward=com)
     open(script_path, "w").write(script)

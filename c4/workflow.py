@@ -216,7 +216,8 @@ def _print_elapsed(job, event):
             text = (_elapsed_fmt % (time.time() - job.started)) + p
             c4.utils.put(text)
             sys.stdout.flush()
-            c4.utils.put("\b"*len(text) + "\033[0m")
+            c4.utils.put("\b"*len(text))
+            c4.utils.reset_color()
 
 
 def _start_enqueue_thread(file_obj):
@@ -436,13 +437,14 @@ class Workflow:
         return job
 
     def find_blobs(self, mtz, pdb, sigma=1.0):
-        job = Job(self, c4.utils.cbin("find-blobs"))
+        # for now search in PATH (which normally includes CBIN)
+        job = Job(self, c4.utils.syspath("find-blobs"))
         job.args += ["-c", "-s%g" % sigma, mtz, pdb]
         job.parser = "_find_blobs_parser"
         return job
 
     def coot_py(self, script_text):
-        job = Job(self, c4.utils.syspath("coot"))
+        job = Job(self, c4.coot.find_path())
         job.args.extend(["--python", "--no-graphics", "--no-guano"])
         job.std_input = script_text + "\ncoot_real_exit(0)"
         job.parser = "preview"
@@ -462,11 +464,16 @@ def open_pickled_workflow(file_or_dir):
     else:
         pkl = file_or_dir
     if not os.path.exists(pkl):
-        c4.utils.put_error("Workflow data file not found",
+        c4.utils.put_error("workflow data file not found",
                            "No such file: %s" % pkl)
         sys.exit(1)
     f = open(pkl)
-    return pickle.load(f)
+    try:
+        return pickle.load(f)
+    except EOFError:
+        c4.utils.put_error("workflow data file is corrupted",
+                           "Cannot unpickle: %s" % pkl)
+        sys.exit(1)
 
 def show_info(wf, job_numbers):
     if not job_numbers:
