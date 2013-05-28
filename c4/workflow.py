@@ -227,17 +227,18 @@ def _start_enqueue_thread(file_obj):
     thr.start()
     return thr, que
 
-def _handle_std_input_from_file(job):
-    # that's clearly suboptimal, but sufficient for now
+def _get_input_as_string(job):
     if job.stdin_file:
         try:
-            job.std_input = open(job.stdin_file).read()
+            return open(job.stdin_file, "rb").read()
         except IOError:
             raise JobError("cannot read input from: %s" % job.stdin_file)
+    else:
+        return job.std_input
 
 def _just_run(process, job):
-    _handle_std_input_from_file(job)
-    out, err = process.communicate(input=job.std_input)
+    job_input = _get_input_as_string(job)
+    out, err = process.communicate(input=job_input)
     job.out.lines = out.splitlines(True)
     job.err.lines = err.splitlines(True)
 
@@ -247,8 +248,8 @@ def _run_and_parse(process, job):
         out_t, job.out.que = _start_enqueue_thread(process.stdout)
         err_t, job.err.que = _start_enqueue_thread(process.stderr)
         try:
-            _handle_std_input_from_file(job)
-            process.stdin.write(job.std_input)
+            job_input = _get_input_as_string(job)
+            process.stdin.write(job_input)
         except IOError as e:
             c4.utils.put("\nWarning: passing input to %s failed.\n" % job.name)
             if e.errno not in (errno.EPIPE, e.errno != errno.EINVAL):
@@ -450,6 +451,15 @@ class Workflow:
         job.stdin_file = os.path.join(self.output_dir, name+".r3d")
         job.parser = " -> %s.%s" % (name, format)
         return job
+
+    def delete_files(self, filenames):
+        for f in filenames:
+            path = os.path.join(self.output_dir, f)
+            if os.path.exists(path):
+                try:
+                    os.remove(path)
+                except OSError, e:
+                    c4.utils.put_error(e)
 
 
 def open_pickled_workflow(file_or_dir):

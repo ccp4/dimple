@@ -172,6 +172,7 @@ def _generate_pictures(wf, opt, fb_job):
     wf.coot_py(script).run()
     for basename in basenames:
         wf.render_r3d(basename, format=opt.format).run()
+    wf.delete_files([name+".r3d" for name in basenames])
 
 
 def parse_dimple_commands():
