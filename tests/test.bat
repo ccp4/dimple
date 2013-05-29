@@ -1,5 +1,3 @@
-#!/bin/sh -e
-
 @setlocal
 @set testdir=%~dp0
 
