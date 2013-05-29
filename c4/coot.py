@@ -3,6 +3,7 @@ import os
 import math
 import textwrap
 import c4.utils
+import subprocess
 
 M_SQRT1_2 = 0.5**0.5
 
@@ -12,9 +13,20 @@ def find_path():
         if os.path.exists(default_path):
             return default_path
         else:
-            put_error("WinCoot not found.")
+            c4.utils.put_error("WinCoot not found.")
     else:
         return c4.utils.syspath("coot")
+
+# returns tuple: coot path and version string
+def find_path_and_version():
+    coot_path = find_path()
+    if not coot_path:
+        return None, None
+    # On Windows reading output from runwincoot.bat is not reliable,
+    # and coot-real.exe --version works fine
+    coot_for_ver = coot_path.replace('runwincoot.bat', 'bin/coot-real.exe')
+    version_str = subprocess.check_output([coot_for_ver, "--version"])
+    return coot_path, version_str
 
 def basic_script(pdb, mtz, center, toward):
     text = """\

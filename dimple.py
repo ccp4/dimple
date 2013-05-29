@@ -5,7 +5,6 @@ import sys
 if sys.version_info[:2] != (2, 7):
     sys.stderr.write("Error. Python 2.7 is required.\n")
     sys.exit(1)
-import subprocess
 import argparse
 from c4.utils import put, put_error, syspath
 from c4.mtz import check_freerflags_column
@@ -130,11 +129,8 @@ def dimple(wf, opt):
 
 def _check_picture_tools():
     ok = True
-    coot_path = coot.find_path()
+    coot_path, coot_ver = coot.find_path_and_version()
     if coot_path:
-        # On Windows reading output from runwincoot.bat is not reliable
-        coot_path = coot_path.replace('runwincoot.bat', 'bin/coot-real.exe')
-        coot_ver = subprocess.check_output([coot_path, "--version"])
         if "with python" not in coot_ver:
             put_error("coot with Python support is needed")
             ok = False

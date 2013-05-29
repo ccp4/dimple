@@ -441,7 +441,17 @@ class Workflow:
     def coot_py(self, script_text):
         job = Job(self, c4.coot.find_path())
         job.args.extend(["--python", "--no-graphics", "--no-guano"])
-        job.std_input = script_text + "\ncoot_real_exit(0)"
+        script_text += "\ncoot_real_exit(0)"
+        # On some Wincoot installations coot-real.exe is started from
+        # runwincoot.bat directly, and on some as "start ... coot-real ...".
+        # There is no way afaics to pipe stdin to coot-real.
+        if os.name == 'nt':
+            helper_path = os.path.join(self.output_dir, "r3d.py")
+            with open(helper_path, "w") as f:
+                f.write(script_text)
+            job.args.append(helper_path)
+        else:
+            job.std_input = script_text
         job.parser = "preview"
         return job
 
