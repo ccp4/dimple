@@ -131,10 +131,9 @@ def dimple(wf, opt):
 def _check_picture_tools():
     ok = True
     coot_path = coot.find_path()
-    if not coot_path:
-        put_error("No coot, no pictures")
-        ok = False
-    else:
+    if coot_path:
+        # On Windows reading output from runwincoot.bat is not reliable
+        coot_path = coot_path.replace('runwincoot.bat', 'bin/coot-real.exe')
         coot_ver = subprocess.check_output([coot_path, "--version"])
         if "with python" not in coot_ver:
             put_error("coot with Python support is needed")
@@ -142,6 +141,9 @@ def _check_picture_tools():
         if "\n0.6." in coot_ver:
             put_error("coot 0.7+ is needed (0.6 would crash)")
             ok = False
+    else:
+        put_error("No coot, no pictures")
+        ok = False
     if not syspath("render"):
         put_error("No Raster3d, no pictures")
         ok = False
