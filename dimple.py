@@ -167,7 +167,7 @@ def _generate_pictures(wf, opt, fb_job):
         rs, names = coot.r3d_script(b, com, blobname="blob%s"%(n+1))
         script += rs
         basenames += names
-    wf.coot_py(script).run()
+        wf.coot_py(script).run()
     for basename in basenames:
         wf.render_r3d(basename, format=opt.format).run()
     wf.delete_files([name+".r3d" for name in basenames])
