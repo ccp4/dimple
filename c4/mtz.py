@@ -1,9 +1,12 @@
 
 import subprocess
 from collections import OrderedDict
+import sys
+from c4.utils import put_error
 
 class MtzMeta:
-    def __init__(self, cell, symmetry, sg_number, dmin, dmax, columns):
+    def __init__(self, cell, symmetry, sg_number, dmin, dmax, columns,
+                 filename):
         assert type(columns[0]) == tuple
         self.cell = cell
         if cell:
@@ -15,12 +18,26 @@ class MtzMeta:
         self.dmax = dmax
         assert dmin >= dmax # yes, min > max here
         self.columns = OrderedDict(columns)
+        self.filename = filename
+
     def __str__(self):
         return """\
 cell: %(cell)s
 symmetry: "%(symmetry)s" (symmetry group no. %(sg_number)d)
 resolution range: %(dmin)s - %(dmax)s
 columns: %(columns)s""" % self.__dict__
+
+    def check_col_type(self, label, expected_type):
+        if label not in self.columns:
+            put_error("Column '%s' not found in %s" % (label, self.filename))
+            sys.exit(1)
+        col_type = self.columns[label]
+        if col_type != expected_type:
+            put_error("Column '%s' in %s has type '%s' (expected '%s')" %
+                      (label, self.filename, col_type, expected_type))
+            return False
+        return True
+
 
 
 def read_metadata(hklin):
@@ -54,10 +71,11 @@ def read_metadata(hklin):
             column_types = lines[n+2].split()
     columns = zip(column_names, column_types)
     return MtzMeta(cell, symmetry=symmetry, sg_number=sg_number,
-                   dmin=lower_resol, dmax=upper_resol, columns=columns)
-
+                   dmin=lower_resol, dmax=upper_resol, columns=columns,
+                   filename=hklin)
 
 def check_freerflags_column(free_mtz, data_mtz_meta):
+    names = ['FreeR_flag', 'FREE']
     rfree_meta = read_metadata(free_mtz)
     if rfree_meta.dmax > data_mtz_meta.dmax:
         raise ValueError("free-R-flags dmax: %g (should be < %g)" %
@@ -65,9 +83,10 @@ def check_freerflags_column(free_mtz, data_mtz_meta):
     if rfree_meta.dmin < data_mtz_meta.dmin:
         raise ValueError("free-R-flags dmin: %g (should be >= %g)" %
                                   (rfree_meta.dmin, data_mtz_meta.dmin))
-    for col_label, col_type in rfree_meta.columns.iteritems():
-        if col_label.lower().startswith('free') and col_type == 'I':
-            return col_label
+    for name in names:
+        if name in rfree_meta.columns:
+            rfree_meta.check_col_type(name, 'I')
+            return name
     raise ValueError("free-R column not found in %s" % free_mtz)
 
 

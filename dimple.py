@@ -8,7 +8,7 @@ if sys.version_info[:2] != (2, 7):
 import argparse
 from c4.utils import put, put_error, syspath
 from c4.mtz import check_freerflags_column
-from c4.workflow import Workflow, JobError, parse_workflow_commands
+import c4.workflow
 from c4 import coot
 
 RFREE_FOR_MOLREP = 0.4
@@ -18,6 +18,8 @@ def dimple(wf, opt):
     wf.pointless(hklin=opt.mtz, xyzin=opt.pdb, hklout="pointless.mtz").run()
     pdb_meta = wf.read_pdb_metadata(opt.pdb)
     mtz_meta = wf.read_mtz_metadata(opt.mtz)
+    mtz_meta.check_col_type(opt.icolumn, 'J')
+    mtz_meta.check_col_type(opt.sigicolumn, 'Q')
     if mtz_meta.symmetry == pdb_meta.symmetry:
         put(" Same symmetry in pdb and mtz (%s).\n" % pdb_meta.symmetry)
         truncate_hklin = "pointless.mtz"
@@ -30,7 +32,7 @@ def dimple(wf, opt):
 
     put("Obtain structure factor amplitudes\n")
     wf.truncate(hklin=truncate_hklin, hklout="truncate.mtz",
-                labin="IMEAN=IMEAN SIGIMEAN=SIGIMEAN",
+                labin="IMEAN=%s SIGIMEAN=%s" % (opt.icolumn, opt.sigicolumn),
                 labout="F=F SIGF=SIGF").run()
 
     if opt.free_r_flags:
@@ -174,23 +176,33 @@ def _generate_pictures(wf, opt, fb_job):
 
 
 def parse_dimple_commands():
+    dstr = ' (default: %(default)s)'
     parser = argparse.ArgumentParser(
-                              usage="dimple input.mtz input.pdb output_dir")
+                usage='%(prog)s [options...] input.mtz input.pdb output_dir',
+                epilog=c4.workflow.commands_help, prog="dimple",
+                formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('mtz', metavar='input.mtz')
     parser.add_argument('pdb', metavar='input.pdb')
     parser.add_argument('output_dir')
-    parser.add_argument('--from-job', metavar='N', type=int, default=0)
-    parser.add_argument('--hklout', metavar='out.mtz', default='final.mtz')
-    parser.add_argument('--xyzout', metavar='out.pdb', default='final.pdb')
-    parser.add_argument('-s', '--summary', action="store_true",
-                        help="show refmac summary")
-    parser.add_argument('-f', choices=["png", "jpeg", "tiff"], default="png",
-                        dest="format",
-                        help="format of generated images [default: png]")
+    parser.add_argument('--hklout', metavar='out.mtz', default='final.mtz',
+                        help='output mtz file'+dstr)
+    parser.add_argument('--xyzout', metavar='out.pdb', default='final.pdb',
+                        help='output pdb file'+dstr)
+    parser.add_argument('-s', '--summary', action='store_true',
+                        help='show refmac summary')
+    parser.add_argument('-f', choices=['png', 'jpeg', 'tiff'], default='png',
+                        dest='format',
+                        help='format of generated images'+dstr)
     parser.add_argument('--weight', metavar='VALUE', type=float,
-                        help='refmac matrix weight [default: auto-weight]')
+                        help='refmac matrix weight (default: auto-weight)')
     parser.add_argument('-R', '--free-r-flags', metavar='MTZ_FILE',
                     help='reference file with all reflections and freeR flags')
+    parser.add_argument('-I', '--icolumn', metavar='ICOL',
+                        default='IMEAN', help='I column label'+dstr)
+    parser.add_argument('--sigicolumn', metavar='SIGICOL',
+                        default='SIG<ICOL>', help='SIGI column label'+dstr)
+    parser.add_argument('--from-job', metavar='N', type=int, default=0,
+                        help=argparse.SUPPRESS)
     # get rid of 'positional arguments' in the usage method
     parser._action_groups[:1] = []
 
@@ -228,12 +240,13 @@ def parse_dimple_commands():
     opt.pdb = os.path.relpath(opt.pdb, opt.output_dir)
     if opt.free_r_flags:
         opt.free_r_flags = os.path.abspath(opt.free_r_flags)
+    opt.sigicolumn = opt.sigicolumn.replace('<ICOL>', opt.icolumn)
 
     return opt
 
 
 def main():
-    if parse_workflow_commands():
+    if c4.workflow.parse_workflow_commands():
         return
 
     for necessary_var in ("CCP4", "CCP4_SCR"):
@@ -245,11 +258,10 @@ def main():
 
     options = parse_dimple_commands()
 
-    wf = Workflow(options.output_dir)
-    wf.from_job = options.from_job
+    wf = c4.workflow.Workflow(options.output_dir, from_job=options.from_job)
     try:
         dimple(wf=wf, opt=options)
-    except JobError, e: # avoiding "as e" syntax for the sake of Py2.4
+    except c4.workflow.JobError, e: # avoid "as e" for the sake of Py2.4
         put_error(e.msg, comment=e.note)
         wf.pickle_jobs()
         sys.exit(1)

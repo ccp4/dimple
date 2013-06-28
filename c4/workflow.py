@@ -95,17 +95,17 @@ class Job:
         # job-specific data from output parsing
         self.data = {}
 
-    def __str__(self):
-        desc = "Job %s" % self.name
+    def __repr__(self):
         if self.started:
-            desc += time.strftime(" %Y-%m-%d %H:%M",
-                                  time.localtime(self.started))
-        return desc
+            t = time.strftime(" %Y-%m-%d %H:%M", time.localtime(self.started))
+        else:
+            t = ""
+        return "<Job %s%s>" % (self.name, t)
 
     def args_as_str(self):
         s = " ".join(pipes.quote(a) for a in self.args)
         if self.stdin_file:
-            s += " < %s" % self.stdin_file
+            s += " < " + self.stdin_file
         elif self.std_input:
             s += " << EOF\n%s\nEOF" % self.std_input
         return s
@@ -229,8 +229,9 @@ def _start_enqueue_thread(file_obj):
 
 def _get_input_as_string(job):
     if job.stdin_file:
+        path = os.path.join(job.workflow.output_dir, job.stdin_file)
         try:
-            return open(job.stdin_file, "rb").read()
+            return open(path, "rb").read()
         except IOError:
             raise JobError("cannot read input from: %s" % job.stdin_file)
     else:
@@ -268,11 +269,17 @@ def _run_and_parse(process, job):
 
 
 class Workflow:
-    def __init__(self, output_dir):
+    def __init__(self, output_dir, from_job=0):
         self.output_dir = os.path.abspath(output_dir)
         self.jobs = []
-        self.from_job = 0 # skip jobs before N (useful for testing)
+        self.from_job = from_job # skip jobs before from_job (for testing)
+        if from_job > 1:
+            try:
+                self.repl_jobs = self.unpickle_jobs().jobs
+            except:
+                self.repl_jobs = None
         self.dry_run = False
+        self.argv = sys.argv
         if not os.path.isdir(self.output_dir):
             os.mkdir(self.output_dir)
 
@@ -283,6 +290,10 @@ class Workflow:
         with open(os.path.join(self.output_dir, filename), "wb") as f:
             pickle.dump(self, f, -1)
 
+    def unpickle_jobs(self, filename="workflow.pickle"):
+        with open(os.path.join(self.output_dir, filename), "rb") as f:
+            return pickle.load(f)
+
     def run_job(self, job, show_progress):
         if not hasattr(sys.stdout, 'isatty') or not sys.stdout.isatty():
             show_progress = False
@@ -291,8 +302,18 @@ class Workflow:
         c4.utils.put_green(_jobname_fmt % job.name)
         sys.stdout.flush()
 
-        if self.from_job >= len(self.jobs) + 1:
-            c4.utils.put("skipped\n")
+        job_idx = len(self.jobs) - 1
+        if job_idx < self.from_job - 1: # from_job is 1-based
+            if self.repl_jobs and len(self.repl_jobs) > job_idx:
+                old_job = self.repl_jobs[job_idx]
+                if old_job.name == job.name:
+                    job = old_job
+                    c4.utils.put("unpickled\n")
+                    self.jobs[-1] = job
+                else:
+                    c4.utils.put("skipped (mismatch)\n")
+            else:
+                c4.utils.put("skipped\n")
             return job
 
         job.started = time.time()
@@ -458,7 +479,7 @@ class Workflow:
     def render_r3d(self, name, format="png"):
         job = Job(self, c4.utils.syspath("render"))
         job.args += ["-"+format, "%s.%s" % (name, format)]
-        job.stdin_file = os.path.join(self.output_dir, name+".r3d")
+        job.stdin_file = name+".r3d"
         job.parser = " -> %s.%s" % (name, format)
         return job
 
@@ -479,19 +500,32 @@ def open_pickled_workflow(file_or_dir):
         pkl = file_or_dir
     if not os.path.exists(pkl):
         c4.utils.put_error("workflow data file not found",
-                           "No such file: %s" % pkl)
+                           "No such file or directory: %s" % pkl)
         sys.exit(1)
     f = open(pkl, "rb")
     return pickle.load(f)
 
-def show_info(wf, job_numbers):
-    if not job_numbers:
-        sys.stdout.write("%s\n" % wf)
-        for n, job in enumerate(wf.jobs):
-            sys.stdout.write("%3d %s\n" % (n+1, job))
-        sys.stderr.write("To see details, add job number(s).\n")
-    for job_nr in job_numbers:
-        show_job_info(wf.jobs[job_nr])
+
+def show_workflow_info(wf, mesg_dict):
+    sys.stdout.write("%s\n" % wf)
+    sys.stdout.write("Command: " + " ".join(pipes.quote(a) for a in wf.argv))
+    for n, job in enumerate(wf.jobs):
+        sys.stdout.write("\n%3d %-15s" % (n+1, job.name))
+        if job.started:
+            started_at = time.localtime(job.started)
+            sys.stdout.write(time.strftime(" %Y-%m-%d %H:%M", started_at))
+            sys.stdout.write(" %7.1fs" % job.total_time)
+    sys.stdout.write("\n")
+    prog = os.path.basename(sys.argv[0])
+    sys.stderr.write("""
+To see details, specify step(s):
+%(prog)s info %(output_dir)s STEPS
+
+To re-run selected steps (for debugging):
+%(prog)s repeat %(output_dir)s [STEPS]
+
+where STEPS is one or more numbers or a range (examples: 1,2 4-6 8-)
+""" % mesg_dict)
 
 def show_job_info(job):
     sys.stdout.write("%s\n" % job)
@@ -506,30 +540,61 @@ def show_job_info(job):
         sys.stdout.write("stderr: %s\n" % job.err.summary())
 
 
-def repeat_jobs(wf, job_numbers):
-    if not job_numbers:
-        sys.stderr.write("Which job(s) to repeat?\n")
-    for job_nr in job_numbers:
-        job = wf.jobs[job_nr]
-        job.data = {}  # reset data from parsing
-        job.run()
-
+def parse_steps(args, wf):
+    jobs = []
+    for arg in args:
+        try:
+            for s in arg.split(','):
+                if '-' in s:
+                    a_, b_ = s.split('-')
+                    a = (int(a_) if a_ != '' else 1)
+                    b = (int(b_) if b_ != '' else len(wf.jobs))
+                    if a == 0 or b == 0:
+                        raise ValueError()
+                    jobs += [wf.jobs[n-1] for n in range(a, b+1)]
+                else:
+                    jobs.append(wf.jobs[int(s)-1])
+        except (ValueError, IndexError):
+            raise ValueError("Invalid step number(s): %s" % arg)
+    return jobs
 
 def parse_workflow_commands():
+    prog = os.path.basename(sys.argv[0])
     args = sys.argv[1:]
-    if len(args) >= 2 and args[0] == "info":
+    if not args:
+        return False
+    if args[0] == 'info':
+        if len(args) == 1:
+            sys.stderr.write("Specify output_dir.\n")
+            return True
         wf = open_pickled_workflow(args[1])
-        job_numbers = [int(job_str)-1 for job_str in args[2:]]
-        show_info(wf, job_numbers)
+        if len(args) == 2:
+            show_workflow_info(wf, dict(prog=prog, output_dir=args[1]))
+        else:
+            for job in parse_steps(args[2:], wf):
+                show_job_info(job)
         return True
 
-    if len(args) >= 2 and args[0] == "repeat":
-        wf = open_pickled_workflow(args[1])
-        job_numbers = [int(job_str)-1 for job_str in args[2:]]
-        try:
-            repeat_jobs(wf, job_numbers)
-        except JobError as e:
-            c4.utils.put_error(e.msg, comment=e.note)
-            sys.exit(1)
+    if args[0] == 'repeat':
+        if len(args) == 1:
+            sys.stderr.write("Specify output_dir.\n")
+        if len(args) <= 2:
+            wf = open_pickled_workflow(args[1])
+            sys.stderr.write("Specify steps. For complete re-run:\n%s\n"
+                             % " ".join(pipes.quote(a) for a in wf.argv))
+        else:
+            wf = open_pickled_workflow(args[1])
+            for job in parse_steps(args[2:], wf):
+                try:
+                    job.data = {}  # reset data from parsing
+                    job.run()
+                except JobError as e:
+                    c4.utils.put_error(e.msg, comment=e.note)
+                    sys.exit(1)
         return True
+
+commands_help = """\
+All files are stored in the specified output directory.
+Quick summary (after running the program): %(prog)s info OUTPUT_DIR
+"""
 
