@@ -1,1 +1,1 @@
-@%CCP4%\bin\ccp4.python.bat -m dimple %*
+@%CCP4%\bin\ccp4-python.bat -m dimple %*

@@ -1,2 +1,2 @@
 #!/bin/sh
-$CCP4/bin/ccp4.python -m dimple "$@"
+$CCP4/bin/ccp4-python -m dimple "$@"

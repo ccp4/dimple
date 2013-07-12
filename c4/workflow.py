@@ -595,6 +595,6 @@ def parse_workflow_commands():
 
 commands_help = """\
 All files are stored in the specified output directory.
-Quick summary (after running the program): %(prog)s info OUTPUT_DIR
+For quick summary (after running the program): %(prog)s info OUTPUT_DIR
 """
 
