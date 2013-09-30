@@ -6,7 +6,7 @@ if sys.version_info[:2] != (2, 7):
     sys.stderr.write("Error. Python 2.7 is required.\n")
     sys.exit(1)
 import argparse
-from c4.utils import put, put_error, syspath
+from c4.utils import put, put_error, syspath, adjust_path
 from c4.mtz import check_freerflags_column
 import c4.workflow
 from c4 import coot
@@ -79,7 +79,7 @@ def dimple(wf, opt):
     refmac_labin = "FP=F SIGFP=SIGF FREE=%s" % free_col
     refmac_labout = ("FC=FC PHIC=PHIC FWT=2FOFCWT PHWT=PH2FOFCWT "
                      "DELFWT=FOFCWT PHDELWT=PHFOFCWT")
-    put("Rigid-body refinement.\n")
+    put("Rigid-body refinement with resolution 3.5 A, 10 cycles.\n")
     wf.refmac5(hklin="prepared.mtz", xyzin=rb_xyzin,
                hklout="refmacRB.mtz", xyzout="refmacRB.pdb",
                labin=refmac_labin, labout=refmac_labout,
@@ -104,7 +104,7 @@ def dimple(wf, opt):
                       f="FC", phi="PHIC", pdbout="prepared_wat.pdb", sigma=2)
         refmac_xyzin = "prepared_wat.pdb"
 
-    put("Final restrained refinement.\n")
+    put("Final restrained refinement, 8 cycles.\n")
     if opt.weight:
         refmac_weight = "matrix 0.2"
     else:
@@ -236,10 +236,13 @@ def parse_dimple_commands():
         put_error("Not a directory: " + opt.output_dir)
         sys.exit(1)
 
-    opt.mtz = os.path.relpath(opt.mtz, opt.output_dir)
-    opt.pdb = os.path.relpath(opt.pdb, opt.output_dir)
+    # Since we'll execute programs from opt.output_dir, adjust paths.
+    opt.mtz = adjust_path(opt.mtz, opt.output_dir)
+    opt.pdb = adjust_path(opt.pdb, opt.output_dir)
     if opt.free_r_flags:
-        opt.free_r_flags = os.path.abspath(opt.free_r_flags)
+        opt.free_r_flags = adjust_path(opt.free_r_flags, opt.output_dir)
+
+    # the default value of sigicolumn ('SIG<ICOL>') needs substitution
     opt.sigicolumn = opt.sigicolumn.replace('<ICOL>', opt.icolumn)
 
     return opt

@@ -58,3 +58,14 @@ def syspath(prog):
     put_error("Program not found: %s" % prog)
 
 
+# Use relpath if possible, absolute paths clutter commands and make
+# moving directory harder.
+def adjust_path(path, relative_to):
+    if os.path.isabs(path) or os.path.isabs(relative_to):
+        return os.path.abspath(path)
+    elif os.path.realpath(relative_to) != os.path.abspath(relative_to):
+        # symlink in relative_to could make mess
+        return os.path.abspath(path)
+    else:
+        return os.path.relpath(path, relative_to)
+

@@ -169,21 +169,28 @@ def _refmac_parser(job):
     if "cycle" not in job.data:
         job.data["cycle"] = 0
         job.data["free_r"] = job.data["overall_r"] = 0.
+        job.data["ini_free_r"] = job.data["ini_overall_r"] = 0
         job.data["summary"] = []
     summary = job.data["summary"]
     for line in job.out.read_line():
         if line.startswith("Free R factor"):
             job.data['free_r'] = float(line.split('=')[-1])
+            if not job.data['ini_free_r']:
+                 job.data['ini_free_r'] = job.data['free_r']
         elif line.startswith("Overall R factor"):
             job.data['overall_r'] = float(line.split('=')[-1])
+            if not job.data['ini_overall_r']:
+                 job.data['ini_overall_r'] = job.data['overall_r']
         elif (line.startswith("     Rigid body cycle =") or
               line.startswith("     CGMAT cycle number =")):
             job.data['cycle'] = int(line.split('=')[-1])
         elif line.startswith(" $TEXT:Result: $$ Final results $$") or (
                 summary and not summary[-1].startswith(" $$")):
             summary.append(line)
-    return "cycle %2d/%d   R-free / R = %.4f / %.4f" % (
-        job.data["cycle"], job.ncyc, job.data["free_r"], job.data["overall_r"])
+    return "%2d/%d   Rfree/R  %.4f/%.4f  ->  %.4f/%.4f" % (
+            job.data["cycle"], job.ncyc,
+            job.data["ini_free_r"], job.data["ini_overall_r"],
+            job.data["free_r"], job.data["overall_r"])
 
 
 def ccp4_job(workflow, prog, logical=None, input="", add_end=True):
