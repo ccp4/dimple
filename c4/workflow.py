@@ -364,14 +364,14 @@ class Workflow:
             c4.utils.put("%s\n" % (job.parse() or ""))
             self._write_logs(job)
         if retcode:
-            all_args = " ".join(pipes.quote(a) for a in job.args)
-            notes = []
+            all_args = job.args_as_str()
+            notes = [all_args, ""]
             if job.out.saved_to:
-                notes = ["stdout -> %s/%s" % (self.output_dir,
-                                              job.out.saved_to)]
+                notes += ["stdout -> %s/%s" % (self.output_dir,
+                                               job.out.saved_to)]
             if job.err:
                 notes += ["stderr:", job.err.summary()]
-            raise JobError("Non-zero return value from:\n%s" % all_args,
+            raise JobError("%s failed (exit status %d)" % (job.name, retcode),
                            note="\n".join(notes))
         return job
 
