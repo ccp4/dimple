@@ -153,6 +153,10 @@ def _generate_pictures(wf, opt, fb_job):
     put("Rendering %d blob(s).\n" % min(len(blobs), 2))
     com = fb_job.data["center"]
 
+    # run-coot.py centers on the biggest blob. It uses relative paths -
+    # it can be run only from the output directory, but is not affected
+    # by moving that directory to different location.
+    # There are blobN-coot.py scripts generated below with absolute paths.
     # write coot script (apart from pictures) that centers on the biggest blob
     script_path = os.path.join(wf.output_dir, "run-coot.py")
     script = coot.basic_script(pdb=opt.xyzout, mtz=opt.hklout,
@@ -162,6 +166,12 @@ def _generate_pictures(wf, opt, fb_job):
     # blob images, for now for not more than two blobs
     basenames = []
     for n, b in enumerate(blobs[:2]):
+        py_path = os.path.join(wf.output_dir, "blob%d-coot.py" % (n+1))
+        with open(py_path, "w") as blob_py:
+            d = os.path.abspath(wf.output_dir)
+            blob_py.write(coot.basic_script(pdb=os.path.join(d, opt.xyzout),
+                                            mtz=os.path.join(d, opt.hklout),
+                                            center=blobs[n], toward=com))
         if n != 0:
             # workaround for buggy coot: reloading maps
             script += coot.basic_script(pdb=opt.xyzout, mtz=opt.hklout,
