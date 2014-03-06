@@ -34,6 +34,8 @@ def add_blob(n):
 import dimple
 opt = dimple.parse_dimple_commands()
 jobdir = os.path.abspath(opt.output_dir)
+if not os.path.exists(jobdir):
+    os.makedirs(jobdir) # it would be created by dimple, but too late
 
 print "_JOB_DIRECTORY:", jobdir
 sys.stdout.flush()
