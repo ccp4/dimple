@@ -14,5 +14,5 @@ endif()
 install(TARGETS find-blobs DESTINATION bin)
 install(PROGRAMS dimple DESTINATION bin)
 install(FILES dimple.py ccp4i-dimple.py DESTINATION ${CCP4_PY2_DIR})
-install(DIRECTORY c4 DESTINATION lib/python2.7/site-packages
+install(DIRECTORY c4 DESTINATION ${CCP4_PY2_DIR}
         FILES_MATCHING PATTERN "*.py")
