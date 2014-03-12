@@ -487,7 +487,7 @@ int main(int argc, char **argv)
     }
   }
   if (pdb_filename.empty()) {
-    fprintf(stderr, usage);
+    fprintf(stderr, "%s", usage);
     return 1;
   }
   if (mtz_filename.empty())
