@@ -176,11 +176,11 @@ def _refmac_parser(job):
         if line.startswith("Free R factor"):
             job.data['free_r'] = float(line.split('=')[-1])
             if not job.data['ini_free_r']:
-                 job.data['ini_free_r'] = job.data['free_r']
+                job.data['ini_free_r'] = job.data['free_r']
         elif line.startswith("Overall R factor"):
             job.data['overall_r'] = float(line.split('=')[-1])
             if not job.data['ini_overall_r']:
-                 job.data['ini_overall_r'] = job.data['overall_r']
+                job.data['ini_overall_r'] = job.data['overall_r']
         elif (line.startswith("     Rigid body cycle =") or
               line.startswith("     CGMAT cycle number =")):
             job.data['cycle'] = int(line.split('=')[-1])
@@ -500,11 +500,11 @@ class Workflow:
         job.parser = "preview"
         return job
 
-    def render_r3d(self, name, format="png"):
+    def render_r3d(self, name, img_format="png"):
         job = Job(self, c4.utils.syspath("render"))
-        job.args += ["-"+format, "%s.%s" % (name, format)]
+        job.args += ["-"+img_format, "%s.%s" % (name, img_format)]
         job.stdin_file = name+".r3d"
-        job.parser = " -> %s.%s" % (name, format)
+        job.parser = " -> %s.%s" % (name, img_format)
         return job
 
     def delete_files(self, filenames):
@@ -540,7 +540,6 @@ def show_workflow_info(wf, mesg_dict):
             sys.stdout.write(time.strftime(" %Y-%m-%d %H:%M", started_at))
             sys.stdout.write(" %7.1fs" % job.total_time)
     sys.stdout.write("\n")
-    prog = os.path.basename(sys.argv[0])
     sys.stderr.write("""
 To see details, specify step(s):
 %(prog)s info %(output_dir)s STEPS
