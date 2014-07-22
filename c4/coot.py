@@ -25,7 +25,10 @@ def find_path_and_version():
     # On Windows reading output from runwincoot.bat is not reliable,
     # and coot-real.exe --version works fine
     coot_for_ver = coot_path.replace('runwincoot.bat', 'bin/coot-real.exe')
-    version_str = subprocess.check_output([coot_for_ver, "--version"])
+    try:
+        version_str = subprocess.check_output([coot_for_ver, "--version"])
+    except subprocess.CalledProcessError:
+        version_str = None
     return coot_path, version_str
 
 def basic_script(pdb, mtz, center, toward):

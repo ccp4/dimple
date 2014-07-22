@@ -301,6 +301,25 @@ class Workflow:
         with open(os.path.join(self.output_dir, filename), "rb") as f:
             return pickle.load(f)
 
+    def silently_run_job(self, job):
+        job.started = time.time()
+        try:
+            process = Popen(job.args, stdin=PIPE, stdout=PIPE, stderr=PIPE,
+                            cwd=self.output_dir)
+        except OSError as e:
+            if e.errno == errno.ENOENT:
+                raise JobError("Program not found: %s\n" % job.args[0])
+            else:
+                raise
+        try:
+            _just_run(process, job)
+        except KeyboardInterrupt:
+            raise JobError("\nKeyboardInterrupt while running %s" % job.name,
+                           note=job.args_as_str())
+        finally:
+            job.total_time = time.time() - job.started
+        return process.poll()
+
     def run_job(self, job, show_progress):
         if not hasattr(sys.stdout, 'isatty') or not sys.stdout.isatty():
             show_progress = False
@@ -356,8 +375,6 @@ class Workflow:
             if show_progress:
                 event.set()
                 progress_thread.join()
-
-
             job.total_time = time.time() - job.started
             retcode = process.poll()
             c4.utils.put(_elapsed_fmt % job.total_time)

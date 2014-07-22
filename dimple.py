@@ -122,7 +122,13 @@ def dimple(wf, opt):
         put("".join(restr_job.data["summary"]))
 
     fb_job = wf.find_blobs(opt.hklout, opt.xyzout, sigma=0.8).run()
-    if fb_job.data["blobs"]:
+    blobs = fb_job.data["blobs"]
+    if blobs:
+        if len(blobs) == 1:
+            put("Rendering density blob at (%.1f, %.1f, %.1f)\n" % blobs[0])
+        else:
+            put("Rendering 2 largest blobs: at (%.1f, %.1f, %.1f) and at "
+                "(%.1f, %.1f, %.1f)\n" % (blobs[0]+blobs[1]))
         if _check_picture_tools():
             _generate_pictures(wf, opt, fb_job)
     else:
@@ -133,12 +139,16 @@ def _check_picture_tools():
     ok = True
     coot_path, coot_ver = coot.find_path_and_version()
     if coot_path:
-        if "with python" not in coot_ver:
-            put_error("coot with Python support is needed")
+        if coot_ver is None:
+            put_error("coot not working(?), no pictures")
             ok = False
-        if "\n0.6." in coot_ver:
-            put_error("coot 0.7+ is needed (0.6 would crash)")
-            ok = False
+        else:
+            if "with python" not in coot_ver:
+                put_error("coot with Python support is needed")
+                ok = False
+            if "\n0.6." in coot_ver:
+                put_error("coot 0.7+ is needed (0.6 would crash)")
+                ok = False
     else:
         put_error("No coot, no pictures")
         ok = False
@@ -150,7 +160,6 @@ def _check_picture_tools():
 
 def _generate_pictures(wf, opt, fb_job):
     blobs = fb_job.data["blobs"]
-    put("Rendering %d blob(s).\n" % min(len(blobs), 2))
     com = fb_job.data["center"]
 
     # run-coot.py centers on the biggest blob. It uses relative paths -
@@ -179,7 +188,15 @@ def _generate_pictures(wf, opt, fb_job):
         rs, names = coot.r3d_script(b, com, blobname="blob%s"%(n+1))
         script += rs
         basenames += names
-        wf.coot_py(script).run()
+        try:
+            wf.coot_py(script).run()
+        except c4.workflow.JobError: # check for a possible cause
+            retcode = wf.silently_run_job(wf.coot_py(script_text=""))
+            put_error("coot fails with options: --no-graphics --python",
+                      comment="It happens when scripts in .coot or "
+                              ".coot-preferences are not compatible\n"
+                              "with the --no-graphics mode.")
+            raise
     for basename in basenames:
         wf.render_r3d(basename, format=opt.format).run()
     wf.delete_files([name+".r3d" for name in basenames])
