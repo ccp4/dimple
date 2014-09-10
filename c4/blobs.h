@@ -1,10 +1,10 @@
 
 #include <string>
 #include <vector>
-class CMMDBManager;
+namespace mmdb { class Manager; }
 namespace clipper { template<class T> class Xmap; }
 
-CMMDBManager* read_pdb(const std::string& pdb_name);
+mmdb::Manager* read_pdb(const std::string& pdb_name);
 
 struct Blob
 {
@@ -30,7 +30,7 @@ public:
                      const std::string& f_col, const std::string& phi_col);
   void write_ccp4(const std::string& fname) const;
   double calculate_stddev() const;
-  void mask_by_atoms(CMMDBManager *mol, double mask_radius);
+  void mask_by_atoms(mmdb::Manager *mol, double mask_radius);
   const clipper::Xmap<float>* xmap() const { return xmap_; }
 private:
   clipper::Xmap<float>* xmap_;

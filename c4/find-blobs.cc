@@ -1,4 +1,4 @@
-// g++ -DBUILD_EXE find-blobs.cc -lclipper-ccp4 -lclipper-core -lmmdb -o find-blobs
+// g++ -DBUILD_EXE find-blobs.cc -lclipper-ccp4 -lclipper-core -lmmdb2 -o find-blobs
 
 #include "blobs.h"
 #include <stdio.h>
@@ -9,7 +9,7 @@
 
 #include <clipper/clipper.h>
 #include <clipper/clipper-ccp4.h>
-#include <mmdb/mmdb_manager.h>
+#include <mmdb2/mmdb_manager.h>
 
 using std::string;
 using std::vector;
@@ -114,9 +114,9 @@ void DensityMap::write_ccp4(const std::string& fname) const
   mapout.close_write();
 }
 
-void DensityMap::mask_by_atoms(CMMDBManager *mol, double mask_radius)
+void DensityMap::mask_by_atoms(mmdb::Manager *mol, double mask_radius)
 {
-  CAtom **atoms;
+  mmdb::Atom **atoms;
   int n_atoms;
   mol->GetAtomTable(atoms, n_atoms);
   const clipper::Grid_sampling& sampling = xmap_->grid_sampling();
@@ -280,16 +280,17 @@ vector<Cluster> find_clusters_by_flood_fill(const Xmap<float>& xmap,
 }
 
 
-CMMDBManager* read_pdb(const string& pdb_name)
+mmdb::Manager* read_pdb(const string& pdb_name)
 {
-  InitMatType();
-  CMMDBManager* mm = new CMMDBManager;
-  mm->SetFlag(MMDBF_IgnoreBlankLines | MMDBF_IgnoreDuplSeqNum |
-        MMDBF_IgnoreNonCoorPDBErrors | MMDBF_IgnoreHash | MMDBF_IgnoreRemarks);
+  mmdb::InitMatType();
+  mmdb::Manager* mm = new mmdb::Manager;
+  mm->SetFlag(mmdb::MMDBF_IgnoreBlankLines | mmdb::MMDBF_IgnoreDuplSeqNum |
+              mmdb::MMDBF_IgnoreNonCoorPDBErrors | mmdb::MMDBF_IgnoreHash |
+              mmdb::MMDBF_IgnoreRemarks);
   int error = mm->ReadCoorFile(pdb_name.c_str());
   if (error)
     std::runtime_error("Error reading PDB file: " + pdb_name);
-  mm->PDBCleanup(PDBCLEAN_ELEMENT);
+  mm->PDBCleanup(mmdb::PDBCLEAN_ELEMENT);
   return mm;
 }
 
@@ -338,7 +339,7 @@ vector<Cluster> find_clusters(const string& pdb_filename,
   if (map_stddev <= 1e-9)
     throw std::runtime_error("Flat density map");
 
-  CMMDBManager *mm = read_pdb(pdb_filename);
+  mmdb::Manager *mm = read_pdb(pdb_filename);
 
   density_map.mask_by_atoms(mm, config.mask_radius);
   const clipper::Xmap<float>* xmap = density_map.xmap();
@@ -357,13 +358,13 @@ vector<Cluster> find_clusters(const string& pdb_filename,
       clusters.push_back(*i);
   }
 
-  CAtom **atoms;
+  mmdb::Atom **atoms;
   int n_atoms;
   mm->GetAtomTable(atoms, n_atoms);
 
   if (config.print_mass_center) {
-    realtype x, y, z;
-    GetMassCenter(atoms, n_atoms, x, y, z);
+    mmdb::realtype x, y, z;
+    mmdb::GetMassCenter(atoms, n_atoms, x, y, z);
     printf("Protein mass center: %s\n", Coord_orth(x,y,z).format().c_str());
   }
 

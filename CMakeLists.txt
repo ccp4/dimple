@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(dimple C CXX)
 
-find_package(CCP4 REQUIRED mmdb ccp4c clipper-core clipper-ccp4)
+find_package(CCP4 REQUIRED mmdb2 ccp4c clipper-core clipper-ccp4)
 include_directories(${CCP4_INCLUDE_DIRS})
 add_definitions(-DBUILD_EXE)
 
