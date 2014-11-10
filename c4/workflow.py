@@ -149,11 +149,11 @@ def _find_blobs_parser(job):
     for line in job.out.read_line():
         #sys.stdout.write(line)
         if line.startswith("#"):
-            sp = line.split()
+            sp = line.split(None, 6)
             score = float(sp[5])
             if True: #score > 150: XXX: better scoring may be needed
-                xyz = tuple(float(x.strip(",()")) for x in sp[-3:])
-                job.data["blobs"].append(xyz)
+                x, y, z = sp[-1].strip("() \t\r\n").split(",")
+                job.data["blobs"].append((float(x), float(y), float(z)))
                 job.data["scores"].append(score)
         elif line.startswith("Protein mass center:"):
             sp = line.split("(")[1].rstrip("\r\n )").split(",")
