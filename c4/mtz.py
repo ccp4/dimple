@@ -91,7 +91,6 @@ def check_freerflags_column(free_mtz, data_mtz_meta):
 
 
 if __name__ == '__main__':
-    import sys
     if sys.argv[0] < 2:
         sys.stderr.write("No filenames.\n")
         sys.exit(1)
