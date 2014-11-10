@@ -6,7 +6,7 @@ if sys.version_info[:2] != (2, 7):
     sys.stderr.write("Error. Python 2.7 is required.\n")
     sys.exit(1)
 import argparse
-from c4.utils import put, put_error, syspath, adjust_path
+from c4.utils import comment, put_error, syspath, adjust_path, start_log
 from c4.mtz import check_freerflags_column
 import c4.workflow
 from c4 import coot
@@ -14,23 +14,23 @@ from c4 import coot
 RFREE_FOR_MOLREP = 0.4
 
 def dimple(wf, opt):
-    put("Change mtz symmetry if needed. Use pdb as reference.\n")
+    comment("Change mtz symmetry if needed. Use pdb as reference.\n")
     wf.pointless(hklin=opt.mtz, xyzin=opt.pdb, hklout="pointless.mtz").run()
     pdb_meta = wf.read_pdb_metadata(opt.pdb)
     mtz_meta = wf.read_mtz_metadata(opt.mtz)
     mtz_meta.check_col_type(opt.icolumn, 'J')
     mtz_meta.check_col_type(opt.sigicolumn, 'Q')
     if mtz_meta.symmetry == pdb_meta.symmetry:
-        put(" Same symmetry in pdb and mtz (%s).\n" % pdb_meta.symmetry)
+        comment(" Same symmetry in pdb and mtz (%s).\n" % pdb_meta.symmetry)
         truncate_hklin = "pointless.mtz"
     else:
-        put(" Different symmetry in pdb (%s) and mtz (%s), reindexing mtz\n" %
-                (pdb_meta.symmetry, mtz_meta.symmetry))
+        comment(" Different symmetry in pdb (%s) and mtz (%s), reindexing mtz\n"
+                % (pdb_meta.symmetry, mtz_meta.symmetry))
         wf.reindex(hklin="pointless.mtz", hklout="spacegroup.mtz",
                    symmetry=pdb_meta.symmetry).run()
         truncate_hklin = "spacegroup.mtz"
 
-    put("Obtain structure factor amplitudes\n")
+    comment("Obtain structure factor amplitudes\n")
     wf.truncate(hklin=truncate_hklin, hklout="truncate.mtz",
                 labin="IMEAN=%s SIGIMEAN=%s" % (opt.icolumn, opt.sigicolumn),
                 labout="F=F SIGF=SIGF").run()
@@ -42,9 +42,9 @@ def dimple(wf, opt):
         except ValueError, e: # avoiding "as e" syntax for the sake of Py2.4
             put_error(e)
             sys.exit(1)
-        put("Free R flags from given file, col. %s.\n" % free_col)
+        comment("Free R flags from given file, col. %s.\n" % free_col)
     else:
-        put("Add missing reflections and free-R flags\n")
+        comment("Add missing reflections and free-R flags\n")
         free_mtz = "free.mtz"
         wf.unique(hklout="unique.mtz",
                   cell=mtz_meta.cell, symmetry=pdb_meta.symmetry,
@@ -60,11 +60,11 @@ def dimple(wf, opt):
                    """ % (free_col, mtz_meta.dmax)).run()
 
     if all(pdb_meta.cell[i] - mtz_meta.cell[i] < 1e-3 for i in range(6)):
-        put("Cell dimensions in pdb and mtz are the same.\n")
+        comment("Cell dimensions in pdb and mtz are the same.\n")
         correct_cell_pdb = opt.pdb
     else:
-        put("Different cell in pdb %s ...\n" % str(pdb_meta.cell))
-        put("              and mtz %s, changing pdb\n" % str(mtz_meta.cell))
+        comment("Different cell in pdb %s ...\n" % str(pdb_meta.cell))
+        comment("              and mtz %s, changing pdb\n" % str(mtz_meta.cell))
         wf.change_pdb_cell(xyzin=opt.pdb, xyzout="prepared.pdb",
                            cell=mtz_meta.cell)
         correct_cell_pdb = "prepared.pdb"
@@ -72,14 +72,14 @@ def dimple(wf, opt):
     if False:
         rb_xyzin = "prepared_nohet.pdb"
         n_het = wf.remove_hetatm(xyzin=correct_cell_pdb, xyzout=rb_xyzin)
-        put("Removed %s atoms marked as HETATM in pdb.\n" % n_het)
+        comment("Removed %s atoms marked as HETATM in pdb.\n" % n_het)
     else:
         rb_xyzin = correct_cell_pdb
 
     refmac_labin = "FP=F SIGFP=SIGF FREE=%s" % free_col
     refmac_labout = ("FC=FC PHIC=PHIC FWT=2FOFCWT PHWT=PH2FOFCWT "
                      "DELFWT=FOFCWT PHDELWT=PHFOFCWT")
-    put("Rigid-body refinement with resolution 3.5 A, 10 cycles.\n")
+    comment("Rigid-body refinement with resolution 3.5 A, 10 cycles.\n")
     wf.refmac5(hklin="prepared.mtz", xyzin=rb_xyzin,
                hklout="refmacRB.mtz", xyzout="refmacRB.pdb",
                labin=refmac_labin, labout=refmac_labout,
@@ -89,14 +89,14 @@ def dimple(wf, opt):
                        rigidbody ncycle 10""").run()
 
     if "free_r" not in wf.jobs[-1].data:
-        put("WARNING: unknown free_r, something went wrong.\n")
+        comment("WARNING: unknown free_r, something went wrong.\n")
         refmac_xyzin = "refmacRB.pdb"
     elif wf.jobs[-1].data["free_r"] > RFREE_FOR_MOLREP:
-        put("Run MR for R_free > %g\n" % RFREE_FOR_MOLREP)
+        comment("Run MR for R_free > %g\n" % RFREE_FOR_MOLREP)
         wf.molrep(f="prepared.mtz", m="refmacRB.pdb").run()
         refmac_xyzin = "molrep.pdb"
     else:
-        put("No MR for R_free < %g\n" % RFREE_FOR_MOLREP)
+        comment("No MR for R_free < %g\n" % RFREE_FOR_MOLREP)
         refmac_xyzin = "refmacRB.pdb"
 
     if False:
@@ -104,7 +104,7 @@ def dimple(wf, opt):
                       f="FC", phi="PHIC", pdbout="prepared_wat.pdb", sigma=2)
         refmac_xyzin = "prepared_wat.pdb"
 
-    put("Final restrained refinement, 8 cycles.\n")
+    comment("Final restrained refinement, 8 cycles.\n")
     if opt.weight:
         refmac_weight = "matrix 0.2"
     else:
@@ -119,20 +119,20 @@ def dimple(wf, opt):
                          solvent yes vdwprob 1.4 ionprob 0.8 mshrink 0.8
                          ncycle 8""" % refmac_weight).run()
     if opt.summary:
-        put("".join(restr_job.data["summary"]))
+        comment("".join(restr_job.data["selected_lines"]))
 
     fb_job = wf.find_blobs(opt.hklout, opt.xyzout, sigma=0.8).run()
     blobs = fb_job.data["blobs"]
     if blobs:
         if len(blobs) == 1:
-            put("Rendering density blob at (%.1f, %.1f, %.1f)\n" % blobs[0])
+            comment("Rendering density blob at (%.1f, %.1f, %.1f)\n" % blobs[0])
         else:
-            put("Rendering 2 largest blobs: at (%.1f, %.1f, %.1f) and at "
-                "(%.1f, %.1f, %.1f)\n" % (blobs[0]+blobs[1]))
+            comment("Rendering 2 largest blobs: at (%.1f, %.1f, %.1f) and at "
+                    "(%.1f, %.1f, %.1f)\n" % (blobs[0]+blobs[1]))
         if _check_picture_tools():
             _generate_pictures(wf, opt, fb_job)
     else:
-        put("Unmodelled blobs not found.\n")
+        comment("Unmodelled blobs not found.\n")
 
 
 def _check_picture_tools():
@@ -292,6 +292,8 @@ def main():
     options = parse_dimple_commands()
 
     wf = c4.workflow.Workflow(options.output_dir, from_job=options.from_job)
+    start_log(os.path.join(options.output_dir, "dimple.log"),
+              output_dir=options.output_dir)
     try:
         dimple(wf=wf, opt=options)
     except c4.workflow.JobError, e: # avoid "as e" for the sake of Py2.4

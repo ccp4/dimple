@@ -1,7 +1,59 @@
 import os
 import sys
+import time
 
+_logfile = None
 _c4_dir = os.path.abspath(os.path.dirname(__file__))
+
+# start log in ini-like format,
+# readable for humans and easily parsed in Python:
+#   import ConfigParser
+#   log = ConfigParser.RawConfigParser()
+#   log.read('dimple.log')
+# and then, for example:
+#   ini_free_r = log.getfloat('refmac5 restr', 'ini_free_r')
+#   free_r = log.getfloat('refmac5 restr', 'free_r')
+# the first section is [workflow], next ones correspond to jobs:
+#   start_time = log.get(log.sections()[1], 'start_time') # first job start
+#   end_time = log.get(log.sections()[-1], 'end_time') # last job end
+def start_log(filename, output_dir):
+    global _logfile
+    _logfile = open(filename, "w")
+    _logfile.write("# workflow log (compatible with Python ConfigParser)\n")
+    log_section("workflow")
+    log_value("prog", sys.argv[0])
+    if len(sys.argv) > 1:
+        _logfile.write("args:\n")
+        for arg in sys.argv[1:]:
+            _logfile.write(" %s\n" % arg)
+    log_value("output_dir", output_dir)
+    log_value("CCP4", os.getenv("CCP4", ""))
+    _logfile.write("\n")
+    _logfile.flush()
+
+
+def _log_comment(text):
+    global _logfile
+    if _logfile:
+        _logfile.write("# ")
+        _logfile.write(text.rstrip("\n").replace("\n", "\n# "))
+        _logfile.write("\n")
+
+def log_section(name):
+    global _logfile
+    if _logfile:
+        _logfile.write("[%s]\n" % name)
+    _logfile.flush()
+
+def log_value(key, value):
+    global _logfile
+    if _logfile:
+        value = str(value).rstrip().replace("\n", "\n ")
+        _logfile.write("%s: %s\n" % (key, value))
+
+def log_time(key, timestamp):
+    log_value(key, time.strftime("%Y-%m-%d %H:%M:%S",
+                                 time.localtime(timestamp)))
 
 def put(text):
     sys.stdout.write(text)
@@ -15,17 +67,23 @@ def put_green(text):
     else:
         put(text)
 
+def comment(text):
+    put(text)
+    _log_comment(text)
+
 def reset_color():
     if hasattr(sys.stdout, 'isatty') and sys.stdout.isatty():
         if os.name != 'nt':
             put("\033[0m")
 
 def put_error(err, comment=None):
+    _log_comment("Error: %s" % err)
     if hasattr(sys.stderr, 'isatty') and sys.stderr.isatty():
         if os.name != 'nt':
             err = "\033[91m%s\033[0m" % err  # in bold red
     sys.stderr.write("Error: %s.\n" % err)
     if comment is not None:
+        _log_comment(comment)
         sys.stderr.write(comment + "\n")
 
 

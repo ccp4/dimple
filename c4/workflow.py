@@ -62,6 +62,7 @@ class Output:
                 for line in self.lines:
                     f.write(line)
             self.saved_to = filename
+            c4.utils.log_value("std"+self.role, filename)
             if remove_long_list and len(self.lines) > 5:
                 self.lines = []
 
@@ -170,8 +171,8 @@ def _refmac_parser(job):
         job.data["cycle"] = 0
         job.data["free_r"] = job.data["overall_r"] = 0.
         job.data["ini_free_r"] = job.data["ini_overall_r"] = 0
-        job.data["summary"] = []
-    summary = job.data["summary"]
+        job.data["selected_lines"] = []
+    selected = job.data["selected_lines"]
     for line in job.out.read_line():
         if line.startswith("Free R factor"):
             job.data['free_r'] = float(line.split('=')[-1])
@@ -185,8 +186,8 @@ def _refmac_parser(job):
               line.startswith("     CGMAT cycle number =")):
             job.data['cycle'] = int(line.split('=')[-1])
         elif line.startswith(" $TEXT:Result: $$ Final results $$") or (
-                summary and not summary[-1].startswith(" $$")):
-            summary.append(line)
+                selected and not selected[-1].startswith(" $$")):
+            selected.append(line)
     return "%2d/%d   Rfree/R  %.4f/%.4f  ->  %.4f/%.4f" % (
             job.data["cycle"], job.ncyc,
             job.data["ini_free_r"], job.data["ini_overall_r"],
@@ -324,9 +325,11 @@ class Workflow:
         if not hasattr(sys.stdout, 'isatty') or not sys.stdout.isatty():
             show_progress = False
         self.jobs.append(job)
-        c4.utils.put(_jobindex_fmt % len(self.jobs))
+        job_num = len(self.jobs)
+        c4.utils.put(_jobindex_fmt % job_num)
         c4.utils.put_green(_jobname_fmt % job.name)
         sys.stdout.flush()
+        c4.utils.log_section(job.name)
 
         job_idx = len(self.jobs) - 1
         if job_idx < self.from_job - 1: # from_job is 1-based
@@ -335,14 +338,22 @@ class Workflow:
                 if old_job.name == job.name:
                     job = old_job
                     c4.utils.put("unpickled\n")
+                    c4.utils.log_value("not_run", "unpickled")
                     self.jobs[-1] = job
                 else:
                     c4.utils.put("skipped (mismatch)\n")
+                    c4.utils.log_value("not_run", "unpickled/mismatch")
             else:
                 c4.utils.put("skipped\n")
+                c4.utils.log_value("not_run", "skipped")
             return job
 
         job.started = time.time()
+        c4.utils.log_time("start_time", job.started)
+        if job.stdin_file:
+            c4.utils.log_value("stdin", job.stdin_file)
+        elif job.std_input:
+            c4.utils.log_value("input", job.std_input)
         #job.args[0] = "true"  # for debugging
         try:
             process = Popen(job.args, stdin=PIPE, stdout=PIPE, stderr=PIPE,
@@ -375,12 +386,22 @@ class Workflow:
             if show_progress:
                 event.set()
                 progress_thread.join()
-            job.total_time = time.time() - job.started
+            end_time = time.time()
+            job.total_time = end_time - job.started
+            c4.utils.log_time("end_time", end_time)
             retcode = process.poll()
             c4.utils.put(_elapsed_fmt % job.total_time)
-            c4.utils.put("%s\n" % (job.parse() or ""))
+            parse_output = job.parse()
+            c4.utils.put("%s\n" % (parse_output or ""))
+            if parse_output:
+                c4.utils.log_value("info", parse_output)
             self._write_logs(job)
+            for k, v in job.data.iteritems():
+                if k == "selected_lines":
+                    v = "\n" + "".join(v) # selected_lines have newlines
+                c4.utils.log_value(k, v)
         if retcode:
+            c4.utils.log_value("exit_status", retcode)
             all_args = job.args_as_str()
             notes = [all_args, ""]
             if job.out.saved_to:
