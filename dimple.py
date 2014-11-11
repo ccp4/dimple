@@ -188,18 +188,18 @@ def _generate_pictures(wf, opt, fb_job):
         rs, names = coot.r3d_script(b, com, blobname="blob%s"%(n+1))
         script += rs
         basenames += names
-        try:
-            wf.coot_py(script).run()
-        except c4.workflow.JobError:
-            # check for a possible cause to hint the user
-            # (possible workaround: change $HOME to non-existing directory)
-            retcode = wf.silently_run_job(wf.coot_py(script_text=""))
-            if retcode != 0:
-                put_error("coot fails with options: --no-graphics --python",
-                          comment="It happens when scripts in .coot or "
-                                  ".coot-preferences are not compatible\n"
-                                  "with the --no-graphics mode.")
-            raise
+    try:
+        wf.coot_py(script).run()
+    except c4.workflow.JobError:
+        # check for a possible cause to hint the user
+        # (possible workaround: change $HOME to non-existing directory)
+        retcode = wf.silently_run_job(wf.coot_py(script_text=""))
+        if retcode != 0:
+            put_error("coot fails with options: --no-graphics --python",
+                      comment="It happens when scripts in .coot or "
+                              ".coot-preferences are not compatible\n"
+                              "with the --no-graphics mode.")
+        raise
     for basename in basenames:
         wf.render_r3d(basename, img_format=opt.img_format).run()
     wf.delete_files([name+".r3d" for name in basenames])
