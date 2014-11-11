@@ -3,6 +3,7 @@ import sys
 import time
 
 _logfile = None
+_logfile_sections = None
 _c4_dir = os.path.abspath(os.path.dirname(__file__))
 
 # start log in ini-like format,
@@ -18,9 +19,12 @@ _c4_dir = os.path.abspath(os.path.dirname(__file__))
 #   end_time = log.get(log.sections()[-1], 'end_time') # last job end
 def start_log(filename, output_dir):
     global _logfile
+    global _logfile_sections
     _logfile = open(filename, "w")
     _logfile.write("# workflow log (compatible with Python ConfigParser)\n")
+    _logfile_sections = set()
     log_section("workflow")
+    log_value("cwd", os.getcwd())
     log_value("prog", sys.argv[0])
     if len(sys.argv) > 1:
         _logfile.write("args:\n")
@@ -28,7 +32,6 @@ def start_log(filename, output_dir):
             _logfile.write(" %s\n" % arg)
     log_value("output_dir", output_dir)
     log_value("CCP4", os.getenv("CCP4", ""))
-    _logfile.write("\n")
     _logfile.flush()
 
 
@@ -41,9 +44,16 @@ def _log_comment(text):
 
 def log_section(name):
     global _logfile
+    global _logfile_sections
     if _logfile:
-        _logfile.write("[%s]\n" % name)
-    _logfile.flush()
+        if name in _logfile_sections:
+            counter = 2
+            while ('%s %d' % (name, counter)) in _logfile_sections:
+                counter += 1
+            name = '%s %d' % (name, counter)
+        _logfile_sections.add(name)
+        _logfile.write("\n[%s]\n" % name)
+        _logfile.flush()
 
 def log_value(key, value):
     global _logfile
