@@ -354,6 +354,9 @@ class Workflow:
             c4.utils.log_value("stdin", job.stdin_file)
         elif job.std_input:
             c4.utils.log_value("input", job.std_input)
+        c4.utils.log_value("prog", job.args[0])
+        c4.utils.log_value("args",
+                           " ".join(pipes.quote(a) for a in job.args[1:]))
         #job.args[0] = "true"  # for debugging
         try:
             process = Popen(job.args, stdin=PIPE, stdout=PIPE, stderr=PIPE,
