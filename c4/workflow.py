@@ -18,6 +18,16 @@ _jobname_fmt = "%-15s"
 _elapsed_fmt = "%5.1fs  "
 
 
+# heh, python from MSYS2 is handy, but needs some monkey-patching
+if sys.platform == 'msys':
+    old_opjoin = os.path.join
+    def new_opjoin(*args):
+        for n in range(len(args)-1, -1, -1):
+            if n == 0 or os.path.isabs(args[n]):
+                return old_opjoin(*args[n:])
+    os.path.join = new_opjoin
+
+
 class JobError(Exception):
     def __init__(self, msg, note=None):
         self.msg = msg
