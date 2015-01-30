@@ -11,6 +11,8 @@ from c4.mtz import check_freerflags_column
 import c4.workflow
 from c4 import coot
 
+__version__ = '1.4'
+
 def dimple(wf, opt):
     pdb_meta = wf.read_pdb_metadata(opt.pdb)
     mtz_meta = wf.read_mtz_metadata(opt.mtz)
@@ -229,6 +231,8 @@ def parse_dimple_commands():
                         default='SIG<ICOL>', help='SIGI column label'+dstr)
     parser.add_argument('--from-job', metavar='N', type=int, default=0,
                         help=argparse.SUPPRESS)
+    parser.add_argument('--version', action='version',
+                        version='%(prog)s '+__version__)
     # get rid of 'positional arguments' in the usage method
     parser._action_groups[:1] = []
 
