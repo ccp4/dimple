@@ -467,10 +467,10 @@ class Workflow:
     def freerflag(self, hklin, hklout):
         return ccp4_job(self, "freerflag", logical=locals())
 
-    def reindex(self, hklin, hklout, symmetry):
-        return ccp4_job(self, "reindex", logical=locals(),
-                        input=["symmetry '%s'" % symmetry,
-                               "reindex h,k,l"])
+    #def reindex(self, hklin, hklout, symmetry):
+    #    return ccp4_job(self, "reindex", logical=locals(),
+    #                    input=["symmetry '%s'" % symmetry,
+    #                           "reindex h,k,l"])
 
     def truncate(self, hklin, hklout, labin, labout):
         return ccp4_job(self, "truncate", logical=locals(),

@@ -14,24 +14,19 @@ from c4 import coot
 RFREE_FOR_MOLREP = 0.4
 
 def dimple(wf, opt):
-    comment("Change mtz symmetry if needed. Use pdb as reference.\n")
-    wf.pointless(hklin=opt.mtz, xyzin=opt.pdb, hklout="pointless.mtz").run()
     pdb_meta = wf.read_pdb_metadata(opt.pdb)
     mtz_meta = wf.read_mtz_metadata(opt.mtz)
     mtz_meta.check_col_type(opt.icolumn, 'J')
     mtz_meta.check_col_type(opt.sigicolumn, 'Q')
     if mtz_meta.symmetry == pdb_meta.symmetry:
-        comment(" Same symmetry in pdb and mtz (%s).\n" % pdb_meta.symmetry)
-        truncate_hklin = "pointless.mtz"
+        comment(" Same symmetry in mtz and pdb (%s).\n" % pdb_meta.symmetry)
     else:
-        comment(" Different symmetry in pdb (%s) and mtz (%s), reindexing mtz\n"
-                % (pdb_meta.symmetry, mtz_meta.symmetry))
-        wf.reindex(hklin="pointless.mtz", hklout="spacegroup.mtz",
-                   symmetry=pdb_meta.symmetry).run()
-        truncate_hklin = "spacegroup.mtz"
+        comment("Reindex mtz (%s) with pdb symmetry (%s).\n"
+                % (mtz_meta.symmetry, pdb_meta.symmetry))
+    wf.pointless(hklin=opt.mtz, xyzin=opt.pdb, hklout="pointless.mtz").run()
 
-    comment("Obtain structure factor amplitudes\n")
-    wf.truncate(hklin=truncate_hklin, hklout="truncate.mtz",
+    comment("Calculate structure factor amplitudes\n")
+    wf.truncate(hklin="pointless.mtz", hklout="truncate.mtz",
                 labin="IMEAN=%s SIGIMEAN=%s" % (opt.icolumn, opt.sigicolumn),
                 labout="F=F SIGF=SIGF").run()
 
