@@ -11,8 +11,6 @@ from c4.mtz import check_freerflags_column
 import c4.workflow
 from c4 import coot
 
-RFREE_FOR_MOLREP = 0.4
-
 def dimple(wf, opt):
     pdb_meta = wf.read_pdb_metadata(opt.pdb)
     mtz_meta = wf.read_mtz_metadata(opt.mtz)
@@ -86,12 +84,12 @@ def dimple(wf, opt):
     if "free_r" not in wf.jobs[-1].data:
         comment("WARNING: unknown free_r, something went wrong.\n")
         refmac_xyzin = "refmacRB.pdb"
-    elif wf.jobs[-1].data["free_r"] > RFREE_FOR_MOLREP:
-        comment("Run MR for R_free > %g\n" % RFREE_FOR_MOLREP)
+    elif wf.jobs[-1].data["free_r"] > opt.mr_when_rfree:
+        comment("Run MR for R_free > %g\n" % opt.mr_when_rfree)
         wf.molrep(f="prepared.mtz", m="refmacRB.pdb").run()
         refmac_xyzin = "molrep.pdb"
     else:
-        comment("No MR for R_free < %g\n" % RFREE_FOR_MOLREP)
+        comment("No MR for R_free < %g\n" % opt.mr_when_rfree)
         refmac_xyzin = "refmacRB.pdb"
 
     if False:
@@ -222,6 +220,9 @@ def parse_dimple_commands():
                         help='refmac matrix weight (default: auto-weight)')
     parser.add_argument('-R', '--free-r-flags', metavar='MTZ_FILE',
                     help='reference file with all reflections and freeR flags')
+    parser.add_argument('-M', '--mr-when-rfree', type=float, default=0.4,
+                        metavar='NUM',
+                        help='threshold for Molecular Replacement')
     parser.add_argument('-I', '--icolumn', metavar='ICOL',
                         default='IMEAN', help='I column label'+dstr)
     parser.add_argument('--sigicolumn', metavar='SIGICOL',
