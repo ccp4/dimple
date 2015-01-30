@@ -117,6 +117,8 @@ def dimple(wf, opt):
         comment("".join(restr_job.data["selected_lines"]))
 
     fb_job = wf.find_blobs(opt.hklout, opt.xyzout, sigma=0.8).run()
+    if opt.img_format == 'none':
+        return
     blobs = fb_job.data["blobs"]
     if blobs:
         if len(blobs) == 1:
@@ -215,8 +217,8 @@ def parse_dimple_commands():
                         help='output pdb file'+dstr)
     parser.add_argument('-s', '--summary', action='store_true',
                         help='show refmac summary')
-    parser.add_argument('-f', choices=['png', 'jpeg', 'tiff'], default='png',
-                        dest='img_format',
+    parser.add_argument('-f', choices=['png', 'jpeg', 'tiff', 'none'],
+                        default='png', dest='img_format',
                         help='format of generated images'+dstr)
     parser.add_argument('--weight', metavar='VALUE', type=float,
                         help='refmac matrix weight (default: auto-weight)')
