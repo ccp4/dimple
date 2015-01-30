@@ -212,7 +212,7 @@ def ccp4_job(workflow, prog, logical=None, input="", add_end=True):
     """
     job = Job(workflow, c4.utils.cbin(prog))
     if logical:
-        for a in ["hklin", "hklout", "hklref", "xyzin", "xyzout"]:
+        for a in ["hklin", "hklout", "hklref", "xyzin", "xyzout", "libin"]:
             if logical.get(a):
                 job.args.extend([a.upper(), logical[a]])
     lines = (input.splitlines() if isinstance(input, basestring) else input)
@@ -489,7 +489,7 @@ class Workflow:
         return ccp4_job(self, "pdbset", logical=locals(),
                         input=["cell %g %g %g %g %g %g" % cell])
 
-    def refmac5(self, hklin, xyzin, hklout, xyzout, labin, labout, keys):
+    def refmac5(self, hklin, xyzin, hklout, xyzout, labin, labout, libin, keys):
         job = ccp4_job(self, "refmac5", logical=locals(),
                        input=(["labin %s" % labin, "labout %s" % labout] +
                               keys.splitlines()))

@@ -77,7 +77,7 @@ def dimple(wf, opt):
     comment("Rigid-body refinement with resolution 3.5 A, 10 cycles.\n")
     wf.refmac5(hklin="prepared.mtz", xyzin=rb_xyzin,
                hklout="refmacRB.mtz", xyzout="refmacRB.pdb",
-               labin=refmac_labin, labout=refmac_labout,
+               labin=refmac_labin, labout=refmac_labout, libin=None,
                keys="""refinement type rigidbody resolution 15 3.5
                        scale type simple lssc anisotropic experimental
                        solvent yes vdwprob 1.4 ionprob 0.8 mshrink 0.8
@@ -106,7 +106,7 @@ def dimple(wf, opt):
         refmac_weight = "auto"
     restr_job = wf.refmac5(hklin="prepared.mtz", xyzin=refmac_xyzin,
                  hklout=opt.hklout, xyzout=opt.xyzout,
-                 labin=refmac_labin, labout=refmac_labout,
+                 labin=refmac_labin, labout=refmac_labout, libin=opt.libin,
                  keys="""make hydrogen all hout no cispeptide yes ssbridge yes
                          refinement type restrained
                          weight %s
@@ -220,6 +220,8 @@ def parse_dimple_commands():
                         help='format of generated images'+dstr)
     parser.add_argument('--weight', metavar='VALUE', type=float,
                         help='refmac matrix weight (default: auto-weight)')
+    parser.add_argument('--libin', metavar='CIF',
+                        help='ligand descriptions for refmac (LIBIN)')
     parser.add_argument('-R', '--free-r-flags', metavar='MTZ_FILE',
                     help='reference file with all reflections and freeR flags')
     parser.add_argument('-M', '--mr-when-rfree', type=float, default=0.4,
@@ -258,7 +260,7 @@ def parse_dimple_commands():
     if not opt.pdb.endswith(".pdb"):
         put_error("2nd arg should be pdb file")
         sys.exit(1)
-    for filename in [opt.mtz, opt.pdb, opt.free_r_flags]:
+    for filename in [opt.mtz, opt.pdb, opt.free_r_flags, opt.libin]:
         if filename and not os.path.isfile(filename):
             put_error("File not found: " + filename)
             sys.exit(1)
@@ -271,6 +273,8 @@ def parse_dimple_commands():
     opt.pdb = adjust_path(opt.pdb, opt.output_dir)
     if opt.free_r_flags:
         opt.free_r_flags = adjust_path(opt.free_r_flags, opt.output_dir)
+    if opt.libin:
+        opt.libin = adjust_path(opt.libin, opt.output_dir)
 
     # the default value of sigicolumn ('SIG<ICOL>') needs substitution
     opt.sigicolumn = opt.sigicolumn.replace('<ICOL>', opt.icolumn)
