@@ -14,18 +14,23 @@ from c4 import coot
 __version__ = '1.4'
 
 def dimple(wf, opt):
-    pdb_meta = wf.read_pdb_metadata(opt.pdb)
     mtz_meta = wf.read_mtz_metadata(opt.mtz)
     mtz_meta.check_col_type(opt.icolumn, 'J')
     mtz_meta.check_col_type(opt.sigicolumn, 'Q')
-    if mtz_meta.symmetry == pdb_meta.symmetry:
-        comment(" Same symmetry in mtz and pdb (%s).\n" % pdb_meta.symmetry)
-    else:
-        comment("Reindex mtz (%s) with pdb symmetry (%s).\n"
-                % (mtz_meta.symmetry, pdb_meta.symmetry))
-    wf.pointless(hklin=opt.mtz, xyzin=opt.pdb, hklout="pointless.mtz").run()
+    comment("MTZ: %s\n" % _meta_fmt(mtz_meta))
+    pdb_metas = { p: wf.read_pdb_metadata(p) for p in opt.pdbs }
+    if len(opt.pdbs) > 1:
+        comment("PDBs in order of similarity (using the first one):\n")
+        opt.pdbs.sort(key=lambda x: calculate_difference_metric(pdb_metas[x],
+                                                                mtz_meta))
+    for p in opt.pdbs:
+        meta = pdb_metas[p]
+        comment(" %s: %s\n" % (os.path.basename(p), _meta_fmt(meta)))
+    ini_pdb = opt.pdbs[0]
+    pdb_meta = pdb_metas[ini_pdb]
 
-    comment("Calculate structure factor amplitudes\n")
+    wf.pointless(hklin=opt.mtz, xyzin=ini_pdb, hklout="pointless.mtz").run()
+    #comment("Calculate structure factor amplitudes\n")
     wf.truncate(hklin="pointless.mtz", hklout="truncate.mtz",
                 labin="IMEAN=%s SIGIMEAN=%s" % (opt.icolumn, opt.sigicolumn),
                 labout="F=F SIGF=SIGF").run()
@@ -54,13 +59,13 @@ def dimple(wf, opt):
                    reso file 2 1000.0 %g
                    """ % (free_col, mtz_meta.dmax)).run()
 
-    if all(pdb_meta.cell[i] - mtz_meta.cell[i] < 1e-3 for i in range(6)):
+    if all(abs(pdb_meta.cell[i] - mtz_meta.cell[i]) < 1e+3 for i in range(6)):
         comment("Cell dimensions in pdb and mtz are the same.\n")
-        correct_cell_pdb = opt.pdb
+        correct_cell_pdb = ini_pdb
     else:
         comment("Different cell in pdb %s ...\n" % str(pdb_meta.cell))
         comment("              and mtz %s, changing pdb\n" % str(mtz_meta.cell))
-        wf.change_pdb_cell(xyzin=opt.pdb, xyzout="prepared.pdb",
+        wf.change_pdb_cell(xyzin=ini_pdb, xyzout="prepared.pdb",
                            cell=mtz_meta.cell)
         correct_cell_pdb = "prepared.pdb"
 
@@ -130,6 +135,25 @@ def dimple(wf, opt):
             _generate_pictures(wf, opt, fb_job)
     else:
         comment("Unmodelled blobs not found.\n")
+
+
+def _meta_fmt(meta):
+    def angle_fmt(x):
+        if x == 90.: return '90'
+        else:        return str(x)
+    return '%s   (%g, %g, %g, %s, %s, %s)' % (meta.symmetry,
+            meta.a, meta.b, meta.c,
+            angle_fmt(meta.alpha), angle_fmt(meta.beta), angle_fmt(meta.gamma))
+
+
+def match_symmetry(meta1, meta2):
+    return ([a[0] for a in meta1.symmetry.split()] ==
+            [a[0] for a in meta2.symmetry.split()])
+
+def calculate_difference_metric(meta1, meta2):
+    if not match_symmetry(meta1, meta2):
+        return sys.float_info.max
+    return sum(abs(a-b) for a,b in zip(meta1.cell, meta2.cell))
 
 
 def _check_picture_tools():
@@ -208,9 +232,7 @@ def parse_dimple_commands():
                 usage='%(prog)s [options...] input.mtz input.pdb output_dir',
                 epilog=c4.workflow.commands_help, prog="dimple",
                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('mtz', metavar='input.mtz')
-    parser.add_argument('pdb', metavar='input.pdb')
-    parser.add_argument('output_dir')
+    parser.add_argument('all_args', nargs='*')
     parser.add_argument('--hklout', metavar='out.mtz', default='final.mtz',
                         help='output mtz file'+dstr)
     parser.add_argument('--xyzout', metavar='out.pdb', default='final.pdb',
@@ -252,17 +274,31 @@ def parse_dimple_commands():
         args.append(output_dir)
 
     opt = parser.parse_args(args)
-    if opt.mtz.endswith(".pdb") and opt.pdb.endswith(".mtz"):  # no problem
-        opt.mtz, opt.pdb = opt.pdb, opt.mtz
+    # opt.all_args should be one mtz, one or more pdbs and output_dir
+    if len(opt.all_args) < 3:
+        put_error("At least 3 arguments expected.")
+        sys.exit(1)
+    opt.output_dir = opt.all_args.pop()
+    if opt.output_dir.endswith('.mtz') or opt.output_dir.endswith('.pdb'):
+        put_error('The last argument should be output directory')
+        sys.exit(1)
+    mtz_args = [a for a in opt.all_args if a.lower().endswith('.mtz')]
+    if len(mtz_args) != 1:
+        put_error("One mtz file should be given.")
+        sys.exit(1)
+    opt.mtz = mtz_args[0]
+    opt.all_args.remove(opt.mtz)
+    opt.pdbs = opt.all_args
+    for a in opt.pdbs:
+        if not a.lower().endswith('.pdb'):
+            put_error("unexpected arg (neither mtz nor pdb): %s" % a)
+            sys.exit(1)
+    if len(opt.pdbs) == 0:
+        put_error("At least one pdb file should be given.")
+        sys.exit(1)
 
     # extra checks
-    if not opt.mtz.endswith(".mtz"):
-        put_error("1st arg should be mtz file")
-        sys.exit(1)
-    if not opt.pdb.endswith(".pdb"):
-        put_error("2nd arg should be pdb file")
-        sys.exit(1)
-    for filename in [opt.mtz, opt.pdb, opt.free_r_flags, opt.libin]:
+    for filename in opt.pdbs + [opt.mtz, opt.free_r_flags, opt.libin]:
         if filename and not os.path.isfile(filename):
             put_error("File not found: " + filename)
             sys.exit(1)
@@ -272,7 +308,7 @@ def parse_dimple_commands():
 
     # Since we'll execute programs from opt.output_dir, adjust paths.
     opt.mtz = adjust_path(opt.mtz, opt.output_dir)
-    opt.pdb = adjust_path(opt.pdb, opt.output_dir)
+    opt.pdbs = [adjust_path(a, opt.output_dir) for a in opt.pdbs]
     if opt.free_r_flags:
         opt.free_r_flags = adjust_path(opt.free_r_flags, opt.output_dir)
     if opt.libin:
