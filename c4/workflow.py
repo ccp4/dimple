@@ -3,6 +3,7 @@ import sys
 from subprocess import Popen, PIPE
 import errno
 import pipes
+import re
 import threading
 import Queue
 import time
@@ -203,6 +204,30 @@ def _refmac_parser(job):
             job.data["ini_free_r"], job.data["ini_overall_r"],
             job.data["free_r"], job.data["overall_r"])
 
+# example:
+#     Alternative reindexing        Lklhd      CC     R(E^2)    Number Cell_deviation
+#    [-k,-l,h+k+l]           0.079    0.029    0.506     61253      2.99
+_POINTLESS_ALTREINDEX_MATCH = re.compile(r"^\s+\[")
+
+def _pointless_parser(job):
+    # the line with 'reflections copied' is the last we read
+    # to avoid reading 'Alternative reindexing' duplicated in the summary
+    if "refl_out" not in job.data:
+        for line in job.out.read_line():
+            if line.startswith("Maximum resolution used:"):
+                job.data["resol"] = float(line.split(":")[1])
+            elif line.startswith("Number of reflections:"):
+                job.data["refl_in"] = int(line.split(":")[1])
+            elif _POINTLESS_ALTREINDEX_MATCH.match(line):
+                reindex = job.data.setdefault('alt_reindex', [])
+                s = line.split()
+                reindex.append({'op': s[0], 'cc': s[2], 'cell_deviat': s[-1]})
+            elif "reflections copied to output file" in line:
+                job.data["refl_out"] = int(line.split()[0])
+    return "resol. %4s A   #refl: %5s -> %s" % (
+            round(job.data["resol"], 2) if "resol" in job.data else "",
+            job.data.get("refl_in", ""),
+            job.data.get("refl_out", ""))
 
 def ccp4_job(workflow, prog, logical=None, input="", add_end=True):
     """Handle traditional convention for arguments of CCP4 programs.
@@ -451,7 +476,9 @@ class Workflow:
         return job
 
     def pointless(self, hklin, xyzin, hklref=None, hklout=None, keys=""):
-        return ccp4_job(self, "pointless", logical=locals(), input=keys)
+        job = ccp4_job(self, "pointless", logical=locals(), input=keys)
+        job.parser = "_pointless_parser"
+        return job
 
     def mtzdump(self, hklin, keys=""):
         return ccp4_job(self, "mtzdump", logical=locals())

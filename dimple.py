@@ -17,7 +17,7 @@ def dimple(wf, opt):
     mtz_meta = wf.read_mtz_metadata(opt.mtz)
     mtz_meta.check_col_type(opt.icolumn, 'J')
     mtz_meta.check_col_type(opt.sigicolumn, 'Q')
-    comment("MTZ: %s\n" % _meta_fmt(mtz_meta))
+    _comment_summary_line("MTZ", mtz_meta)
     pdb_metas = { p: wf.read_pdb_metadata(p) for p in opt.pdbs }
     if len(opt.pdbs) > 1:
         comment("PDBs in order of similarity (using the first one):\n")
@@ -25,11 +25,18 @@ def dimple(wf, opt):
                                                                 mtz_meta))
     for p in opt.pdbs:
         meta = pdb_metas[p]
-        comment(" %s: %s\n" % (os.path.basename(p), _meta_fmt(meta)))
+        _comment_summary_line(os.path.basename(p), meta)
     ini_pdb = opt.pdbs[0]
     pdb_meta = pdb_metas[ini_pdb]
 
     wf.pointless(hklin=opt.mtz, xyzin=ini_pdb, hklout="pointless.mtz").run()
+    alt_reindex = wf.jobs[-1].data.get('alt_reindex')
+    if alt_reindex:
+        for ar in alt_reindex:
+            comment("    %-10s CC: %-8s cell_deviation: %s\n" % (
+                    ar['op'], ar['cc'], ar['cell_deviat']))
+    else:
+        comment("    ooops, no good indexing\n")
     #comment("Calculate structure factor amplitudes\n")
     wf.truncate(hklin="pointless.mtz", hklout="truncate.mtz",
                 labin="IMEAN=%s SIGIMEAN=%s" % (opt.icolumn, opt.sigicolumn),
@@ -137,17 +144,22 @@ def dimple(wf, opt):
         comment("Unmodelled blobs not found.\n")
 
 
-def _meta_fmt(meta):
-    def angle_fmt(x):
+def _comment_summary_line(name, meta):
+    def angle(x):
         if x == 90.: return '90'
         else:        return str(x)
-    return '%s   (%g, %g, %g, %s, %s, %s)' % (meta.symmetry,
-            meta.a, meta.b, meta.c,
-            angle_fmt(meta.alpha), angle_fmt(meta.beta), angle_fmt(meta.gamma))
+    if meta:
+        line = '%-21s %-12s (%.2f, %.2f, %.2f,  %s, %s, %s)\n' % (
+                name, meta.symmetry, meta.a, meta.b, meta.c,
+                angle(meta.alpha), angle(meta.beta), angle(meta.gamma))
+    else:
+        line = '%-21s ???\n' % name
+    comment(line)
 
 
 def match_symmetry(meta1, meta2):
-    return ([a[0] for a in meta1.symmetry.split()] ==
+    return (meta1 and meta2 and
+            [a[0] for a in meta1.symmetry.split()] ==
             [a[0] for a in meta2.symmetry.split()])
 
 def calculate_difference_metric(meta1, meta2):
