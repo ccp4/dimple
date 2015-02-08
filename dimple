@@ -1,2 +1,7 @@
 #!/bin/sh
-$CCP4/bin/ccp4-python -m dimple "$@"
+
+if [ -e "$0".py ]; then
+  $CCP4/bin/ccp4-python "$0".py "$@" # development version
+else
+  $CCP4/bin/ccp4-python -m dimple "$@"
+fi
