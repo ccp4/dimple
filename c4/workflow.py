@@ -224,6 +224,7 @@ def _pointless_parser(job):
                 reindex.append({'op': s[0], 'cc': s[2], 'cell_deviat': s[-1]})
             elif "reflections copied to output file" in line:
                 job.data["refl_out"] = int(line.split()[0])
+                break
     return "resol. %4s A   #refl: %5s -> %s" % (
             round(job.data["resol"], 2) if "resol" in job.data else "",
             job.data.get("refl_in", ""),
@@ -315,6 +316,7 @@ class Workflow:
     def __init__(self, output_dir, from_job=0):
         self.output_dir = os.path.abspath(output_dir)
         self.jobs = []
+        self.file_info = {}
         self.from_job = from_job # skip jobs before from_job (for testing)
         if from_job > 1:
             try:

@@ -15,19 +15,20 @@ __version__ = '1.4'
 
 def dimple(wf, opt):
     mtz_meta = wf.read_mtz_metadata(opt.mtz)
+    wf.file_info[opt.mtz] = mtz_meta
     mtz_meta.check_col_type(opt.icolumn, 'J')
     mtz_meta.check_col_type(opt.sigicolumn, 'Q')
     _comment_summary_line("MTZ", mtz_meta)
-    pdb_metas = { p: wf.read_pdb_metadata(p) for p in opt.pdbs }
+    for p in opt.pdbs:
+        wf.file_info[p] = wf.read_pdb_metadata(p)
     if len(opt.pdbs) > 1:
         comment("PDBs in order of similarity (using the first one):\n")
-        opt.pdbs.sort(key=lambda x: calculate_difference_metric(pdb_metas[x],
+        opt.pdbs.sort(key=lambda x: calculate_difference_metric(wf.file_info[x],
                                                                 mtz_meta))
     for p in opt.pdbs:
-        meta = pdb_metas[p]
-        _comment_summary_line(os.path.basename(p), meta)
+        _comment_summary_line(os.path.basename(p), wf.file_info[p])
     ini_pdb = opt.pdbs[0]
-    pdb_meta = pdb_metas[ini_pdb]
+    pdb_meta = wf.file_info[ini_pdb]
 
     wf.pointless(hklin=opt.mtz, xyzin=ini_pdb, hklout="pointless.mtz").run()
     alt_reindex = wf.jobs[-1].data.get('alt_reindex')
