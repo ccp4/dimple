@@ -67,7 +67,7 @@ def dimple(wf, opt):
                    reso file 2 1000.0 %g
                    """ % (free_col, mtz_meta.dmax)).run()
 
-    if all(abs(pdb_meta.cell[i] - mtz_meta.cell[i]) < 1e+3 for i in range(6)):
+    if all(abs(pdb_meta.cell[i] - mtz_meta.cell[i]) < 1e-3 for i in range(6)):
         comment("Cell dimensions in pdb and mtz are the same.\n")
         correct_cell_pdb = ini_pdb
     else:
