@@ -318,7 +318,7 @@ class Workflow:
         self.jobs = []
         self.file_info = {}
         self.from_job = from_job # skip jobs before from_job (for testing)
-        if from_job > 1:
+        if from_job >= 1:
             try:
                 self.repl_jobs = self.unpickle_jobs().jobs
             except:
