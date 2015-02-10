@@ -207,7 +207,7 @@ def _refmac_parser(job):
 # example:
 #     Alternative reindexing        Lklhd      CC     R(E^2)    Number Cell_deviation
 #    [-k,-l,h+k+l]           0.079    0.029    0.506     61253      2.99
-_POINTLESS_ALTREINDEX_MATCH = re.compile(r"^\s+\[")
+_POINTLESS_ALTREINDEX_MATCH = re.compile(r"^\s+\[[hkl+-, ]+\][ \t0-9+-.eE]+$")
 
 def _pointless_parser(job):
     # the line with 'reflections copied' is the last we read
