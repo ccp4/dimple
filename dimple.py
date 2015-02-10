@@ -129,6 +129,13 @@ def dimple(wf, opt):
                          ncycle 8""" % refmac_weight).run()
     if opt.summary:
         comment("".join(restr_job.data["selected_lines"]))
+    # if that run is repeated with --from-job it's useful to compare Rfree
+    if wf.repl_jobs and wf.from_job <= len(wf.jobs): # from_job is 1-based
+        prev = [j for j in wf.repl_jobs if j.name == restr_job.name]
+        if prev and prev[0].data and "free_r" in prev[0].data:
+            comment("Previously:  R/Rfree %.4f/%.4f  Rfree change: %+.4f\n" % (
+                    prev[0].data["overall_r"], prev[0].data["free_r"],
+                    restr_job.data["free_r"] - prev[0].data["free_r"]))
 
     fb_job = wf.find_blobs(opt.hklout, opt.xyzout, sigma=0.8).run()
     if opt.img_format == 'none':
