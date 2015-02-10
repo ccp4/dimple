@@ -130,7 +130,7 @@ def dimple(wf, opt):
     if opt.summary:
         comment("".join(restr_job.data["selected_lines"]))
     # if that run is repeated with --from-job it's useful to compare Rfree
-    if wf.repl_jobs and wf.from_job <= len(wf.jobs): # from_job is 1-based
+    if wf.from_job > 0 and wf.from_job <= len(wf.jobs): # from_job is 1-based
         prev = [j for j in wf.repl_jobs if j.name == restr_job.name]
         if prev and prev[0].data and "free_r" in prev[0].data:
             comment("Previously:  R/Rfree %.4f/%.4f  Rfree change: %+.4f\n" % (
