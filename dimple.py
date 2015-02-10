@@ -30,7 +30,8 @@ def dimple(wf, opt):
     ini_pdb = opt.pdbs[0]
     pdb_meta = wf.file_info[ini_pdb]
 
-    wf.pointless(hklin=opt.mtz, xyzin=ini_pdb, hklout="pointless.mtz").run()
+    wf.pointless(hklin=opt.mtz, xyzin=ini_pdb, hklout="pointless.mtz",
+                 keys="TOLERANCE 5").run()
     alt_reindex = wf.jobs[-1].data.get('alt_reindex')
     if alt_reindex:
         for ar in alt_reindex:
