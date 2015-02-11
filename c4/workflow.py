@@ -458,10 +458,6 @@ class Workflow:
         job.out.save_output(self.output_dir, "%s.log" % log_basename)
         job.err.save_output(self.output_dir, "%s.err" % log_basename)
 
-    def change_pdb_cell(self, xyzin, xyzout, cell):
-        #for now using pdbset
-        self.pdbset(xyzin=xyzin, xyzout=xyzout, cell=cell).run()
-
     def remove_hetatm(self, xyzin, xyzout):
         with open(xyzout, "wb") as out:
             return c4.pdb.remove_hetatm(xyzin, out)

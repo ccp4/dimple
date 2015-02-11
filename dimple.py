@@ -67,23 +67,12 @@ def dimple(wf, opt):
                    labin file 2 E1=%s
                    reso file 2 1000.0 %g
                    """ % (free_col, mtz_meta.dmax)).run()
-
-    if all(abs(pdb_meta.cell[i] - mtz_meta.cell[i]) < 1e-3 for i in range(6)):
-        comment("Cell dimensions in pdb and mtz are the same.\n")
-        correct_cell_pdb = ini_pdb
-    else:
-        comment("Different cell in pdb %s ...\n" % str(pdb_meta.cell))
-        comment("              and mtz %s, changing pdb\n" % str(mtz_meta.cell))
-        wf.change_pdb_cell(xyzin=ini_pdb, xyzout="prepared.pdb",
-                           cell=mtz_meta.cell)
-        correct_cell_pdb = "prepared.pdb"
-
     if False:
         rb_xyzin = "prepared_nohet.pdb"
-        n_het = wf.remove_hetatm(xyzin=correct_cell_pdb, xyzout=rb_xyzin)
+        n_het = wf.remove_hetatm(xyzin=ini_pdb, xyzout=rb_xyzin)
         comment("Removed %s atoms marked as HETATM in pdb.\n" % n_het)
     else:
-        rb_xyzin = correct_cell_pdb
+        rb_xyzin = ini_pdb
 
     refmac_labin = "FP=F SIGFP=SIGF FREE=%s" % free_col
     refmac_labout = ("FC=FC PHIC=PHIC FWT=2FOFCWT PHWT=PH2FOFCWT "
