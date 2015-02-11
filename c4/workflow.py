@@ -1,6 +1,7 @@
 import os
 import sys
 from subprocess import Popen, PIPE
+import gzip
 import errno
 import pipes
 import re
@@ -8,6 +9,7 @@ import threading
 import Queue
 import time
 import cPickle as pickle
+import shutil
 import c4.utils
 import c4.mtz
 import c4.pdb
@@ -565,6 +567,17 @@ class Workflow:
         job.stdin_file = name+".r3d"
         job.parser = " -> %s.%s" % (name, img_format)
         return job
+
+    def copy_uncompressed(self, src, dst):
+        src_fullpath = os.path.join(self.output_dir, src)
+        dst_fullpath = os.path.join(self.output_dir, dst)
+        if src.endswith(".gz"):
+            with gzip.open(src_fullpath, 'rb') as fsrc:
+                content = fsrc.read()
+            with open(dst_fullpath, 'wb') as fdst:
+                fdst.write(content)
+        else:
+            shutil.copy2(src_fullpath, dst_fullpath)
 
     def delete_files(self, filenames):
         for f in filenames:

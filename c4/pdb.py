@@ -1,3 +1,4 @@
+import gzip
 import sys
 
 
@@ -24,10 +25,16 @@ symmetry: "%(symmetry)s"''' % self.__dict__
 
 
 def read_metadata(pdb):
-    with open(pdb) as f:
-        for line in f:
-            if line.startswith("CRYST1"):
-                return PdbMeta(line)
+    if pdb.endswith('.gz'):
+        f = gzip.open(pdb, 'rb')
+    else:
+        f = open(pdb)
+    for line in f:
+        if line.startswith("CRYST1"):
+            f.close()
+            return PdbMeta(line)
+    f.close()
+    sys.stderr.write("\nCRYST1 line not found in %s\n" % pdb)
 
 
 def remove_hetatm(filename_in, file_out):

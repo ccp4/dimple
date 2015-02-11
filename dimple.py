@@ -27,9 +27,9 @@ def dimple(wf, opt):
                                                                 mtz_meta))
     for p in opt.pdbs:
         _comment_summary_line(os.path.basename(p), wf.file_info[p])
-    ini_pdb = opt.pdbs[0]
-    pdb_meta = wf.file_info[ini_pdb]
-
+    ini_pdb = "ini.pdb"
+    wf.copy_uncompressed(opt.pdbs[0], ini_pdb)
+    pdb_meta = wf.file_info[opt.pdbs[0]]
     wf.pointless(hklin=opt.mtz, xyzin=ini_pdb, hklout="pointless.mtz",
                  keys="TOLERANCE 5").run()
     alt_reindex = wf.jobs[-1].data.get('alt_reindex')
@@ -289,7 +289,8 @@ def parse_dimple_commands():
         put_error("At least 3 arguments expected.")
         sys.exit(1)
     opt.output_dir = opt.all_args.pop()
-    if opt.output_dir.endswith('.mtz') or opt.output_dir.endswith('.pdb'):
+    if (opt.output_dir.endswith('.mtz') or opt.output_dir.endswith('.pdb')
+            or opt.output_dir.endswith('.gz')):
         put_error('The last argument should be output directory')
         sys.exit(1)
     mtz_args = [a for a in opt.all_args if a.lower().endswith('.mtz')]
@@ -300,7 +301,7 @@ def parse_dimple_commands():
     opt.all_args.remove(opt.mtz)
     opt.pdbs = opt.all_args
     for a in opt.pdbs:
-        if not a.lower().endswith('.pdb'):
+        if not (a.lower().endswith('.pdb') or a.lower().endswith('.pdb.gz')):
             put_error("unexpected arg (neither mtz nor pdb): %s" % a)
             sys.exit(1)
     if len(opt.pdbs) == 0:
