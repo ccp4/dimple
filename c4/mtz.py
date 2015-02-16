@@ -3,15 +3,13 @@ import subprocess
 from collections import OrderedDict
 import sys
 from c4.utils import put_error
+from c4.cell import Cell
 
-class MtzMeta:
+class MtzMeta(Cell):
     def __init__(self, cell, symmetry, sg_number, dmin, dmax, columns,
                  filename):
         assert type(columns[0]) == tuple
-        self.cell = cell
-        if cell:
-            self.a, self.b, self.c = cell[0:3]
-            self.alpha, self.beta, self.gamma = cell[3:]
+        Cell.__init__(self, cell)
         self.symmetry = symmetry
         self.sg_number = sg_number
         self.dmin = dmin

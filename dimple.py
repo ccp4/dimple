@@ -163,7 +163,8 @@ def match_symmetry(meta1, meta2):
 def calculate_difference_metric(meta1, meta2):
     if not match_symmetry(meta1, meta2):
         return sys.float_info.max
-    return sum(abs(a-b) for a,b in zip(meta1.cell, meta2.cell))
+    #return sum(abs(a-b) for a,b in zip(meta1.cell, meta2.cell))
+    return meta1.max_shift_in_mapping(meta2)
 
 
 def _check_picture_tools():
