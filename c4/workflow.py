@@ -501,7 +501,8 @@ class Workflow:
 
     def truncate(self, hklin, hklout, labin, labout):
         return ccp4_job(self, "truncate", logical=locals(),
-                        input=["labin %s" % labin, "labout %s" % labout])
+                        input=["labin %s" % labin, "labout %s" % labout,
+                               "NOHARVEST"])
 
     def cad(self, hklin, hklout, keys):
         assert type(hklin) is list
