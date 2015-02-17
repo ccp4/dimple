@@ -154,6 +154,9 @@ class Job:
             return p(self)
 
 
+def _format(fmt, arg):
+    return (fmt % arg) if arg else ""
+
 # parsers for various programs
 def _find_blobs_parser(job):
     if "blobs" not in job.data:
@@ -228,9 +231,25 @@ def _pointless_parser(job):
                 job.data["refl_out"] = int(line.split()[0])
                 break
     return "resol. %4s A   #refl: %5s -> %s" % (
-            round(job.data["resol"], 2) if "resol" in job.data else "",
+            _format("%.2f", job.data.get("resol")),
             job.data.get("refl_in", ""),
             job.data.get("refl_out", ""))
+
+
+def _ctruncate_parser(job):
+    d = job.data
+    for line in job.out.read_line():
+        if line.startswith("$GRAPHS: Wilson plot - estimated B factor ="):
+            d["B-factor"] = float(line.partition('=')[-1].split()[0])
+        elif line.startswith("Eigenvalue ratios:"):
+            d["eigval-ratios"] = tuple(float(i) for i in line.split()[-3:])
+        elif line.startswith("L statistic ="):
+            d["L-test"] = float(line.partition('=')[-1].split()[0])
+    return " B=%4s   aniso %14s   L-test:%s" % (
+            _format("%.1f", d.get("B-factor")),
+            _format("%.2f:%.2f:%.2f", d.get("eigval-ratios")),
+            _format("%.2f", d.get("L-test")))
+
 
 def ccp4_job(workflow, prog, logical=None, input="", add_end=True):
     """Handle traditional convention for arguments of CCP4 programs.
@@ -242,7 +261,7 @@ def ccp4_job(workflow, prog, logical=None, input="", add_end=True):
     if logical:
         for a in ["hklin", "hklout", "hklref", "xyzin", "xyzout", "libin"]:
             if logical.get(a):
-                job.args.extend([a.upper(), logical[a]])
+                job.args += [a.upper(), logical[a]]
     lines = (input.splitlines() if isinstance(input, basestring) else input)
     stripped = [a.strip() for a in lines if a and not a.isspace()]
     if add_end and not (stripped and stripped[-1].lower() == "end"):
@@ -472,7 +491,7 @@ class Workflow:
 
     def molrep(self, f, m):
         job = Job(self, c4.utils.cbin("molrep"))
-        job.args.extend(["-f", f, "-m", m])
+        job.args += ["-f", f, "-m", m]
         return job
 
     def pointless(self, hklin, xyzin, hklref=None, hklout=None, keys=""):
@@ -503,6 +522,12 @@ class Workflow:
         return ccp4_job(self, "truncate", logical=locals(),
                         input=["labin %s" % labin, "labout %s" % labout,
                                "NOHARVEST"])
+
+    def ctruncate(self, hklin, hklout, colin):
+        job = Job(self, "ctruncate")
+        job.args += ["-hklin", hklin, "-hklout", hklout, "-colin", colin]
+        job.parser = "_ctruncate_parser"
+        return job
 
     def cad(self, hklin, hklout, keys):
         assert type(hklin) is list
@@ -547,7 +572,7 @@ class Workflow:
 
     def coot_py(self, script_text):
         job = Job(self, c4.coot.find_path())
-        job.args.extend(["--python", "--no-graphics", "--no-guano"])
+        job.args += ["--python", "--no-graphics", "--no-guano"]
         script_text += "\ncoot_real_exit(0)"
         # On some Wincoot installations coot-real.exe is started from
         # runwincoot.bat directly, and on some as "start ... coot-real ...".

@@ -12,6 +12,7 @@ import c4.workflow
 from c4 import coot
 
 __version__ = '1.4'
+OLD_TRUNCATE=False
 
 def dimple(wf, opt):
     mtz_meta = wf.read_mtz_metadata(opt.mtz)
@@ -40,9 +41,13 @@ def dimple(wf, opt):
     else:
         comment("    ooops, no good indexing\n")
     #comment("Calculate structure factor amplitudes\n")
-    wf.truncate(hklin="pointless.mtz", hklout="truncate.mtz",
-                labin="IMEAN=%s SIGIMEAN=%s" % (opt.icolumn, opt.sigicolumn),
-                labout="F=F SIGF=SIGF").run()
+    if OLD_TRUNCATE:
+        wf.truncate(hklin="pointless.mtz", hklout="truncate.mtz",
+                  labin="IMEAN=%s SIGIMEAN=%s" % (opt.icolumn, opt.sigicolumn),
+                  labout="F=F SIGF=SIGF").run()
+    else:
+        wf.ctruncate(hklin="pointless.mtz", hklout="truncate.mtz",
+                     colin="/*/*/[%s,%s]" % (opt.icolumn, opt.sigicolumn)).run()
 
     if opt.free_r_flags:
         free_mtz = opt.free_r_flags
@@ -51,9 +56,9 @@ def dimple(wf, opt):
         except ValueError, e: # avoiding "as e" syntax for the sake of Py2.4
             put_error(e)
             sys.exit(1)
-        comment("Free R flags from given file, col. %s.\n" % free_col)
+        comment("Free-R flags from given file, col. %s.\n" % free_col)
     else:
-        comment("Add missing reflections and free-R flags\n")
+        comment("Generate free-R flags\n")
         free_mtz = "free.mtz"
         wf.unique(hklout="unique.mtz",
                   cell=mtz_meta.cell, symmetry=pdb_meta.symmetry,
