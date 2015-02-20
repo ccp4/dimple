@@ -104,7 +104,7 @@ def dimple(wf, opt):
         refmac_xyzin = "refmacRB.pdb"
     elif wf.jobs[-1].data["free_r"] > opt.mr_when_rfree:
         comment("Run MR for R_free > %g\n" % opt.mr_when_rfree)
-        wf.molrep(f=prepared_mtz, m="refmacRB.pdb").run()
+        wf.molrep(f=prepared_mtz, m=rb_xyzin).run()
         refmac_xyzin = "molrep.pdb"
     else:
         comment("No MR for R_free < %g\n" % opt.mr_when_rfree)
