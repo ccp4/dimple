@@ -52,7 +52,8 @@ def dimple(wf, opt):
     if opt.free_r_flags:
         free_mtz = opt.free_r_flags
         try:
-            free_col = check_freerflags_column(free_mtz, mtz_meta)
+            free_mtz_path = os.path.join(wf.output_dir, free_mtz)
+            free_col = check_freerflags_column(free_mtz_path, mtz_meta)
         except ValueError, e: # avoiding "as e" syntax for the sake of Py2.4
             put_error(e)
             sys.exit(1)
