@@ -7,7 +7,7 @@ if sys.version_info[:2] != (2, 7):
     sys.exit(1)
 import argparse
 from c4.utils import comment, put_error, syspath, adjust_path, start_log
-from c4.mtz import check_freerflags_column
+from c4.mtz import check_freerflags_column, get_num_missing
 import c4.workflow
 from c4 import coot
 
@@ -52,12 +52,11 @@ def dimple(wf, opt):
     if opt.free_r_flags:
         free_mtz = opt.free_r_flags
         try:
-            free_mtz_path = os.path.join(wf.output_dir, free_mtz)
-            free_col = check_freerflags_column(free_mtz_path, mtz_meta)
+            free_col = check_freerflags_column(wf.path(free_mtz), mtz_meta)
         except ValueError, e: # avoiding "as e" syntax for the sake of Py2.4
             put_error(e)
             sys.exit(1)
-        comment("Free-R flags from given file, col. %s.\n" % free_col)
+        comment("Free-R flags from the reference file, column %s.\n" % free_col)
     else:
         comment("Generate free-R flags\n")
         free_mtz = "free.mtz"
@@ -68,11 +67,19 @@ def dimple(wf, opt):
         wf.freerflag(hklin="unique.mtz", hklout=free_mtz).run()
         free_col = 'FreeR_flag'
 
-    wf.cad(hklin=["truncate.mtz", free_mtz], hklout="prepared.mtz",
+    prepared_mtz = "prepared.mtz"
+    wf.cad(hklin=["truncate.mtz", free_mtz], hklout=prepared_mtz,
            keys="""labin file 1 ALL
                    labin file 2 E1=%s
                    reso file 2 1000.0 %g
                    """ % (free_col, mtz_meta.dmax)).run()
+    freerflag_missing = get_num_missing(wf.path(prepared_mtz), free_col)
+    if freerflag_missing:
+        comment("Hmmm, missing free-R flags for %d reflections. Adding.\n"
+                % freerflag_missing)
+        wf.freerflag(hklin=prepared_mtz, hklout="prepared2.mtz",
+                     keys="COMPLETE FREE="+free_col).run()
+        prepared_mtz = "prepared2.mtz"
     if False:
         rb_xyzin = "prepared_nohet.pdb"
         n_het = wf.remove_hetatm(xyzin=ini_pdb, xyzout=rb_xyzin)
@@ -84,7 +91,7 @@ def dimple(wf, opt):
     refmac_labout = ("FC=FC PHIC=PHIC FWT=2FOFCWT PHWT=PH2FOFCWT "
                      "DELFWT=FOFCWT PHDELWT=PHFOFCWT")
     comment("Rigid-body refinement with resolution 3.5 A, 10 cycles.\n")
-    wf.refmac5(hklin="prepared.mtz", xyzin=rb_xyzin,
+    wf.refmac5(hklin=prepared_mtz, xyzin=rb_xyzin,
                hklout="refmacRB.mtz", xyzout="refmacRB.pdb",
                labin=refmac_labin, labout=refmac_labout, libin=None,
                keys="""refinement type rigidbody resolution 15 3.5
@@ -97,7 +104,7 @@ def dimple(wf, opt):
         refmac_xyzin = "refmacRB.pdb"
     elif wf.jobs[-1].data["free_r"] > opt.mr_when_rfree:
         comment("Run MR for R_free > %g\n" % opt.mr_when_rfree)
-        wf.molrep(f="prepared.mtz", m="refmacRB.pdb").run()
+        wf.molrep(f=prepared_mtz, m="refmacRB.pdb").run()
         refmac_xyzin = "molrep.pdb"
     else:
         comment("No MR for R_free < %g\n" % opt.mr_when_rfree)
@@ -113,7 +120,7 @@ def dimple(wf, opt):
         refmac_weight = "matrix 0.2"
     else:
         refmac_weight = "auto"
-    restr_job = wf.refmac5(hklin="prepared.mtz", xyzin=refmac_xyzin,
+    restr_job = wf.refmac5(hklin=prepared_mtz, xyzin=refmac_xyzin,
                  hklout=opt.hklout, xyzout=opt.xyzout,
                  labin=refmac_labin, labout=refmac_labout, libin=opt.libin,
                  keys="""make hydrogen all hout no cispeptide yes ssbridge yes

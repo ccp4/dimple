@@ -294,7 +294,7 @@ def _start_enqueue_thread(file_obj):
 
 def _get_input_as_string(job):
     if job.stdin_file:
-        path = os.path.join(job.workflow.output_dir, job.stdin_file)
+        path = job.workflow.path(job.stdin_file)
         try:
             return open(path, "rb").read()
         except IOError:
@@ -352,12 +352,15 @@ class Workflow:
     def __str__(self):
         return "Workflow with %d jobs @ %s" % (len(self.jobs), self.output_dir)
 
+    def path(self, rel_path):
+        return os.path.join(self.output_dir, rel_path)
+
     def pickle_jobs(self, filename="workflow.pickle"):
-        with open(os.path.join(self.output_dir, filename), "wb") as f:
+        with open(self.path(filename), "wb") as f:
             pickle.dump(self, f, -1)
 
     def unpickle_jobs(self, filename="workflow.pickle"):
-        with open(os.path.join(self.output_dir, filename), "rb") as f:
+        with open(self.path(filename), "rb") as f:
             return pickle.load(f)
 
     def silently_run_job(self, job):
@@ -484,10 +487,10 @@ class Workflow:
             return c4.pdb.remove_hetatm(xyzin, out)
 
     def read_pdb_metadata(self, xyzin):
-        return c4.pdb.read_metadata(os.path.join(self.output_dir, xyzin))
+        return c4.pdb.read_metadata(self.path(xyzin))
 
     def read_mtz_metadata(self, hklin):
-        return c4.mtz.read_metadata(os.path.join(self.output_dir, hklin))
+        return c4.mtz.read_metadata(self.path(hklin))
 
     def molrep(self, f, m):
         job = Job(self, c4.utils.cbin("molrep"))
@@ -499,9 +502,6 @@ class Workflow:
         job.parser = "_pointless_parser"
         return job
 
-    def mtzdump(self, hklin, keys=""):
-        return ccp4_job(self, "mtzdump", logical=locals())
-
     def unique(self, hklout, cell, symmetry, resolution,
                labout="F=F_UNIQUE SIGF=SIGF_UNIQUE"):
         return ccp4_job(self, "unique", logical=locals(),
@@ -510,8 +510,8 @@ class Workflow:
                                "resolution %.3f" % resolution,
                                "labout %s" % labout])
 
-    def freerflag(self, hklin, hklout):
-        return ccp4_job(self, "freerflag", logical=locals())
+    def freerflag(self, hklin, hklout, keys=""):
+        return ccp4_job(self, "freerflag", logical=locals(), input=keys)
 
     #def reindex(self, hklin, hklout, symmetry):
     #    return ccp4_job(self, "reindex", logical=locals(),
@@ -578,7 +578,7 @@ class Workflow:
         # runwincoot.bat directly, and on some as "start ... coot-real ...".
         # There is no way afaics to pipe stdin to coot-real.
         if os.name == 'nt':
-            helper_path = os.path.join(self.output_dir, "r3d.py")
+            helper_path = self.path("r3d.py")
             with open(helper_path, "w") as f:
                 f.write(script_text)
             job.args.append(helper_path)
@@ -595,8 +595,8 @@ class Workflow:
         return job
 
     def copy_uncompressed(self, src, dst):
-        src_fullpath = os.path.join(self.output_dir, src)
-        dst_fullpath = os.path.join(self.output_dir, dst)
+        src_fullpath = self.path(src)
+        dst_fullpath = self.path(dst)
         if src.endswith(".gz"):
             with gzip.open(src_fullpath, 'rb') as fsrc:
                 content = fsrc.read()
@@ -607,7 +607,7 @@ class Workflow:
 
     def delete_files(self, filenames):
         for f in filenames:
-            path = os.path.join(self.output_dir, f)
+            path = self.path(f)
             if os.path.exists(path):
                 try:
                     os.remove(path)

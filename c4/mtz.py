@@ -37,16 +37,19 @@ columns: %(columns)s""" % self.__dict__
         return True
 
 
-
-def read_metadata(hklin):
-    "for now using mtzdump, directly calling libccp4/mtzlib would be better"
+def _run_mtzdump(hklin, keys):
     p = subprocess.Popen(["mtzdump", "HKLIN", hklin],
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-    stdoutdata, stderrdata = p.communicate(input="HEAD\nEND")
+    keys.append("END")
+    stdoutdata, stderrdata = p.communicate(input="\n".join(keys))
     retcode = p.poll()
     if retcode:
         raise RuntimeError("mtzdump of %s failed." % hklin)
-    lines = stdoutdata.splitlines()
+    return stdoutdata
+
+def read_metadata(hklin):
+    "for now using mtzdump, directly calling libccp4/mtzlib would be better"
+    lines = _run_mtzdump(hklin, ["HEAD"]).splitlines()
     for n, line in enumerate(lines):
         if not line.startswith(" * "):
             continue
@@ -87,11 +90,33 @@ def check_freerflags_column(free_mtz, data_mtz_meta):
             return name
     raise ValueError("free-R column not found in %s" % free_mtz)
 
+def get_num_missing(hklin, col):
+    # for now using mtzdump
+    out = _run_mtzdump(hklin, ["NREF 0"])
+    try:
+        start = out.index('\n Col Sort')
+        end = out.index('\n No. of reflections')
+        lines = out[start+1:end].splitlines()[3:-1]
+        for line in lines:
+            sp = line.split()
+            if sp[-1] == col:
+                return int(sp[4])
+    except ValueError:
+        pass
 
-if __name__ == '__main__':
-    if sys.argv[0] < 2:
+# for testing only
+def main():
+    if len(sys.argv) < 2:
         sys.stderr.write("No filenames.\n")
         sys.exit(1)
-    for arg in sys.argv[1:]:
-        print("File: %s" % arg)
-        print read_metadata(arg)
+    if sys.argv[1] == '-m' and len(sys.argv) >= 3:
+        col = sys.argv[2]
+        for arg in sys.argv[3:]:
+            print arg, get_num_missing(arg, col)
+    else:
+        for arg in sys.argv[1:]:
+            print("File: %s" % arg)
+            print read_metadata(arg)
+
+if __name__ == '__main__':
+    main()
