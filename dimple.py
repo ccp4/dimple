@@ -33,7 +33,8 @@ def dimple(wf, opt):
     pdb_meta = wf.file_info[opt.pdbs[0]]
     wf.pointless(hklin=opt.mtz, xyzin=ini_pdb, hklout="pointless.mtz",
                  keys="TOLERANCE 5").run()
-    alt_reindex = wf.jobs[-1].data.get('alt_reindex')
+    pointless_data = wf.jobs[-1].data
+    alt_reindex = pointless_data.get('alt_reindex')
     if alt_reindex:
         for ar in alt_reindex:
             comment("    %-10s CC: %-8s cell_deviation: %s\n" % (
@@ -61,7 +62,8 @@ def dimple(wf, opt):
         comment("Generate free-R flags\n")
         free_mtz = "free.mtz"
         wf.unique(hklout="unique.mtz",
-                  cell=mtz_meta.cell, symmetry=pdb_meta.symmetry,
+                  cell=pointless_data['output_cell'],
+                  symmetry=pdb_meta.symmetry,
                   resolution=mtz_meta.dmax,
                   labout="F=F_UNIQUE SIGF=SIGF_UNIQUE").run()
         wf.freerflag(hklin="unique.mtz", hklout=free_mtz).run()
