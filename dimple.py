@@ -169,15 +169,18 @@ def _comment_summary_line(name, meta):
 
 
 def match_symmetry(meta1, meta2):
-    return (meta1 and meta2 and
-            [a[0] for a in meta1.symmetry.split()] ==
-            [a[0] for a in meta2.symmetry.split()])
+    if not meta1 or not meta2:
+        return None
+    t1 = [a[0] for a in meta1.symmetry.split()]
+    t2 = [a[0] for a in meta2.symmetry.split()]
+    # FIXME sort t1 and t2?, C2 should match I2
+    return t1 == t2
 
 def calculate_difference_metric(meta1, meta2):
     if not match_symmetry(meta1, meta2):
         return sys.float_info.max
     #return sum(abs(a-b) for a,b in zip(meta1.cell, meta2.cell))
-    return meta1.max_shift_in_mapping(meta2)
+    return meta1.to_standard().max_shift_in_mapping(meta2.to_standard())
 
 
 def _check_picture_tools():

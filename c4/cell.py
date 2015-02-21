@@ -37,6 +37,15 @@ class Cell(object):
         trans = self.get_frac_matrix().dot(other.get_orth_matrix())
         return (trans - Mat3.identity()).euclidean_norm()
 
+    # This affects only primitive orthorhombic (P 2x 2x 2x).
+    # Convert the "reference" (symmetry-based) settings to the "standard"
+    # (cell-based) settings. See the SETTING keyword in POINTLESS.
+    def to_standard(self):
+        if self.alpha == self.beta == self.gamma == 90 and (
+                self.a > self.b or self.b > self.c):
+            return Cell(sorted(self.cell[:3]) + self.cell[3:])
+        return self
+
 
 class Mat3(object):
     "Matrix 3x3"
