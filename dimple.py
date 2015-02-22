@@ -6,6 +6,7 @@ if sys.version_info[:2] != (2, 7):
     sys.stderr.write("Error. Python 2.7 is required.\n")
     sys.exit(1)
 import argparse
+from c4.cell import Cell
 from c4.utils import comment, put_error, syspath, adjust_path, start_log
 from c4.mtz import check_freerflags_column, get_num_missing
 import c4.workflow
@@ -92,25 +93,34 @@ def dimple(wf, opt):
     refmac_labin = "FP=F SIGFP=SIGF FREE=%s" % free_col
     refmac_labout = ("FC=FC PHIC=PHIC FWT=2FOFCWT PHWT=PH2FOFCWT "
                      "DELFWT=FOFCWT PHDELWT=PHFOFCWT")
-    comment("Rigid-body refinement with resolution 3.5 A, 10 cycles.\n")
-    wf.refmac5(hklin=prepared_mtz, xyzin=rb_xyzin,
-               hklout="refmacRB.mtz", xyzout="refmacRB.pdb",
-               labin=refmac_labin, labout=refmac_labout, libin=None,
-               keys="""refinement type rigidbody resolution 15 3.5
-                       scale type simple lssc anisotropic experimental
-                       solvent yes vdwprob 1.4 ionprob 0.8 mshrink 0.8
-                       rigidbody ncycle 10""").run()
 
-    if "free_r" not in wf.jobs[-1].data:
-        comment("WARNING: unknown free_r, something went wrong.\n")
-        refmac_xyzin = "refmacRB.pdb"
-    elif wf.jobs[-1].data["free_r"] > opt.mr_when_rfree:
-        comment("Run MR for R_free > %g\n" % opt.mr_when_rfree)
+    refmac_xyzin = None
+    cell_diff = pdb_meta.max_shift_in_mapping(Cell(
+                                                pointless_data['output_cell']))
+    if cell_diff > 0.5:
+        comment("Quite different unit cells, start from MR.\n")
+    else:
+        comment("Rigid-body refinement with resolution 3.5 A, 10 cycles.\n")
+        wf.refmac5(hklin=prepared_mtz, xyzin=rb_xyzin,
+                   hklout="refmacRB.mtz", xyzout="refmacRB.pdb",
+                   labin=refmac_labin, labout=refmac_labout, libin=None,
+                   keys="""refinement type rigidbody resolution 15 3.5
+                           scale type simple lssc anisotropic experimental
+                           solvent yes vdwprob 1.4 ionprob 0.8 mshrink 0.8
+                           rigidbody ncycle 10""").run()
+
+        if "free_r" not in wf.jobs[-1].data:
+            comment("WARNING: unknown free_r, something went wrong.\n")
+            refmac_xyzin = "refmacRB.pdb"
+        elif wf.jobs[-1].data["free_r"] > opt.mr_when_rfree:
+            comment("Run MR for R_free > %g\n" % opt.mr_when_rfree)
+        else:
+            comment("No MR for R_free < %g\n" % opt.mr_when_rfree)
+            refmac_xyzin = "refmacRB.pdb"
+
+    if refmac_xyzin is None:
         wf.molrep(f=prepared_mtz, m=rb_xyzin).run()
         refmac_xyzin = "molrep.pdb"
-    else:
-        comment("No MR for R_free < %g\n" % opt.mr_when_rfree)
-        refmac_xyzin = "refmacRB.pdb"
 
     if False:
         wf.findwaters(pdbin=refmac_xyzin, hklin="refmacRB.mtz",
