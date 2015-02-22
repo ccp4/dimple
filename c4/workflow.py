@@ -227,10 +227,9 @@ def _pointless_parser(job):
                 reindex = job.data.setdefault('alt_reindex', [])
                 s = line.split()
                 reindex.append({'op': s[0], 'cc': s[2], 'cell_deviat': s[-1]})
-            elif line.startswith("   Cell:"):
-                if 'alt_reindex' in job.data and 'output_cell' not in job.data:
-                    s = line.split()[1:]
-                    job.data["output_cell"] = tuple(float(i) for i in s)
+            elif line.startswith("   Cell:") and 'output_cell' not in job.data:
+                s = line.split()[1:]
+                job.data["output_cell"] = tuple(float(i) for i in s)
             elif "reflections copied to output file" in line:
                 job.data["refl_out"] = int(line.split()[0])
                 break
