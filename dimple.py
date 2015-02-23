@@ -95,9 +95,10 @@ def dimple(wf, opt):
                      "DELFWT=FOFCWT PHDELWT=PHFOFCWT")
 
     refmac_xyzin = None
+    #TODO: change to calculate_difference_metric
     cell_diff = pdb_meta.max_shift_in_mapping(Cell(
                                                 pointless_data['output_cell']))
-    if cell_diff > 0.5:
+    if cell_diff > 0.5 and opt.mr_when_rfree < 1:
         comment("Quite different unit cells, start from MR.\n")
     else:
         comment("Rigid-body refinement with resolution 3.5 A, 10 cycles.\n")
