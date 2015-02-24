@@ -1,4 +1,5 @@
 import gzip
+import subprocess
 import sys
 
 from c4.cell import Cell
@@ -38,6 +39,18 @@ def read_metadata(pdb):
     f.close()
     sys.stderr.write("\nCRYST1 line not found in %s\n" % pdb)
 
+def get_protein_mw(pdb):
+    p = subprocess.Popen(["rwcontents", "XYZIN", pdb],
+                         stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    stdoutdata, stderrdata = p.communicate(input="END\n")
+    retcode = p.poll()
+    if retcode:
+        raise RuntimeError("rwcontents of %s failed." % pdb)
+    key = 'Molecular Weight of protein:'
+    start = stdoutdata.find(key)
+    if start != -1:
+        start += len(key)
+        return float(stdoutdata[start:start+50].split()[0])
 
 def remove_hetatm(filename_in, file_out):
     "remove HETATM and related lines"
@@ -71,6 +84,9 @@ if __name__ == '__main__':
         sys.exit(1)
     if sys.argv[1] == "nohet":
         remove_hetatm(sys.argv[2], sys.stdout)
+        sys.exit(0)
+    if sys.argv[1] == "mw":
+        print get_protein_mw(sys.argv[2])
         sys.exit(0)
     for arg in sys.argv[1:]:
         print("File: %s" % arg)

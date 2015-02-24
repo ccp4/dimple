@@ -14,7 +14,7 @@ from c4 import coot
 
 __version__ = '1.4'
 OLD_TRUNCATE=False # truncate or ctruncate
-USE_MOLREP=True # molrep or phaser
+USE_MOLREP=False # molrep or phaser
 
 def dimple(wf, opt):
     mtz_meta = wf.read_mtz_metadata(opt.mtz)
@@ -125,10 +125,12 @@ def dimple(wf, opt):
             wf.molrep(f=prepared_mtz, m=rb_xyzin).run()
             refmac_xyzin = "molrep.pdb"
         else:
+            mw = wf.get_protein_mw(ini_pdb)
             phaser_script = """\
              ENSEMBLE p PDBFILE %s IDENTITY 100
+             COMPOSITION PROTEIN MW %s NUM 1
              SEARCH ENSEMBLE p NUM 1
-            """ % rb_xyzin
+            """ % (rb_xyzin, mw)
             if False:
                 phaser_script += "SGALTERNATIVE SELECT ALL"
             wf.phaser(hklin=prepared_mtz,

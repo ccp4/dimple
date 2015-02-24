@@ -495,6 +495,9 @@ class Workflow:
     def read_mtz_metadata(self, hklin):
         return c4.mtz.read_metadata(self.path(hklin))
 
+    def get_protein_mw(self, xyzin):
+        return c4.pdb.get_protein_mw(self.path(xyzin))
+
     def molrep(self, f, m, keys=""):
         job = Job(self, c4.utils.cbin("molrep"))
         job.args += ["-f", f, "-m", m]
