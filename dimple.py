@@ -13,7 +13,6 @@ import c4.workflow
 from c4 import coot
 
 __version__ = '1.4'
-USE_MOLREP=False # molrep or phaser
 
 def dimple(wf, opt):
     mtz_meta = wf.read_mtz_metadata(opt.mtz)
@@ -120,7 +119,7 @@ def dimple(wf, opt):
             refmac_xyzin = "refmacRB.pdb"
 
     if refmac_xyzin is None:
-        if USE_MOLREP:
+        if opt.MR_prog == 'molrep':
             wf.molrep(f=prepared_mtz, m=rb_xyzin).run()
             refmac_xyzin = "molrep.pdb"
         else:
@@ -307,14 +306,17 @@ def parse_dimple_commands():
                     help='reference file with all reflections and freeR flags')
     parser.add_argument('-M', '--mr-when-rfree', type=float, default=0.4,
                         metavar='NUM',
-                        help='threshold for Molecular Replacement')
+                        help='threshold for Molecular Replacement'+dstr)
+    parser.add_argument('--MR-prog', choices=['phaser', 'molrep'],
+                        default='phaser',
+                        help='Molecular Replacement program'+dstr)
     parser.add_argument('-I', '--icolumn', metavar='ICOL',
                         default='IMEAN', help='I column label'+dstr)
     parser.add_argument('--sigicolumn', metavar='SIGICOL',
                         default='SIG<ICOL>', help='SIGI column label'+dstr)
     parser.add_argument('--ItoF-prog', choices=['truncate', 'ctruncate'],
                         default='truncate',
-                        help='program used to covert intensity to amplitude')
+                        help='program to calculate amplitudes'+dstr)
     parser.add_argument('--from-job', metavar='N', type=int, default=0,
                         help=argparse.SUPPRESS)
     parser.add_argument('--version', action='version',
