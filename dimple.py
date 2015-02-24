@@ -402,6 +402,7 @@ def main():
         put_error(e.msg, comment=e.note)
         wf.pickle_jobs()
         sys.exit(1)
+    wf.options = options
     wf.pickle_jobs()
 
 if __name__ == "__main__":
