@@ -75,20 +75,12 @@ def read_metadata(hklin):
                    dmin=lower_resol, dmax=upper_resol, columns=columns,
                    filename=hklin)
 
-def check_freerflags_column(free_mtz, data_mtz_meta, expected_symmetry):
+def check_freerflags_column(free_mtz, expected_symmetry):
     names = ['FreeR_flag', 'FREE']
     rfree_meta = read_metadata(free_mtz)
     if rfree_meta.symmetry != expected_symmetry:
         comment("WARNING: R-free flag reference file is %s not %s.\n" % (
                 rfree_meta.symmetry, expected_symmetry))
-    if rfree_meta.dmax > data_mtz_meta.dmax:
-        put_error("free-R-flags dmax: %g (should be < %g)" %
-                  (rfree_meta.dmax, data_mtz_meta.dmax))
-        sys.exit(1)
-    if rfree_meta.dmin < data_mtz_meta.dmin:
-        put_error("free-R-flags dmin: %g (should be >= %g)" %
-                  (rfree_meta.dmin, data_mtz_meta.dmin))
-        sys.exit(1)
     for name in names:
         if name in rfree_meta.columns:
             rfree_meta.check_col_type(name, 'I')

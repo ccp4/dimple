@@ -52,7 +52,7 @@ def dimple(wf, opt):
 
     if opt.free_r_flags:
         free_mtz = opt.free_r_flags
-        free_col = check_freerflags_column(wf.path(free_mtz), mtz_meta,
+        free_col = check_freerflags_column(wf.path(free_mtz),
                                            expected_symmetry=pdb_meta.symmetry)
         comment("Free-R flags from the reference file, column %s.\n" % free_col)
     else:
