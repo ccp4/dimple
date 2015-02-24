@@ -530,7 +530,7 @@ class Workflow:
     def unique(self, hklout, cell, symmetry, resolution,
                labout="F=F_UNIQUE SIGF=SIGF_UNIQUE"):
         return ccp4_job(self, "unique", logical=locals(),
-                        input=["cell %g %g %g %g %g %g" % cell,
+                        input=["cell %g %g %g %g %g %g" % tuple(cell),
                                "symmetry '%s'" % symmetry,
                                "resolution %.3f" % resolution,
                                "labout %s" % labout])

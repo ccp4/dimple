@@ -59,12 +59,23 @@ def dimple(wf, opt):
     else:
         comment("Generate free-R flags\n")
         free_mtz = "free.mtz"
-        wf.unique(hklout="unique.mtz",
-                  cell=pointless_data['output_cell'],
-                  symmetry=pdb_meta.symmetry,
-                  resolution=mtz_meta.dmax,
-                  labout="F=F_UNIQUE SIGF=SIGF_UNIQUE").run()
-        wf.freerflag(hklin="unique.mtz", hklout=free_mtz).run()
+        # CCP4 freerflag uses always the same pseudo-random sequence by default
+        if opt.seed_freerflag:
+            wf.unique(hklout="unique.mtz",
+                      cell=pointless_data['output_cell'],
+                      symmetry=pdb_meta.symmetry,
+                      resolution=mtz_meta.dmax,
+                      labout="F=F_UNIQUE SIGF=SIGF_UNIQUE").run()
+            wf.freerflag(hklin="unique.mtz", hklout=free_mtz, keys="SEED").run()
+        else:
+            # here we'd like to have always the same set of free-r flags
+            # for given PDB file. That's why it's MTZ-agnostic.
+            wf.unique(hklout="unique.mtz",
+                      cell=pdb_meta.cell,
+                      symmetry=pdb_meta.symmetry,
+                      resolution=1.0, # somewhat arbitrary limit
+                      labout="F=F_UNIQUE SIGF=SIGF_UNIQUE").run()
+            wf.freerflag(hklin="unique.mtz", hklout=free_mtz).run()
         free_col = 'FreeR_flag'
 
     prepared_mtz = "prepared.mtz"
@@ -315,6 +326,8 @@ def parse_dimple_commands():
     parser.add_argument('--ItoF-prog', choices=['truncate', 'ctruncate'],
                         default='truncate',
                         help='program to calculate amplitudes'+dstr)
+    parser.add_argument('--seed-freerflag', action='store_true',
+                        help=argparse.SUPPRESS)
     parser.add_argument('--from-job', metavar='N', type=int, default=0,
                         help=argparse.SUPPRESS)
     parser.add_argument('--version', action='version',
