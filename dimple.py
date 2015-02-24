@@ -13,7 +13,8 @@ import c4.workflow
 from c4 import coot
 
 __version__ = '1.4'
-OLD_TRUNCATE=False
+OLD_TRUNCATE=False # truncate or ctruncate
+USE_MOLREP=True # molrep or phaser
 
 def dimple(wf, opt):
     mtz_meta = wf.read_mtz_metadata(opt.mtz)
@@ -120,8 +121,23 @@ def dimple(wf, opt):
             refmac_xyzin = "refmacRB.pdb"
 
     if refmac_xyzin is None:
-        wf.molrep(f=prepared_mtz, m=rb_xyzin).run()
-        refmac_xyzin = "molrep.pdb"
+        if USE_MOLREP:
+            wf.molrep(f=prepared_mtz, m=rb_xyzin).run()
+            refmac_xyzin = "molrep.pdb"
+        else:
+            phaser_script = """\
+             ENSEMBLE p PDBFILE %s IDENTITY 100
+             SEARCH ENSEMBLE p NUM 1
+            """ % rb_xyzin
+            if False:
+                phaser_script += "SGALTERNATIVE SELECT ALL"
+            wf.phaser(hklin=prepared_mtz,
+                      #labin="I = %s SIGI = %s" % (opt.icolumn, opt.sigicolumn),
+                      labin="F = F SIGF = SIGF",
+                      mode="MR_AUTO",
+                      script=phaser_script,
+                      root='phaser').run()
+            refmac_xyzin = "phaser.1.pdb"
 
     if False:
         wf.findwaters(pdbin=refmac_xyzin, hklin="refmacRB.mtz",

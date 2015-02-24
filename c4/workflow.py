@@ -495,9 +495,21 @@ class Workflow:
     def read_mtz_metadata(self, hklin):
         return c4.mtz.read_metadata(self.path(hklin))
 
-    def molrep(self, f, m):
+    def molrep(self, f, m, keys=""):
         job = Job(self, c4.utils.cbin("molrep"))
         job.args += ["-f", f, "-m", m]
+        if keys:
+            job.args.append("-i")
+            job.std_input = keys.strip() + "\nend"
+        return job
+
+    def phaser(self, hklin, labin, mode, script, root):
+        lines = ["MODE %s" % mode,
+                 "HKLIN %s" % hklin,
+                 "LABIN %s" % labin
+                ] + script.splitlines() + [
+                 "ROOT %s" % root ]
+        job = ccp4_job(self, "phaser", input=lines)
         return job
 
     def pointless(self, hklin, xyzin, hklref=None, hklout=None, keys=""):
