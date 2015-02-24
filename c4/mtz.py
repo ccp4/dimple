@@ -2,7 +2,7 @@
 import subprocess
 from collections import OrderedDict
 import sys
-from c4.utils import put_error
+from c4.utils import put_error, comment
 from c4.cell import Cell
 
 class MtzMeta(Cell):
@@ -75,20 +75,26 @@ def read_metadata(hklin):
                    dmin=lower_resol, dmax=upper_resol, columns=columns,
                    filename=hklin)
 
-def check_freerflags_column(free_mtz, data_mtz_meta):
+def check_freerflags_column(free_mtz, data_mtz_meta, expected_symmetry):
     names = ['FreeR_flag', 'FREE']
     rfree_meta = read_metadata(free_mtz)
+    if rfree_meta.symmetry != expected_symmetry:
+        comment("WARNING: R-free flag reference file is %s not %s.\n" % (
+                rfree_meta.symmetry, expected_symmetry))
     if rfree_meta.dmax > data_mtz_meta.dmax:
-        raise ValueError("free-R-flags dmax: %g (should be < %g)" %
-                                  (rfree_meta.dmax, data_mtz_meta.dmax))
+        put_error("free-R-flags dmax: %g (should be < %g)" %
+                  (rfree_meta.dmax, data_mtz_meta.dmax))
+        sys.exit(1)
     if rfree_meta.dmin < data_mtz_meta.dmin:
-        raise ValueError("free-R-flags dmin: %g (should be >= %g)" %
-                                  (rfree_meta.dmin, data_mtz_meta.dmin))
+        put_error("free-R-flags dmin: %g (should be >= %g)" %
+                  (rfree_meta.dmin, data_mtz_meta.dmin))
+        sys.exit(1)
     for name in names:
         if name in rfree_meta.columns:
             rfree_meta.check_col_type(name, 'I')
             return name
-    raise ValueError("free-R column not found in %s" % free_mtz)
+    put_error("free-R column not found in %s" % free_mtz)
+    sys.exit(1)
 
 def get_num_missing(hklin, col):
     # for now using mtzdump

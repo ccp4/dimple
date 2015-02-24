@@ -52,11 +52,8 @@ def dimple(wf, opt):
 
     if opt.free_r_flags:
         free_mtz = opt.free_r_flags
-        try:
-            free_col = check_freerflags_column(wf.path(free_mtz), mtz_meta)
-        except ValueError, e: # avoiding "as e" syntax for the sake of Py2.4
-            put_error(e)
-            sys.exit(1)
+        free_col = check_freerflags_column(wf.path(free_mtz), mtz_meta,
+                                           expected_symmetry=pdb_meta.symmetry)
         comment("Free-R flags from the reference file, column %s.\n" % free_col)
     else:
         comment("Generate free-R flags\n")
