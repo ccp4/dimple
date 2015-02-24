@@ -79,6 +79,7 @@ def dimple(wf, opt):
         free_col = 'FreeR_flag'
 
     prepared_mtz = "prepared.mtz"
+    # TODO: add SYSAB_KEEP key if spacegroup is to be searched
     wf.cad(hklin=["truncate.mtz", free_mtz], hklout=prepared_mtz,
            keys="""labin file 1 ALL
                    labin file 2 E1=%s
@@ -209,10 +210,13 @@ def _comment_summary_line(name, meta):
 def match_symmetry(meta1, meta2):
     if not meta1 or not meta2:
         return None
-    t1 = [a[0] for a in meta1.symmetry.split()]
-    t2 = [a[0] for a in meta2.symmetry.split()]
-    # FIXME sort t1 and t2?, C2 should match I2
-    return t1 == t2
+    def sig(sym):
+        first_chars = [a[0] for a in sym.split()]
+        s = first_chars[0] + ''.join(sorted(first_chars[1:]))
+        if s == 'I112': # I2 is equivalent to C2
+            return 'C112'
+        return s
+    return sig(meta1.symmetry) == sig(meta2.symmetry)
 
 def calculate_difference_metric(meta1, meta2):
     if not match_symmetry(meta1, meta2):
