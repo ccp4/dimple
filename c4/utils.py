@@ -79,6 +79,7 @@ def put_green(text):
 
 def comment(text):
     put(text)
+    sys.stdout.flush()
     _log_comment(text)
 
 def reset_color():
