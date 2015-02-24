@@ -1,8 +1,11 @@
 import gzip
+import os
 import subprocess
 import sys
+import urllib2
 
 from c4.cell import Cell
+from c4.utils import comment, put_error
 
 
 class PdbMeta(Cell):
@@ -77,6 +80,27 @@ def remove_hetatm(filename_in, file_out):
         file_out.write(line)
     return len(removed)
 
+def is_pdb_id(a):
+    return len(a) == 4 and a[0].isdigit() and a[1:].isalnum()
+
+def download_pdb(pdb_id, output_dir):
+    filename = pdb_id.upper()+'.pdb'
+    path = os.path.join(output_dir, filename)
+    if os.path.exists(path):
+        comment('%s: using existing file %s\n' % (pdb_id, filename))
+    else:
+        comment('Downloading %s from RCSB...  ' % pdb_id)
+        url = 'http://www.rcsb.org/pdb/download/downloadFile.do?fileFormat=pdb&compression=NO&structureId=' + pdb_id.upper()
+        try:
+            u = urllib2.urlopen(url)
+        except urllib2.HTTPError as e:
+            put_error(str(e))
+            sys.exit(1)
+        content = u.read()
+        with open(path, 'wb') as f:
+            f.write(content)
+        comment('done.\n')
+    return path
 
 if __name__ == '__main__':
     if sys.argv[0] < 2:

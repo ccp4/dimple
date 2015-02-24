@@ -9,6 +9,7 @@ import argparse
 from c4.cell import Cell
 from c4.utils import comment, put_error, syspath, adjust_path, start_log
 from c4.mtz import check_freerflags_column, get_num_missing
+from c4.pdb import is_pdb_id, download_pdb
 import c4.workflow
 from c4 import coot
 
@@ -349,8 +350,10 @@ def parse_dimple_commands():
     opt.mtz = mtz_args[0]
     opt.all_args.remove(opt.mtz)
     opt.pdbs = opt.all_args
-    for a in opt.pdbs:
-        if not (a.lower().endswith('.pdb') or a.lower().endswith('.pdb.gz')):
+    for n, a in enumerate(opt.pdbs):
+        if is_pdb_id(a):
+            opt.pdbs[n] = download_pdb(a, opt.output_dir)
+        elif not (a.lower().endswith('.pdb') or a.lower().endswith('.pdb.gz')):
             put_error("unexpected arg (neither mtz nor pdb): %s" % a)
             sys.exit(1)
     if len(opt.pdbs) == 0:
