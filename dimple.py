@@ -13,7 +13,6 @@ import c4.workflow
 from c4 import coot
 
 __version__ = '1.4'
-OLD_TRUNCATE=False # truncate or ctruncate
 USE_MOLREP=False # molrep or phaser
 
 def dimple(wf, opt):
@@ -44,7 +43,7 @@ def dimple(wf, opt):
     else:
         comment("    ooops, no good indexing\n")
     #comment("Calculate structure factor amplitudes\n")
-    if OLD_TRUNCATE:
+    if opt.ItoF_prog == 'truncate':
         wf.truncate(hklin="pointless.mtz", hklout="truncate.mtz",
                   labin="IMEAN=%s SIGIMEAN=%s" % (opt.icolumn, opt.sigicolumn),
                   labout="F=F SIGF=SIGF").run()
@@ -313,6 +312,9 @@ def parse_dimple_commands():
                         default='IMEAN', help='I column label'+dstr)
     parser.add_argument('--sigicolumn', metavar='SIGICOL',
                         default='SIG<ICOL>', help='SIGI column label'+dstr)
+    parser.add_argument('--ItoF-prog', choices=['truncate', 'ctruncate'],
+                        default='truncate',
+                        help='program used to covert intensity to amplitude')
     parser.add_argument('--from-job', metavar='N', type=int, default=0,
                         help=argparse.SUPPRESS)
     parser.add_argument('--version', action='version',

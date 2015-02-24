@@ -239,6 +239,13 @@ def _pointless_parser(job):
             job.data.get("refl_out", ""))
 
 
+def _truncate_parser(job):
+    for line in job.out.read_line():
+        if line.startswith(' Least squares straight line gives:'):
+            b_str = line.partition(':')[-1].strip(' \tB=').split()[0]
+            job.data["B-factor"] = float(b_str)
+    return " B=%4s" % _format("%.1f", job.data.get("B-factor"))
+
 def _ctruncate_parser(job):
     d = job.data
     for line in job.out.read_line():
@@ -254,7 +261,7 @@ def _ctruncate_parser(job):
             _format("%.2f", d.get("L-test")))
 
 
-def ccp4_job(workflow, prog, logical=None, input="", add_end=True):
+def ccp4_job(workflow, prog, logical=None, input="", parser=None, add_end=True):
     """Handle traditional convention for arguments of CCP4 programs.
     logical is dictionary with where keys are so-called logical names,
     input string or list of lines that are to be passed though stdin
@@ -270,6 +277,7 @@ def ccp4_job(workflow, prog, logical=None, input="", add_end=True):
     if add_end and not (stripped and stripped[-1].lower() == "end"):
         stripped.append("end")
     job.std_input = "\n".join(stripped)
+    job.parser = parser
     return job
 
 
@@ -516,9 +524,8 @@ class Workflow:
         return job
 
     def pointless(self, hklin, xyzin, hklref=None, hklout=None, keys=""):
-        job = ccp4_job(self, "pointless", logical=locals(), input=keys)
-        job.parser = "_pointless_parser"
-        return job
+        return ccp4_job(self, "pointless", logical=locals(), input=keys,
+                        parser="_pointless_parser")
 
     def unique(self, hklout, cell, symmetry, resolution,
                labout="F=F_UNIQUE SIGF=SIGF_UNIQUE"):
@@ -539,7 +546,8 @@ class Workflow:
     def truncate(self, hklin, hklout, labin, labout):
         return ccp4_job(self, "truncate", logical=locals(),
                         input=["labin %s" % labin, "labout %s" % labout,
-                               "NOHARVEST"])
+                               "NOHARVEST"],
+                        parser="_truncate_parser")
 
     def ctruncate(self, hklin, hklout, colin):
         job = Job(self, "ctruncate")
@@ -563,7 +571,8 @@ class Workflow:
     def refmac5(self, hklin, xyzin, hklout, xyzout, labin, labout, libin, keys):
         job = ccp4_job(self, "refmac5", logical=locals(),
                        input=(["labin %s" % labin, "labout %s" % labout] +
-                              keys.splitlines()))
+                              keys.splitlines()),
+                       parser="_refmac_parser")
         words = keys.split()
         for n, w in enumerate(words[:-2]):
             if w == "refinement" and words[n+1] == "type":
@@ -572,7 +581,6 @@ class Workflow:
         for n, w in enumerate(words[:-1]):
             if w.startswith("ncyc"):
                 job.ncyc = int(words[n+1])
-        job.parser = "_refmac_parser"
         return job
 
     def findwaters(self, pdbin, hklin, f, phi, pdbout, sigma=2.0):
