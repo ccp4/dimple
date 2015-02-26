@@ -102,16 +102,27 @@ def download_pdb(pdb_id, output_dir):
         comment('done.\n')
     return path
 
-if __name__ == '__main__':
+
+def main():
     if sys.argv[0] < 2:
         sys.stderr.write("No filenames.\n")
         sys.exit(1)
     if sys.argv[1] == "nohet":
         remove_hetatm(sys.argv[2], sys.stdout)
-        sys.exit(0)
-    if sys.argv[1] == "mw":
+    elif sys.argv[1] == "mw":
         print get_protein_mw(sys.argv[2])
-        sys.exit(0)
-    for arg in sys.argv[1:]:
-        print("File: %s" % arg)
-        print read_metadata(arg)
+    elif sys.argv[1] == "get":
+        for arg in sys.argv[2:]:
+            if is_pdb_id(arg):
+                path = download_pdb(arg, os.getcwd())
+                print '-> ' + path
+            else:
+                sys.stderr.write('Error: %s is not a pdb code.\n' % arg)
+                sys.exit(1)
+    else:
+        for arg in sys.argv[1:]:
+            print("File: %s" % arg)
+            print read_metadata(arg)
+
+if __name__ == '__main__':
+    main()
