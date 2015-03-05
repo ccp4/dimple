@@ -359,6 +359,13 @@ class Workflow:
         self.argv = sys.argv
         if not os.path.isdir(self.output_dir):
             os.mkdir(self.output_dir)
+        # this can seriously affect Refmac compiled with GFortran
+        bad_var = os.getenv('GFORTRAN_UNBUFFERED_ALL')
+        if bad_var and bad_var[0] not in ('0', 'n', 'N'):
+            c4.utils.put_error(
+                    '$GFORTRAN_UNBUFFERED_ALL may terribly slow down Refmac',
+                    comment='It is better to unset it!')
+
 
     def __str__(self):
         return "Workflow with %d jobs @ %s" % (len(self.jobs), self.output_dir)
