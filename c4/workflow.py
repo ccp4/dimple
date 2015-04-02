@@ -366,6 +366,8 @@ class Workflow:
                     '$GFORTRAN_UNBUFFERED_ALL may terribly slow down Refmac',
                     comment='It is unset internally in dimple.')
             del os.environ['GFORTRAN_UNBUFFERED_ALL']
+        # avoid html-like crap in the output of CCP4 program
+        os.environ['CCP_SUPPRESS_HTML'] = '1'
 
 
     def __str__(self):
