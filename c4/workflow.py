@@ -364,7 +364,8 @@ class Workflow:
         if bad_var and bad_var[0] not in ('0', 'n', 'N'):
             c4.utils.put_error(
                     '$GFORTRAN_UNBUFFERED_ALL may terribly slow down Refmac',
-                    comment='It is better to unset it!')
+                    comment='It is unset internally in dimple.')
+            del os.environ['GFORTRAN_UNBUFFERED_ALL']
 
 
     def __str__(self):
