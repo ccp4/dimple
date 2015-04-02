@@ -321,7 +321,7 @@ def parse_dimple_commands():
                         metavar='NUM',
                         help='threshold for Molecular Replacement'+dstr)
     parser.add_argument('--MR-prog', choices=['phaser', 'molrep'],
-                        default='phaser',
+                        default='molrep',
                         help='Molecular Replacement program'+dstr)
     parser.add_argument('-I', '--icolumn', metavar='ICOL',
                         default='IMEAN', help='I column label'+dstr)
