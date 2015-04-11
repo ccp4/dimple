@@ -301,7 +301,12 @@ def parse_dimple_commands():
                 usage='%(prog)s [options...] input.mtz input.pdb output_dir',
                 epilog=c4.workflow.commands_help, prog="dimple",
                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('all_args', nargs='*')
+    # positional args can be separated by options, but not after the 3rd one
+    # see http://bugs.python.org/issue15112 , http://bugs.python.org/issue14191
+    parser.add_argument('pos_arg1')
+    parser.add_argument('pos_arg2')
+    parser.add_argument('pos_arg3')
+    parser.add_argument('more_args', nargs='*')
     parser.add_argument('--hklout', metavar='out.mtz', default='final.mtz',
                         help='output mtz file'+dstr)
     parser.add_argument('--xyzout', metavar='out.pdb', default='final.pdb',
@@ -351,22 +356,20 @@ def parse_dimple_commands():
         args.append(output_dir)
 
     opt = parser.parse_args(args)
-    # opt.all_args should be one mtz, one or more pdbs and output_dir
-    if len(opt.all_args) < 3:
-        put_error("At least 3 arguments expected.")
-        sys.exit(1)
-    opt.output_dir = opt.all_args.pop()
+    all_args = [opt.pos_arg1, opt.pos_arg2, opt.pos_arg3] + opt.more_args;
+    # all_args should be one mtz, one or more pdbs and output_dir
+    opt.output_dir = all_args.pop()
     if (opt.output_dir.endswith('.mtz') or opt.output_dir.endswith('.pdb')
             or opt.output_dir.endswith('.gz')):
         put_error('The last argument should be output directory')
         sys.exit(1)
-    mtz_args = [a for a in opt.all_args if a.lower().endswith('.mtz')]
+    mtz_args = [a for a in all_args if a.lower().endswith('.mtz')]
     if len(mtz_args) != 1:
         put_error("One mtz file should be given.")
         sys.exit(1)
     opt.mtz = mtz_args[0]
-    opt.all_args.remove(opt.mtz)
-    opt.pdbs = opt.all_args
+    all_args.remove(opt.mtz)
+    opt.pdbs = all_args
     for n, a in enumerate(opt.pdbs):
         if is_pdb_id(a):
             opt.pdbs[n] = download_pdb(a, opt.output_dir)

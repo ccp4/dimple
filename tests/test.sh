@@ -7,6 +7,12 @@ echo "Run dimple on artificial thaumatin example"
 $dimple "$@" $test_dir/thaumatin.* $test_dir/out/
 exit
 
+# test the command used in ccp4i gui
+out2="$test_dir/dimple_pipeline"
+$dimple $test_dir/thaumatin.mtz $test_dir/thaumatin.pdb \
+    --hklout $out2/dimple_soln1.mtz --xyzout $out2/dimple_soln1.pdb \
+    --icolumn IMEAN --sigicolumn SIGIMEAN  $out2
+
 # the rest in not essential
 # workflow is pickled as workflow.pickle in output dir, let's check it
 echo
