@@ -7,7 +7,8 @@ if sys.version_info[:2] != (2, 7):
     sys.exit(1)
 import argparse
 from c4.cell import Cell
-from c4.utils import comment, put_error, syspath, adjust_path, start_log
+import c4.utils
+from c4.utils import comment, put_error, adjust_path
 from c4.mtz import check_freerflags_column, get_num_missing
 from c4.pdb import is_pdb_id, download_pdb
 import c4.workflow
@@ -242,7 +243,7 @@ def _check_picture_tools():
     else:
         put_error("No coot, no pictures")
         ok = False
-    if not syspath("render"):
+    if not c4.utils.syspath("render"):
         put_error("No Raster3d, no pictures")
         ok = False
     return ok
@@ -417,8 +418,9 @@ def main():
     options = parse_dimple_commands()
 
     wf = c4.workflow.Workflow(options.output_dir, from_job=options.from_job)
-    start_log(os.path.join(options.output_dir, "dimple.log"),
-              output_dir=options.output_dir)
+    c4.utils.start_log(os.path.join(options.output_dir, "dimple.log"),
+                       output_dir=options.output_dir)
+    c4.utils.log_value("version", __version__)
     try:
         dimple(wf=wf, opt=options)
     except c4.workflow.JobError, e: # avoid "as e" for the sake of Py2.4
