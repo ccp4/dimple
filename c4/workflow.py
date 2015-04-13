@@ -188,14 +188,19 @@ def _refmac_parser(job):
         job.data["free_r"] = job.data["overall_r"] = 0.
         job.data["ini_free_r"] = job.data["ini_overall_r"] = 0
         job.data["selected_lines"] = []
+        # iter_*_r values were added in dimple 1.5
+        job.data["iter_free_r"] = []
+        job.data["iter_overall_r"] = []
     selected = job.data["selected_lines"]
     for line in job.out.read_line():
         if line.startswith("Free R factor"):
             job.data['free_r'] = float(line.split('=')[-1])
+            job.data['iter_free_r'].append(job.data['free_r'])
             if not job.data['ini_free_r']:
                 job.data['ini_free_r'] = job.data['free_r']
         elif line.startswith("Overall R factor"):
             job.data['overall_r'] = float(line.split('=')[-1])
+            job.data['iter_overall_r'].append(job.data['overall_r'])
             if not job.data['ini_overall_r']:
                 job.data['ini_overall_r'] = job.data['overall_r']
         elif (line.startswith("     Rigid body cycle =") or
