@@ -180,19 +180,25 @@ def dimple(wf, opt):
                     restr_job.data["free_r"] - prev[0].data["free_r"]))
 
     fb_job = wf.find_blobs(opt.hklout, opt.xyzout, sigma=0.8).run()
-    if opt.img_format == 'none':
-        return
-    blobs = fb_job.data["blobs"]
-    if blobs:
-        if len(blobs) == 1:
-            comment("Rendering density blob at (%.1f, %.1f, %.1f)\n" % blobs[0])
+    if opt.img_format != 'none':
+        blobs = fb_job.data["blobs"]
+        if blobs:
+            if len(blobs) == 1:
+                comment("Rendering density blob at (%.1f, %.1f, %.1f)\n" %
+                        blobs[0])
+            else:
+                comment("Rendering 2 largest blobs: at (%.1f, %.1f, %.1f) and "
+                        "at (%.1f, %.1f, %.1f)\n" % (blobs[0]+blobs[1]))
+            if _check_picture_tools():
+                _generate_pictures(wf, opt, fb_job)
         else:
-            comment("Rendering 2 largest blobs: at (%.1f, %.1f, %.1f) and at "
-                    "(%.1f, %.1f, %.1f)\n" % (blobs[0]+blobs[1]))
-        if _check_picture_tools():
-            _generate_pictures(wf, opt, fb_job)
-    else:
-        comment("Unmodelled blobs not found.\n")
+            comment("Unmodelled blobs not found.\n")
+    if opt.cleanup:
+        wf.delete_files(["pointless.mtz", "truncate.mtz", "unique.mtz",
+                         "free.mtz", "prepared.mtz", "prepared2.mtz",
+                         "refmacRB.mtz",
+                         "refmacRB.pdb", "molrep.pdb", "molrep_dimer.pdb",
+                         "molrep.crd", "phaser.1.pdb"])
 
 
 def _comment_summary_line(name, meta):
@@ -336,6 +342,8 @@ def parse_dimple_commands():
     parser.add_argument('--ItoF-prog', choices=['truncate', 'ctruncate'],
                         default='truncate',
                         help='program to calculate amplitudes'+dstr)
+    parser.add_argument('--cleanup', action='store_true',
+                        help='remove intermediate files on exit')
     parser.add_argument('--seed-freerflag', action='store_true',
                         help=argparse.SUPPRESS)
     parser.add_argument('--from-job', metavar='N', type=int, default=0,
