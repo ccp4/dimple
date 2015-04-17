@@ -760,3 +760,17 @@ All files are stored in the specified output directory.
 For quick summary (after running the program): %(prog)s info OUTPUT_DIR
 """
 
+if __name__ == '__main__':
+    def test_parser(name, logfile):
+        parser = globals()['_%s_parser' % name]
+        job = Job(None, name)
+        job.out.que = Queue.Queue()
+        with open(logfile) as f:
+            for line in f:
+                job.out.que.put(line)
+        parser(job)
+        for k in sorted(job.data.keys()):
+            print k, job.data[k]
+
+    assert len(sys.argv) == 3
+    test_parser(sys.argv[1], logfile=sys.argv[2])
