@@ -42,7 +42,9 @@ def dimple(wf, opt):
             comment("    %-10s CC: %-8s cell_deviation: %s\n" % (
                     ar['op'], ar['cc'], ar['cell_deviat']))
     else:
-        comment("    ooops, no good indexing\n")
+        # pointless doesn't print CC for non-ambiguous spacegroups (e.g. C2)
+        #comment("    ooops, no good indexing\n")
+        pass
     #comment("Calculate structure factor amplitudes\n")
     if opt.ItoF_prog == 'truncate':
         wf.truncate(hklin="pointless.mtz", hklout="truncate.mtz",
