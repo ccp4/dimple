@@ -363,7 +363,11 @@ class Workflow:
         self.dry_run = False
         self.argv = sys.argv
         if not os.path.isdir(self.output_dir):
-            os.makedirs(self.output_dir)
+            try:
+                os.makedirs(self.output_dir)
+            except OSError as e:
+                c4.utils.put_error(e)
+                sys.exit(1)
         # this can seriously affect Refmac compiled with GFortran
         bad_var = os.getenv('GFORTRAN_UNBUFFERED_ALL')
         if bad_var and bad_var[0] not in ('0', 'n', 'N'):
