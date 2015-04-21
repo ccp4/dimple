@@ -13,7 +13,7 @@ def our_put(text):
     orig_put(text)
     qtrapi_text[0] += text
     for n in (1,2):
-        if ('-> blob%dv3.png' % n) in text:
+        if (' blob%dv3.png' % n) in text:
             add_blob(n)
 
     report.flush()
