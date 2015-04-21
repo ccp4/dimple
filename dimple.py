@@ -304,7 +304,7 @@ def _generate_pictures(wf, opt, fb_job):
     wf.delete_files([name+".r3d" for name in basenames])
 
 
-def parse_dimple_commands():
+def parse_dimple_commands(args):
     dstr = ' (default: %(default)s)'
     parser = argparse.ArgumentParser(
                 usage='%(prog)s [options...] input.mtz input.pdb output_dir',
@@ -354,8 +354,6 @@ def parse_dimple_commands():
                         version='%(prog)s '+__version__)
     # get rid of 'positional arguments' in the usage method
     parser._action_groups[:1] = []
-
-    args = sys.argv[1:]
 
     # special mode for compatibility with ccp4i
     legacy_args = { "HKLIN": "", "XYZIN": "",
@@ -414,7 +412,7 @@ def parse_dimple_commands():
     return opt
 
 
-def main():
+def main(args):
     if c4.workflow.parse_workflow_commands():
         return
 
@@ -425,7 +423,7 @@ def main():
     if not os.path.isdir(os.environ["CCP4_SCR"]):
         put_error('No such directory: $CCP4_SCR, refmac shall not work!')
 
-    options = parse_dimple_commands()
+    options = parse_dimple_commands(args)
 
     wf = c4.workflow.Workflow(options.output_dir, from_job=options.from_job)
     c4.utils.start_log(os.path.join(options.output_dir, "dimple.log"),
@@ -441,4 +439,4 @@ def main():
     wf.pickle_jobs()
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
