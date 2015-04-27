@@ -731,8 +731,9 @@ def parse_steps(args, wf):
                     jobs += [wf.jobs[n-1] for n in range(a, b+1)]
                 else:
                     jobs.append(wf.jobs[int(s)-1])
-        except (ValueError, IndexError):
-            raise ValueError("Invalid step number(s): %s" % arg)
+        except (ValueError, IndexError) as e:
+            sys.stderr.write("Invalid step number(s): %s\n(%s)\n" % (arg, e))
+            sys.exit(1)
     return jobs
 
 def parse_workflow_commands():
