@@ -140,8 +140,9 @@ class Job:
                 pass
 
             if preview_mode and line:
-                ret = "[%d] %s" % (len(self.out.lines), line.rstrip())
-                return ret[:50].ljust(50)
+                # we only remove \e[1m (bold), it can be generalized if needed
+                trimmed = line.strip().replace('\033[1m', '')
+                return "[%d] %-44.44s" % (len(self.out.lines), trimmed)
 
             ret = "stdout:%11s" % self.out.size_as_str()
             if self.err:
