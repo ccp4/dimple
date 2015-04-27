@@ -680,17 +680,19 @@ def open_pickled_workflow(file_or_dir):
     f = open(pkl, "rb")
     return pickle.load(f)
 
+def _write_workflow_steps(wf, output):
+    for n, job in enumerate(wf.jobs):
+        output.write("\n%3d %-15s" % (n+1, job.name))
+        if job.started:
+            started_at = time.localtime(job.started)
+            output.write(time.strftime(" %Y-%m-%d %H:%M", started_at))
+            output.write(" %7.1fs" % job.total_time)
+    output.write("\n")
 
 def show_workflow_info(wf, mesg_dict):
     sys.stdout.write("%s\n" % wf)
     sys.stdout.write("Command: " + " ".join(pipes.quote(a) for a in wf.argv))
-    for n, job in enumerate(wf.jobs):
-        sys.stdout.write("\n%3d %-15s" % (n+1, job.name))
-        if job.started:
-            started_at = time.localtime(job.started)
-            sys.stdout.write(time.strftime(" %Y-%m-%d %H:%M", started_at))
-            sys.stdout.write(" %7.1fs" % job.total_time)
-    sys.stdout.write("\n")
+    _write_workflow_steps(wf, sys.stdout)
     sys.stderr.write("""
 To see details, specify step(s):
 %(prog)s info %(output_dir)s STEPS
@@ -752,9 +754,12 @@ def parse_workflow_commands():
     if args[0] == 'repeat':
         if len(args) == 1:
             sys.stderr.write("Specify output_dir.\n")
-        if len(args) <= 2:
+        elif len(args) <= 2:
             wf = open_pickled_workflow(args[1])
-            sys.stderr.write("Specify steps. For complete re-run:\n%s\n"
+            sys.stderr.write("Specify steps from the list "
+                             "(you can use ranges, e.g: 1,2 4-6 8-):")
+            _write_workflow_steps(wf, sys.stderr)
+            sys.stderr.write("For complete re-run:\n%s\n"
                              % " ".join(pipes.quote(a) for a in wf.argv))
         else:
             wf = open_pickled_workflow(args[1])
