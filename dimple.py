@@ -14,9 +14,11 @@ from c4.pdb import is_pdb_id, download_pdb
 import c4.workflow
 from c4 import coot
 
-__version__ = '1.5'
+__version__ = '2.1'
 
 def dimple(wf, opt):
+    comment("%8s### Dimple v%s. Problems and suggestions:"
+            " ccp4@ccp4.ac.uk ###\n" % ('', __version__))
     mtz_meta = wf.read_mtz_metadata(opt.mtz)
     wf.file_info[opt.mtz] = mtz_meta
     mtz_meta.check_col_type(opt.icolumn, 'J')
