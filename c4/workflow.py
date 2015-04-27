@@ -41,6 +41,7 @@ class Output:
     "storage for Job's stdout/stderr"
     def __init__(self, role):
         self.role = role  # "out" or "err"
+        self.file_extension = {"out":"log", "err":"err"}[role]
         self.lines = []
         self.saved_to = None
         self.que = None
@@ -69,7 +70,8 @@ class Output:
                 self.lines.append(self.que.get_nowait())
             self.que = None
 
-    def save_output(self, output_dir, filename, remove_long_list=True):
+    def save_output(self, output_dir, basename, remove_long_list=True):
+        filename = basename + '.' + self.file_extension
         if self.lines:
             with open(os.path.join(output_dir, filename), "w") as f:
                 for line in self.lines:
@@ -426,6 +428,7 @@ class Workflow:
 
         job_idx = len(self.jobs) - 1
         if job_idx < self.from_job - 1: # from_job is 1-based
+            # unpickle or skip
             if self.repl_jobs and len(self.repl_jobs) > job_idx:
                 old_job = self.repl_jobs[job_idx]
                 if old_job.name == job.name:
@@ -511,8 +514,8 @@ class Workflow:
 
     def _write_logs(self, job):
         log_basename = "%02d-%s" % (len(self.jobs), job.name.replace(" ","_"))
-        job.out.save_output(self.output_dir, "%s.log" % log_basename)
-        job.err.save_output(self.output_dir, "%s.err" % log_basename)
+        for output in (job.out, job.err):
+            output.save_output(self.output_dir, log_basename)
 
     def remove_hetatm(self, xyzin, xyzout):
         with open(xyzout, "wb") as out:
@@ -636,6 +639,9 @@ class Workflow:
 
     def render_r3d(self, name, img_format="png"):
         job = Job(self, c4.utils.syspath("render"))
+        # render writes normal output to stderr (and nothing to stdout)
+        job.out.file_extension = "out"
+        job.err.file_extension = "log"
         job.args += ["-"+img_format, "%s.%s" % (name, img_format)]
         job.stdin_file = name+".r3d"
         job.parser = " -> %s.%s" % (name, img_format)
