@@ -81,11 +81,13 @@ class Output:
 
     def summary(self):
         n = len(self.lines)
-        if n < 3:
+        if 0 < n <= 3:
             return "".join(self.lines)
         elif self.saved_to:
             return "-> %s" % self.saved_to
-        else:
+        elif n == 0:
+            return ""
+        else: # n > 3
             return "".join(self.lines[:3]) + ("%s more lines" % (n-3))
 
 
