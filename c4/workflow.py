@@ -568,10 +568,12 @@ class Workflow:
                         input=["cell %g %g %g %g %g %g" % tuple(cell),
                                "symmetry '%s'" % symmetry,
                                "resolution %.3f" % resolution,
-                               "labout %s" % labout])
+                               "labout %s" % labout],
+                        parser="")
 
     def freerflag(self, hklin, hklout, keys=""):
-        return ccp4_job(self, "freerflag", logical=locals(), input=keys)
+        return ccp4_job(self, "freerflag", logical=locals(), input=keys,
+                        parser="")
 
     #def reindex(self, hklin, hklout, symmetry):
     #    return ccp4_job(self, "reindex", logical=locals(),
