@@ -18,7 +18,7 @@ __version__ = '2.1'
 
 def dimple(wf, opt):
     comment("%8s### Dimple v%s. Problems and suggestions:"
-            " ccp4@ccp4.ac.uk ###\n" % ('', __version__))
+            " ccp4@ccp4.ac.uk ###" % ('', __version__))
     mtz_meta = wf.read_mtz_metadata(opt.mtz)
     wf.file_info[opt.mtz] = mtz_meta
     mtz_meta.check_col_type(opt.icolumn, 'J')
@@ -27,7 +27,7 @@ def dimple(wf, opt):
     for p in opt.pdbs:
         wf.file_info[p] = wf.read_pdb_metadata(p)
     if len(opt.pdbs) > 1:
-        comment("PDBs in order of similarity (using the first one):\n")
+        comment("\nPDBs in order of similarity (using the first one):")
         opt.pdbs.sort(key=lambda x: calculate_difference_metric(wf.file_info[x],
                                                                 mtz_meta))
     for p in opt.pdbs:
@@ -41,13 +41,13 @@ def dimple(wf, opt):
     alt_reindex = pointless_data.get('alt_reindex')
     if alt_reindex:
         for ar in alt_reindex:
-            comment("    %-10s CC: %-8s cell_deviation: %s\n" % (
+            comment("\n    %-10s CC: %-8s cell_deviation: %s" % (
                     ar['op'], ar['cc'], ar['cell_deviat']))
     else:
         # pointless doesn't print CC for non-ambiguous spacegroups (e.g. C2)
-        #comment("    ooops, no good indexing\n")
+        #comment("\n    ooops, no good indexing")
         pass
-    #comment("Calculate structure factor amplitudes\n")
+    #comment("\nCalculate structure factor amplitudes")
     if opt.ItoF_prog == 'truncate':
         wf.truncate(hklin="pointless.mtz", hklout="truncate.mtz",
                   labin="IMEAN=%s SIGIMEAN=%s" % (opt.icolumn, opt.sigicolumn),
@@ -60,9 +60,9 @@ def dimple(wf, opt):
         free_mtz = opt.free_r_flags
         free_col = check_freerflags_column(wf.path(free_mtz),
                                            expected_symmetry=pdb_meta.symmetry)
-        comment("Free-R flags from the reference file, column %s.\n" % free_col)
+        comment("\nFree-R flags from the reference file, column %s." % free_col)
     else:
-        comment("Generate free-R flags\n")
+        comment("\nGenerate free-R flags")
         free_mtz = "free.mtz"
         # CCP4 freerflag uses always the same pseudo-random sequence by default
         if opt.seed_freerflag:
@@ -92,7 +92,7 @@ def dimple(wf, opt):
                    """ % (free_col, mtz_meta.dmax)).run()
     freerflag_missing = get_num_missing(wf.path(prepared_mtz), free_col)
     if freerflag_missing:
-        comment("Hmmm, missing free-R flags for %d reflections. Adding.\n"
+        comment("\nHmmm, missing free-R flags for %d reflections. Adding."
                 % freerflag_missing)
         wf.freerflag(hklin=prepared_mtz, hklout="prepared2.mtz",
                      keys="COMPLETE FREE="+free_col).run()
@@ -100,7 +100,7 @@ def dimple(wf, opt):
     if False:
         rb_xyzin = "prepared_nohet.pdb"
         n_het = wf.remove_hetatm(xyzin=ini_pdb, xyzout=rb_xyzin)
-        comment("Removed %s atoms marked as HETATM in pdb.\n" % n_het)
+        comment("\nRemoved %s atoms marked as HETATM in pdb." % n_het)
     else:
         rb_xyzin = ini_pdb
 
@@ -113,9 +113,9 @@ def dimple(wf, opt):
     cell_diff = pdb_meta.max_shift_in_mapping(Cell(
                                                 pointless_data['output_cell']))
     if cell_diff > 0.5 and opt.mr_when_rfree < 1:
-        comment("Quite different unit cells, start from MR.\n")
+        comment("\nQuite different unit cells, start from MR.")
     else:
-        comment("Rigid-body refinement with resolution 3.5 A, 10 cycles.\n")
+        comment("\nRigid-body refinement with resolution 3.5 A, 10 cycles.")
         wf.refmac5(hklin=prepared_mtz, xyzin=rb_xyzin,
                    hklout="refmacRB.mtz", xyzout="refmacRB.pdb",
                    labin=refmac_labin, labout=refmac_labout, libin=None,
@@ -125,12 +125,12 @@ def dimple(wf, opt):
                            rigidbody ncycle 10""").run()
 
         if "free_r" not in wf.jobs[-1].data:
-            comment("WARNING: unknown free_r, something went wrong.\n")
+            comment("\nWARNING: unknown free_r, something went wrong.")
             refmac_xyzin = "refmacRB.pdb"
         elif wf.jobs[-1].data["free_r"] > opt.mr_when_rfree:
-            comment("Run MR for R_free > %g\n" % opt.mr_when_rfree)
+            comment("\nRun MR for R_free > %g" % opt.mr_when_rfree)
         else:
-            comment("No MR for R_free < %g\n" % opt.mr_when_rfree)
+            comment("\nNo MR for R_free < %g" % opt.mr_when_rfree)
             refmac_xyzin = "refmacRB.pdb"
 
     if refmac_xyzin is None:
@@ -159,7 +159,7 @@ def dimple(wf, opt):
                       f="FC", phi="PHIC", pdbout="prepared_wat.pdb", sigma=2)
         refmac_xyzin = "prepared_wat.pdb"
 
-    comment("Final restrained refinement, 8 cycles.\n")
+    comment("\nFinal restrained refinement, 8 cycles.")
     if opt.weight:
         refmac_weight = "matrix 0.2"
     else:
@@ -179,7 +179,7 @@ def dimple(wf, opt):
     if wf.from_job > 0 and wf.from_job <= len(wf.jobs): # from_job is 1-based
         prev = [j for j in wf.repl_jobs if j.name == restr_job.name]
         if prev and prev[0].data and "free_r" in prev[0].data:
-            comment("Previously:  R/Rfree %.4f/%.4f  Rfree change: %+.4f\n" % (
+            comment("\nPreviously:  R/Rfree %.4f/%.4f  Rfree change: %+.4f" % (
                     prev[0].data["overall_r"], prev[0].data["free_r"],
                     restr_job.data["free_r"] - prev[0].data["free_r"]))
 
@@ -188,15 +188,16 @@ def dimple(wf, opt):
         blobs = fb_job.data["blobs"]
         if blobs:
             if len(blobs) == 1:
-                comment("Rendering density blob at (%.1f, %.1f, %.1f)\n" %
+                comment("\nRendering density blob at (%.1f, %.1f, %.1f)" %
                         blobs[0])
             else:
-                comment("Rendering 2 largest blobs: at (%.1f, %.1f, %.1f) and "
-                        "at (%.1f, %.1f, %.1f)\n" % (blobs[0]+blobs[1]))
+                comment("\nRendering 2 largest blobs: at (%.1f, %.1f, %.1f) "
+                        "and at (%.1f, %.1f, %.1f)" % (blobs[0]+blobs[1]))
             if _check_picture_tools():
                 _generate_pictures(wf, opt, fb_job)
         else:
-            comment("Unmodelled blobs not found.\n")
+            comment("\nUnmodelled blobs not found.")
+    comment("\n")
     if opt.cleanup:
         wf.delete_files(["pointless.mtz", "truncate.mtz", "unique.mtz",
                          "free.mtz", "prepared.mtz", "prepared2.mtz",
@@ -210,11 +211,11 @@ def _comment_summary_line(name, meta):
         if x == 90.: return '90'
         else:        return str(x)
     if meta:
-        line = '%-21s %-12s (%.2f, %.2f, %.2f,  %s, %s, %s)\n' % (
+        line = '\n%-21s %-12s (%.2f, %.2f, %.2f,  %s, %s, %s)' % (
                 name, meta.symmetry, meta.a, meta.b, meta.c,
                 angle(meta.alpha), angle(meta.beta), angle(meta.gamma))
     else:
-        line = '%-21s ???\n' % name
+        line = '\n%-21s ???' % name
     comment(line)
 
 
@@ -301,8 +302,12 @@ def _generate_pictures(wf, opt, fb_job):
                               ".coot-preferences are not compatible\n"
                               "with the --no-graphics mode.")
         raise
-    for basename in basenames:
-        wf.render_r3d(basename, img_format=opt.img_format).run()
+    for n, basename in enumerate(basenames):
+        job = wf.render_r3d(basename, img_format=opt.img_format)
+        if n % 3 == 0:
+            job.run()
+        else: # minimal output
+            wf.run_job(job, show_progress=False, new_line=False)
     wf.delete_files([name+".r3d" for name in basenames])
 
 

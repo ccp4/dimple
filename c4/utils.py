@@ -92,7 +92,8 @@ def put_error(err, comment=None):
     if hasattr(sys.stderr, 'isatty') and sys.stderr.isatty():
         if os.name != 'nt':
             err = "\033[91m%s\033[0m" % err  # in bold red
-    sys.stderr.write("Error: %s.\n" % err)
+    sys.stdout.flush()
+    sys.stderr.write("\nError: %s.\n" % err)
     if comment is not None:
         _log_comment(comment)
         sys.stderr.write(comment + "\n")

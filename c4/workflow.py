@@ -291,7 +291,7 @@ def ccp4_job(workflow, prog, logical=None, input="", parser=None, add_end=True):
     return job
 
 
-def _print_elapsed(job, event):
+def _print_progress(job, event):
     while not event.wait(0.5):
         p = job.parse()
         if p is not None:
@@ -411,19 +411,22 @@ class Workflow:
         try:
             _just_run(process, job)
         except KeyboardInterrupt:
-            raise JobError("\nKeyboardInterrupt while running %s" % job.name,
+            raise JobError("KeyboardInterrupt while running %s" % job.name,
                            note=job.args_as_str())
         finally:
             job.total_time = time.time() - job.started
         return process.poll()
 
-    def run_job(self, job, show_progress):
+    def run_job(self, job, show_progress, new_line=True):
         if not hasattr(sys.stdout, 'isatty') or not sys.stdout.isatty():
             show_progress = False
         self.jobs.append(job)
         job_num = len(self.jobs)
-        c4.utils.put(_jobindex_fmt % job_num)
-        c4.utils.put_green(_jobname_fmt % job.name)
+        if new_line:
+            c4.utils.put("\n" + _jobindex_fmt % job_num)
+            c4.utils.put_green(_jobname_fmt % job.name)
+        else:
+            c4.utils.put(" / %d" % job_num)
         sys.stdout.flush()
         c4.utils.log_section(job.name)
 
@@ -434,14 +437,14 @@ class Workflow:
                 old_job = self.repl_jobs[job_idx]
                 if old_job.name == job.name:
                     job = old_job
-                    c4.utils.put("unpickled\n")
+                    c4.utils.put("unpickled")
                     c4.utils.log_value("not_run", "unpickled")
                     self.jobs[-1] = job
                 else:
-                    c4.utils.put("skipped (mismatch)\n")
+                    c4.utils.put("skipped (mismatch)")
                     c4.utils.log_value("not_run", "unpickled/mismatch")
             else:
-                c4.utils.put("skipped\n")
+                c4.utils.put("skipped")
                 c4.utils.log_value("not_run", "skipped")
             return job
 
@@ -469,7 +472,7 @@ class Workflow:
 
         if show_progress:
             event = threading.Event()
-            progress_thread = threading.Thread(target=_print_elapsed,
+            progress_thread = threading.Thread(target=_print_progress,
                                                args=(job, event))
             progress_thread.daemon = True
             progress_thread.start()
@@ -480,7 +483,7 @@ class Workflow:
             else:
                 _just_run(process, job)
         except KeyboardInterrupt:
-            raise JobError("\nKeyboardInterrupt while running %s" % job.name,
+            raise JobError("KeyboardInterrupt while running %s" % job.name,
                            note=job.args_as_str())
         finally:
             if show_progress:
@@ -490,9 +493,10 @@ class Workflow:
             job.total_time = end_time - job.started
             c4.utils.log_time("end_time", end_time)
             retcode = process.poll()
-            c4.utils.put(_elapsed_fmt % job.total_time)
+            if new_line:
+                c4.utils.put(_elapsed_fmt % job.total_time)
             parse_output = job.parse()
-            c4.utils.put("%s\n" % (parse_output or ""))
+            c4.utils.put("%s" % (parse_output or ""))
             if parse_output:
                 c4.utils.log_value("info", parse_output)
             self._write_logs(job)
@@ -645,7 +649,7 @@ class Workflow:
         job.err.file_extension = "log"
         job.args += ["-"+img_format, "%s.%s" % (name, img_format)]
         job.stdin_file = name+".r3d"
-        job.parser = " -> %s.%s" % (name, img_format)
+        job.parser = " %s.%s" % (name, img_format)
         return job
 
     def copy_uncompressed(self, src, dst):
