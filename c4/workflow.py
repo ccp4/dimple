@@ -151,7 +151,7 @@ class Job:
                 ret = ret.ljust(50)
             return ret
 
-        elif self.parser[0] == ' ':
+        elif self.parser == '' or self.parser[0] == ' ':
             return self.parser
 
         else:
@@ -186,6 +186,12 @@ def _find_blobs_parser(job):
         return "Blob scores: " + " ".join("%.0f" % sc for sc in scores)
     else:
         return ""
+
+def _cad_parser(job):
+    for line in job.out.read_line():
+        if line.startswith(' Final Total of Unique records to HKLOUT ='):
+            job.data["refl_out"] = int(line.split('=')[1])
+    return "#refl -> %s" % job.data.get("refl_out", "")
 
 def _refmac_parser(job):
     if "cycle" not in job.data:
@@ -232,7 +238,7 @@ def _pointless_parser(job):
             if line.startswith("Maximum resolution used:"):
                 job.data["resol"] = float(line.split(":")[1])
             elif line.startswith("Number of reflections:"):
-                job.data["refl_in"] = int(line.split(":")[1])
+                job.data["refl_ref"] = int(line.split(":")[1])
             elif _POINTLESS_ALTREINDEX_MATCH.match(line):
                 reindex = job.data.setdefault('alt_reindex', [])
                 s = line.split()
@@ -243,10 +249,10 @@ def _pointless_parser(job):
             elif "reflections copied to output file" in line:
                 job.data["refl_out"] = int(line.split()[0])
                 break
-    return "resol. %4s A   #refl: %5s -> %s" % (
+    return "resol. %4s A   #refl: %5s of %s" % (
             _format("%.2f", job.data.get("resol")),
-            job.data.get("refl_in", ""),
-            job.data.get("refl_out", ""))
+            job.data.get("refl_out", ""),
+            job.data.get("refl_ref", ""))
 
 
 def _truncate_parser(job):
@@ -254,7 +260,7 @@ def _truncate_parser(job):
         if line.startswith(' Least squares straight line gives:'):
             b_str = line.partition(':')[-1].strip(' \tB=').split()[0]
             job.data["B-factor"] = float(b_str)
-    return " B=%4s" % _format("%.1f", job.data.get("B-factor"))
+    return "B=%4s" % _format("%.1f", job.data.get("B-factor"))
 
 def _ctruncate_parser(job):
     d = job.data
@@ -265,7 +271,7 @@ def _ctruncate_parser(job):
             d["eigval-ratios"] = tuple(float(i) for i in line.split()[-3:])
         elif line.startswith("L statistic ="):
             d["L-test"] = float(line.partition('=')[-1].split()[0])
-    return " B=%4s   aniso %14s   L-test:%s" % (
+    return "B=%4s   aniso %14s   L-test:%s" % (
             _format("%.1f", d.get("B-factor")),
             _format("%.2f:%.2f:%.2f", d.get("eigval-ratios")),
             _format("%.2f", d.get("L-test")))
@@ -586,7 +592,8 @@ class Workflow:
 
     def cad(self, hklin, hklout, keys):
         assert type(hklin) is list
-        job = ccp4_job(self, "cad", logical={}, input=keys)
+        job = ccp4_job(self, "cad", logical={}, input=keys,
+                       parser="_cad_parser")
         # is hklinX only for cad?
         for n, name in enumerate(hklin):
             job.args += ["HKLIN%d" % (n+1), name]
