@@ -249,10 +249,13 @@ def _pointless_parser(job):
             elif "reflections copied to output file" in line:
                 job.data["refl_out"] = int(line.split()[0])
                 break
-    return "resol. %4s A   #refl: %5s of %s" % (
-            _format("%.2f", job.data.get("resol")),
-            job.data.get("refl_out", ""),
-            job.data.get("refl_ref", ""))
+    resol_txt = _format("%.2f", job.data.get("resol"))
+    refl_out = job.data.get("refl_out", "")
+    refl_ref = job.data.get("refl_ref", "")
+    txt = "resol. %4s A   #refl: %5s of %s" % (resol_txt, refl_out, refl_ref)
+    if refl_out and refl_ref:
+        txt += " (%.1f%%)" % (100.*refl_out/refl_ref)
+    return txt
 
 
 def _truncate_parser(job):
