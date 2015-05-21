@@ -38,8 +38,12 @@ columns: %(columns)s""" % self.__dict__
 
 
 def _run_mtzdump(hklin, keys):
-    p = subprocess.Popen(["mtzdump", "HKLIN", hklin],
-                         stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    try:
+        p = subprocess.Popen(["mtzdump", "HKLIN", hklin],
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    except OSError as e:
+        put_error("Cannot run mtzdump: %s" % e)
+        sys.exit(1)
     keys.append("END")
     stdoutdata, stderrdata = p.communicate(input="\n".join(keys))
     retcode = p.poll()
