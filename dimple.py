@@ -36,7 +36,7 @@ def dimple(wf, opt):
     wf.copy_uncompressed(opt.pdbs[0], ini_pdb)
     pdb_meta = wf.file_info[opt.pdbs[0]]
     wf.pointless(hklin=opt.mtz, xyzin=ini_pdb, hklout="pointless.mtz",
-                 keys="TOLERANCE 5").run()
+                 keys="TOLERANCE 2").run()
     pointless_data = wf.jobs[-1].data
     alt_reindex = pointless_data.get('alt_reindex')
     if alt_reindex:
