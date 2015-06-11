@@ -11,6 +11,13 @@ class Cell(object):
         self.alpha, self.beta, self.gamma = parameters[3:]
         self.cell = parameters
 
+    def get_volume(self):
+        ca = cos(radians(self.alpha))
+        cb = cos(radians(self.beta))
+        cg = cos(radians(self.gamma))
+        return self.a * self.b * self.c * sqrt((1 - ca*ca - cb*cb - cg*cg) +
+                                                2 * ca*cb*cg)
+
     def __str__(self):
         return str(self.cell)
 
