@@ -138,21 +138,22 @@ def dimple(wf, opt):
             wf.molrep(f=prepared_mtz, m=rb_xyzin).run()
             refmac_xyzin = "molrep.pdb"
         else:
-            mw = wf.get_protein_mw(ini_pdb)
-            phaser_script = """\
-             ENSEMBLE p PDBFILE %s IDENTITY 100
-             COMPOSITION PROTEIN MW %s NUM 1
-             SEARCH ENSEMBLE p NUM 1
-            """ % (rb_xyzin, mw)
-            if False:
-                phaser_script += "SGALTERNATIVE SELECT ALL"
-            wf.phaser(hklin=prepared_mtz,
+            # FIXME: should be the ratio of ASU
+            vol_ratio = mtz_meta.get_volume() / pdb_meta.get_volume()
+            # FIXME account for strict NCS (MTRIX records without iGiven)
+            num = max(int(round(vol_ratio)), 1)
+            if num != 1:
+                comment("\nSearching %d molecules, mtz cell %.1f x larger "
+                        "than model" % (num, vol_ratio))
+            wf.phaser_auto(hklin=prepared_mtz,
                       #labin="I = %s SIGI = %s" % (opt.icolumn, opt.sigicolumn),
                       labin="F = F SIGF = SIGF",
-                      mode="MR_AUTO",
-                      script=phaser_script,
+                      sg_alt="ALL",
+                      model=dict(pdb=rb_xyzin, identity=100, num=num),
+                      solvent_percent=_get_solvent_percent(wf, rb_xyzin),
                       root='phaser').run()
             refmac_xyzin = "phaser.1.pdb"
+            prepared_mtz = "phaser.1.mtz"
 
     if False:
         wf.findwaters(pdbin=refmac_xyzin, hklin="refmacRB.mtz",
@@ -217,6 +218,25 @@ def _comment_summary_line(name, meta):
     else:
         line = '\n%-21s ???' % name
     comment(line)
+
+
+# returns only part of the script
+def _get_solvent_percent(wf, pdb):
+    rw = wf.rwcontents(pdb)
+    if wf.silently_run_job(rw) != 0:
+        raise RuntimeError("rwcontents of %s failed." % pdb)
+    def val(key):
+        for line in rw.out.lines:
+            if key in line:
+                return float(line[line.find(key)+len(key):])
+    Vm = val('The Matthews Coefficient is :')
+    #mw = val('Molecular Weight of protein:')
+    #vol = val('Cell volume:')
+    #data_num = int(round(mtz_meta.get_volume() / mw / Vm))
+    if not Vm:
+        raise RuntimeError("rwcontents could not interpret %s." % pdb)
+    # 1.23 is used in phaser/src/Composition.cc
+    return (1 - 1.23/Vm) * 100
 
 
 def match_symmetry(meta1, meta2):
@@ -372,7 +392,7 @@ def parse_dimple_commands(args):
         args.append(output_dir)
 
     opt = parser.parse_args(args)
-    all_args = [opt.pos_arg1, opt.pos_arg2, opt.pos_arg3] + opt.more_args;
+    all_args = [opt.pos_arg1, opt.pos_arg2, opt.pos_arg3] + opt.more_args
     # all_args should be one mtz, one or more pdbs and output_dir
     opt.output_dir = all_args.pop()
     if (opt.output_dir.endswith('.mtz') or opt.output_dir.endswith('.pdb')
@@ -440,6 +460,10 @@ def main(args):
         dimple(wf=wf, opt=options)
     except c4.workflow.JobError, e: # avoid "as e" for the sake of Py2.4
         put_error(e.msg, comment=e.note)
+        wf.pickle_jobs()
+        sys.exit(1)
+    except RuntimeError, e:
+        put_error(e)
         wf.pickle_jobs()
         sys.exit(1)
     wf.options = options

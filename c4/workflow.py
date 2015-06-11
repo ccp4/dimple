@@ -541,9 +541,6 @@ class Workflow:
     def read_mtz_metadata(self, hklin):
         return c4.mtz.read_metadata(self.path(hklin))
 
-    def get_protein_mw(self, xyzin):
-        return c4.pdb.get_protein_mw(self.path(xyzin))
-
     def molrep(self, f, m, keys=""):
         job = Job(self, c4.utils.cbin("molrep"))
         job.args += ["-f", f, "-m", m]
@@ -552,12 +549,23 @@ class Workflow:
             job.std_input = keys.strip() + "\nend"
         return job
 
-    def phaser(self, hklin, labin, mode, script, root):
-        lines = ["MODE %s" % mode,
+    def phaser_auto(self, hklin, labin, model, root, sg_alt="NONE",
+                   solvent_percent=None):
+        lines = ["MODE MR_AUTO",
+                 "SEARCH METHOD FAST",
                  "HKLIN %s" % hklin,
-                 "LABIN %s" % labin
-                ] + script.splitlines() + [
-                 "ROOT %s" % root ]
+                 "LABIN %s" % labin,
+                 "SGALTERNATIVE SELECT %s" % sg_alt]
+        if solvent_percent:
+            lines += ['COMPOSITION BY SOLVENT',
+                      'COMPOSITION PERCENTAGE %f' % solvent_percent]
+        lines += ('ENSEMBLE p PDBFILE %(pdb)s IDENTITY %(identity)g\n'
+                  'SEARCH ENSEMBLE p NUM %(num)d' % model).splitlines()
+        # test TNCS for pseudo-tripling/quadrupling of the cell
+        # (it shouldn't be num in general case
+        #if n_tncs:
+        #    lines += 'TNCS NMOL %d' % n_tncs
+        lines += ["ROOT %s" % root]
         job = ccp4_job(self, "phaser", input=lines)
         return job
 
@@ -636,6 +644,9 @@ class Workflow:
         job.args += ["-c", "-s%g" % sigma, mtz, pdb]
         job.parser = "_find_blobs_parser"
         return job
+
+    def rwcontents(self, pdb):
+        return ccp4_job(self, "rwcontents", logical=dict(xyzin=pdb))
 
     def coot_py(self, script_text):
         job = Job(self, c4.coot.find_path())
