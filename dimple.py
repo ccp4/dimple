@@ -44,9 +44,12 @@ def dimple(wf, opt):
             comment("\n    %-10s CC: %-8s cell_deviation: %s" % (
                     ar['op'], ar['cc'], ar['cell_deviat']))
     else:
-        # pointless doesn't print CC for non-ambiguous spacegroups (e.g. C2)
-        #comment("\n    ooops, no good indexing")
-        pass
+        # until recently (2015) pointless did't print CC for non-ambiguous
+        # spacegroups (e.g. C2), but now it always prints (?)
+        comment("\n    ooops, no good indexing")
+    pointless_mtz_meta = wf.read_mtz_metadata("pointless.mtz")
+    if pointless_mtz_meta.symmetry != mtz_meta.symmetry:
+        _comment_summary_line('reindexed MTZ', pointless_mtz_meta)
     #comment("\nCalculate structure factor amplitudes")
     if opt.ItoF_prog == 'truncate':
         wf.truncate(hklin="pointless.mtz", hklout="truncate.mtz",
