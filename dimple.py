@@ -13,7 +13,7 @@ from c4.pdb import is_pdb_id, download_pdb
 import c4.workflow
 from c4 import coot
 
-__version__ = '2.1'
+__version__ = '2.1.1'
 
 def dimple(wf, opt):
     comment("%8s### Dimple v%s. Problems and suggestions:"
@@ -152,6 +152,11 @@ def dimple(wf, opt):
                       model=dict(pdb=rb_xyzin, identity=100, num=num),
                       solvent_percent=_get_solvent_percent(wf, rb_xyzin),
                       root='phaser').run()
+            phaser_data = wf.jobs[-1].data
+            if phaser_data['status'].startswith('Sorry'):
+                return
+            if phaser_data['SG'] != pointless_mtz_meta.symmetry:
+                comment("\nSpacegroup changed to %s" % phaser_data['SG'])
             refmac_xyzin = "phaser.1.pdb"
             prepared_mtz = "phaser.1.mtz"
 
@@ -198,13 +203,6 @@ def dimple(wf, opt):
                 _generate_pictures(wf, opt, fb_job)
         else:
             comment("\nUnmodelled blobs not found.")
-    comment("\n")
-    if opt.cleanup:
-        wf.delete_files(["pointless.mtz", "truncate.mtz", "unique.mtz",
-                         "free.mtz", "prepared.mtz", "prepared2.mtz",
-                         "refmacRB.mtz",
-                         "refmacRB.pdb", "molrep.pdb", "molrep_dimer.pdb",
-                         "molrep.crd", "phaser.1.pdb"])
 
 
 def _comment_summary_line(name, meta):
@@ -362,7 +360,7 @@ def parse_dimple_commands(args):
                         metavar='NUM',
                         help='threshold for Molecular Replacement'+dstr)
     parser.add_argument('--MR-prog', choices=['phaser', 'molrep'],
-                        default='molrep',
+                        default='phaser',
                         help='Molecular Replacement program'+dstr)
     parser.add_argument('-I', '--icolumn', metavar='ICOL',
                         default='IMEAN', help='I column label'+dstr)
@@ -380,7 +378,7 @@ def parse_dimple_commands(args):
     parser.add_argument('--version', action='version',
                         version='%(prog)s '+__version__)
     # get rid of 'positional arguments' in the usage method
-    parser._action_groups[:1] = []
+    parser._action_groups[:1] = []  # pylint: disable=protected-access
 
     # special mode for compatibility with ccp4i
     legacy_args = { "HKLIN": "", "XYZIN": "",
@@ -458,6 +456,13 @@ def main(args):
     c4.utils.log_value("version", __version__)
     try:
         dimple(wf=wf, opt=options)
+        comment("\n")
+        if options.cleanup:
+            wf.delete_files(["pointless.mtz", "truncate.mtz", "unique.mtz",
+                             "free.mtz", "prepared.mtz", "prepared2.mtz",
+                             "refmacRB.mtz", "refmacRB.pdb",
+                             "molrep.pdb", "molrep_dimer.pdb", "molrep.crd",
+                             "phaser.1.pdb", "phaser.1.mtz"])
     except c4.workflow.JobError, e: # avoid "as e" for the sake of Py2.4
         put_error(e.msg, comment=e.note)
         wf.pickle_jobs()
