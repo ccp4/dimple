@@ -27,7 +27,7 @@ if sys.platform == 'msys':
     def new_opjoin(*args):
         for n in range(len(args)-1, -1, -1):
             if n == 0 or os.path.isabs(args[n]):
-                return old_opjoin(*args[n:])
+                return old_opjoin(*args[n:])  # pylint: disable=star-args
     os.path.join = new_opjoin
 
 
@@ -258,6 +258,19 @@ def _pointless_parser(job):
     return txt
 
 
+def _phaser_parser(job):
+    d = job.data
+    for line in job.out.read_line():
+        if line.startswith('*** Phaser Module:'):
+            d['status'] = '[%s]' % line[19:70].strip().lower()
+        if line.startswith('   SOLU SET ') and 'LLG=' in line:
+            d['status'] = line[12:].strip()
+        if line.startswith('   Sorry - No solution'):
+            d['status'] = line.strip()
+        if line.startswith('   SOLU SPAC '):
+            d['SG'] = line[13:].strip()
+    return "%-48s" % d.get('status', '')
+
 def _truncate_parser(job):
     for line in job.out.read_line():
         if line.startswith(' Least squares straight line gives:'):
@@ -280,7 +293,9 @@ def _ctruncate_parser(job):
             _format("%.2f", d.get("L-test")))
 
 
-def ccp4_job(workflow, prog, logical=None, input="", parser=None, add_end=True):
+def ccp4_job(workflow, prog, logical=None,
+             input="",  # pylint: disable=redefined-builtin
+             parser=None, add_end=True):
     """Handle traditional convention for arguments of CCP4 programs.
     logical is dictionary with where keys are so-called logical names,
     input string or list of lines that are to be passed though stdin
@@ -551,11 +566,11 @@ class Workflow:
 
     def phaser_auto(self, hklin, labin, model, root, sg_alt="NONE",
                    solvent_percent=None):
-        lines = ["MODE MR_AUTO",
-                 "SEARCH METHOD FAST",
-                 "HKLIN %s" % hklin,
-                 "LABIN %s" % labin,
-                 "SGALTERNATIVE SELECT %s" % sg_alt]
+        lines = ['MODE MR_AUTO',
+                 'SEARCH METHOD FAST',
+                 'HKLIN "%s"' % hklin,
+                 'LABIN %s' % labin,
+                 'SGALTERNATIVE SELECT %s' % sg_alt]
         if solvent_percent:
             lines += ['COMPOSITION BY SOLVENT',
                       'COMPOSITION PERCENTAGE %f' % solvent_percent]
@@ -566,8 +581,11 @@ class Workflow:
         #if n_tncs:
         #    lines += 'TNCS NMOL %d' % n_tncs
         lines += ["ROOT %s" % root]
-        job = ccp4_job(self, "phaser", input=lines)
+        job = ccp4_job(self, "phaser", input=lines, parser="_phaser_parser")
         return job
+
+    # functions below use logical=locals()
+    # pylint: disable=unused-argument
 
     def pointless(self, hklin, xyzin, hklref=None, hklout=None, keys=""):
         return ccp4_job(self, "pointless", logical=locals(), input=keys,
