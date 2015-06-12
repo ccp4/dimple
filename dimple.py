@@ -6,7 +6,6 @@ if sys.version_info[:2] != (2, 7):
     sys.stderr.write("Error. Python 2.7 is required.\n")
     sys.exit(1)
 import argparse
-from c4.cell import Cell
 import c4.utils
 from c4.utils import comment, put_error, adjust_path
 from c4.mtz import check_freerflags_column, get_num_missing
@@ -112,10 +111,8 @@ def dimple(wf, opt):
                      "DELFWT=FOFCWT PHDELWT=PHFOFCWT")
 
     refmac_xyzin = None
-    #TODO: change to calculate_difference_metric
-    cell_diff = pdb_meta.max_shift_in_mapping(Cell(
-                                                pointless_data['output_cell']))
-    if cell_diff > 0.5 and opt.mr_when_rfree < 1:
+    cell_diff = calculate_difference_metric(pdb_meta, pointless_mtz_meta)
+    if cell_diff > 0.25 and opt.mr_when_rfree < 1:
         comment("\nQuite different unit cells, start from MR.")
     else:
         comment("\nRigid-body refinement with resolution 3.5 A, 10 cycles.")
