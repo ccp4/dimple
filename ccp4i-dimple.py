@@ -32,7 +32,8 @@ def add_blob(n):
     section_output.extend([dfiles, vfiles])
 
 import dimple
-opt = dimple.parse_dimple_commands()
+
+opt = dimple.parse_dimple_commands(sys.argv[1:])
 jobdir = os.path.abspath(opt.output_dir)
 if not os.path.exists(jobdir):
     os.makedirs(jobdir) # it would be created by dimple, but too late
@@ -42,10 +43,10 @@ sys.stdout.flush()
 
 input_files = qtrapi.Files()
 input_files.extend([
-qtrapi.File(key="HKLIN", title="Reflection Data", type="hkl:hkl",
-            path=os.path.join(jobdir, opt.mtz)),
-qtrapi.File(key="XYZIN", title="Input Model", type="xyz",
-            path=os.path.join(jobdir, opt.pdb))
+    qtrapi.File(key="HKLIN", title="Reflection Data", type="hkl:hkl",
+                path=os.path.join(jobdir, opt.mtz)),
+    qtrapi.File(key="XYZIN", title="Input Model", type="xyz",
+                path=os.path.join(jobdir, opt.pdb))
 ])
 
 qtrapi_text = qtrapi.Text("")
@@ -62,4 +63,4 @@ report = qtrapi.Report(title="Dimple", path=jobdir)
 report.extend([section_info, section_input, section_output])
 report.flush()
 
-dimple.main()
+dimple.main(sys.argv[1:])
