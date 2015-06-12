@@ -39,7 +39,7 @@ def read_metadata(pdb):
             f.close()
             return PdbMeta(line)
     f.close()
-    sys.stderr.write("\nCRYST1 line not found in %s\n" % pdb)
+    put_error("CRYST1 line not found in %s" % pdb)
 
 def remove_hetatm(filename_in, file_out):
     "remove HETATM and related lines"

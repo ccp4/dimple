@@ -32,7 +32,7 @@ if sys.platform == 'msys':
 
 
 class JobError(Exception):
-    def __init__(self, msg, note=None):
+    def __init__(self, msg, note=None): # pylint: disable=super-init-not-called
         self.msg = msg
         self.note = note
 
@@ -165,11 +165,9 @@ def _format(fmt, arg):
 # parsers for various programs
 def _find_blobs_parser(job):
     if "blobs" not in job.data:
-        #sys.stdout.write("\n")
         job.data["blobs"] = []
         job.data["scores"] = []
     for line in job.out.read_line():
-        #sys.stdout.write(line)
         if line.startswith("#"):
             sp = line.split(None, 6)
             score = float(sp[5])
@@ -320,9 +318,7 @@ def _print_progress(job, event):
         p = job.parse()
         if p is not None:
             text = (_elapsed_fmt % (time.time() - job.started)) + p
-            c4.utils.put(text)
-            sys.stdout.flush()
-            c4.utils.put("\b"*len(text))
+            c4.utils.put_temporarily(text)
             c4.utils.reset_color()
 
 

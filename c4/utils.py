@@ -4,6 +4,7 @@ import time
 
 _logfile = None
 _logfile_sections = None
+_screen_logfile = None
 _c4_dir = os.path.abspath(os.path.dirname(__file__))
 
 # start log in ini-like format,
@@ -33,7 +34,6 @@ def start_log(filename, output_dir):
     log_value("output_dir", output_dir)
     log_value("CCP4", os.getenv("CCP4", ""))
     _logfile.flush()
-
 
 def _log_comment(text):
     global _logfile  # pylint: disable=global-variable-not-assigned
@@ -65,17 +65,32 @@ def log_time(key, timestamp):
     log_value(key, time.strftime("%Y-%m-%d %H:%M:%S",
                                  time.localtime(timestamp)))
 
-def put(text):
+def start_log_screen(filename):
+    global _screen_logfile  # pylint: disable=global-statement
+    _screen_logfile = open(filename, 'a')
+    _screen_logfile.write('\n')
+
+def _log_screen(text):
+    global _screen_logfile  # pylint: disable=global-variable-not-assigned
+    if _screen_logfile:
+        _screen_logfile.write(text)
+        _screen_logfile.flush()
+
+def put(text, ansi_code=None):
+    _log_screen(text)
+    if (ansi_code is not None and os.name != 'nt' and
+            hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()):
+        sys.stdout.write("\033[%dm%s\033[0m" % (ansi_code, text))
+    else:
+        sys.stdout.write(text)
+
+def put_temporarily(text):
     sys.stdout.write(text)
+    sys.stdout.flush()
+    sys.stdout.write("\b"*len(text))
 
 def put_green(text):
-    if hasattr(sys.stdout, 'isatty') and sys.stdout.isatty():
-        if os.name != 'nt':
-            put("\033[92m%s\033[0m" % text)
-        else:
-            put(text)
-    else:
-        put(text)
+    put(text, ansi_code=92)
 
 def comment(text):
     put(text)
@@ -85,10 +100,11 @@ def comment(text):
 def reset_color():
     if hasattr(sys.stdout, 'isatty') and sys.stdout.isatty():
         if os.name != 'nt':
-            put("\033[0m")
+            sys.stdout.write("\033[0m")
 
 def put_error(err, comment=None):  # pylint: disable=redefined-outer-name
-    _log_comment("Error: %s" % err)
+    _log_comment("Error: %s." % err)
+    _log_screen("\nError: %s.\n" % err)
     if hasattr(sys.stderr, 'isatty') and sys.stderr.isatty():
         if os.name != 'nt':
             err = "\033[91m%s\033[0m" % err  # in bold red
@@ -96,6 +112,7 @@ def put_error(err, comment=None):  # pylint: disable=redefined-outer-name
     sys.stderr.write("\nError: %s.\n" % err)
     if comment is not None:
         _log_comment(comment)
+        _log_screen(comment + "\n")
         sys.stderr.write(comment + "\n")
 
 

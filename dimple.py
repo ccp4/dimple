@@ -454,6 +454,7 @@ def main(args):
     c4.utils.start_log(os.path.join(options.output_dir, "dimple.log"),
                        output_dir=options.output_dir)
     c4.utils.log_value("version", __version__)
+    c4.utils.start_log_screen(os.path.join(options.output_dir, "screen.log"))
     try:
         dimple(wf=wf, opt=options)
         comment("\n")
