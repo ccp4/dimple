@@ -1,6 +1,5 @@
 import gzip
 import os
-import subprocess
 import sys
 import urllib2
 
@@ -108,7 +107,7 @@ def main():
                 sys.exit(1)
     else:
         for arg in sys.argv[1:]:
-            print("File: %s" % arg)
+            print "File: %s" % arg
             print read_metadata(arg)
 
 if __name__ == '__main__':

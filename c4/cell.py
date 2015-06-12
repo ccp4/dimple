@@ -16,7 +16,7 @@ class Cell(object):
         cb = cos(radians(self.beta))
         cg = cos(radians(self.gamma))
         return self.a * self.b * self.c * sqrt((1 - ca*ca - cb*cb - cg*cg) +
-                                                2 * ca*cb*cg)
+                                               2 * ca*cb*cg)
 
     def __str__(self):
         return str(self.cell)
@@ -33,9 +33,9 @@ class Cell(object):
         gamma = radians(self.gamma)
         alpha_star = acos((cos(gamma)*cos(beta) - cos(alpha)) /
                           (sin(beta)*sin(gamma)))
-        return Mat3( a, b*cos(gamma),  c*cos(beta),
-                     0, b*sin(gamma), -c*sin(beta)*cos(alpha_star),
-                     0, 0,             c*sin(beta)*sin(alpha_star))
+        return Mat3(a, b*cos(gamma),  c*cos(beta),
+                    0, b*sin(gamma), -c*sin(beta)*cos(alpha_star),
+                    0, 0,             c*sin(beta)*sin(alpha_star))
 
     def get_frac_matrix(self):
         return self.get_orth_matrix().inverse()

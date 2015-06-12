@@ -45,7 +45,7 @@ def _run_mtzdump(hklin, keys):
         put_error("Cannot run mtzdump: %s" % e)
         sys.exit(1)
     keys.append("END")
-    stdoutdata, stderrdata = p.communicate(input="\n".join(keys))
+    stdoutdata, _ = p.communicate(input="\n".join(keys))
     retcode = p.poll()
     if retcode:
         raise RuntimeError("mtzdump of %s failed." % hklin)
@@ -83,8 +83,8 @@ def check_freerflags_column(free_mtz, expected_symmetry):
     names = ['FreeR_flag', 'FREE']
     rfree_meta = read_metadata(free_mtz)
     if rfree_meta.symmetry != expected_symmetry:
-        comment("WARNING: R-free flag reference file is %s not %s.\n" % (
-                rfree_meta.symmetry, expected_symmetry))
+        comment("WARNING: R-free flag reference file is %s not %s.\n" %
+                (rfree_meta.symmetry, expected_symmetry))
     for name in names:
         if name in rfree_meta.columns:
             rfree_meta.check_col_type(name, 'I')
@@ -116,9 +116,9 @@ def main():
         for arg in sys.argv[3:]:
             print arg, get_num_missing(arg, col)
     else:
-        for arg in sys.argv[1:]:
-            print("File: %s" % arg)
-            print read_metadata(arg)
+        for filename in sys.argv[1:]:
+            print "File: %s" % filename
+            print read_metadata(filename)
 
 if __name__ == '__main__':
     main()

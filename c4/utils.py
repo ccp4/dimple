@@ -18,8 +18,8 @@ _c4_dir = os.path.abspath(os.path.dirname(__file__))
 #   start_time = log.get(log.sections()[1], 'start_time') # first job start
 #   end_time = log.get(log.sections()[-1], 'end_time') # last job end
 def start_log(filename, output_dir):
-    global _logfile
-    global _logfile_sections
+    global _logfile  # pylint: disable=global-statement
+    global _logfile_sections  # pylint: disable=global-statement
     _logfile = open(filename, "w")
     _logfile.write("# workflow log (compatible with Python ConfigParser)\n")
     _logfile_sections = set()
@@ -36,15 +36,15 @@ def start_log(filename, output_dir):
 
 
 def _log_comment(text):
-    global _logfile
+    global _logfile  # pylint: disable=global-variable-not-assigned
     if _logfile:
         _logfile.write("# ")
         _logfile.write(text.rstrip("\n").replace("\n", "\n# "))
         _logfile.write("\n")
 
 def log_section(name):
-    global _logfile
-    global _logfile_sections
+    global _logfile  # pylint: disable=global-variable-not-assigned
+    global _logfile_sections  # pylint: disable=global-variable-not-assigned
     if _logfile:
         if name in _logfile_sections:
             counter = 2
@@ -56,7 +56,7 @@ def log_section(name):
         _logfile.flush()
 
 def log_value(key, value):
-    global _logfile
+    global _logfile  # pylint: disable=global-variable-not-assigned
     if _logfile:
         value = str(value).rstrip().replace("\n", "\n ")
         _logfile.write("%s: %s\n" % (key, value))
@@ -87,7 +87,7 @@ def reset_color():
         if os.name != 'nt':
             put("\033[0m")
 
-def put_error(err, comment=None):
+def put_error(err, comment=None):  # pylint: disable=redefined-outer-name
     _log_comment("Error: %s" % err)
     if hasattr(sys.stderr, 'isatty') and sys.stderr.isatty():
         if os.name != 'nt':
