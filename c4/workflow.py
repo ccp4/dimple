@@ -547,8 +547,8 @@ class Workflow:
             output.save_output(self.output_dir, log_basename)
 
     def remove_hetatm(self, xyzin, xyzout):
-        with open(xyzout, "wb") as out:
-            return c4.pdb.remove_hetatm(xyzin, out)
+        with open(self.path(xyzout), "wb") as out:
+            return c4.pdb.remove_hetatm(self.path(xyzin), out)
 
     def read_pdb_metadata(self, xyzin):
         return c4.pdb.read_metadata(self.path(xyzin))
