@@ -9,7 +9,7 @@ import qtrapi
 # monkey-patch put() before dimple is imported
 import c4.utils
 orig_put = c4.utils.put
-def our_put(text):
+def our_put(text, ansi_code=None):
     orig_put(text)
     qtrapi_text[0] += text
     for n in (1,2):
@@ -46,7 +46,7 @@ input_files.extend([
     qtrapi.File(key="HKLIN", title="Reflection Data", type="hkl:hkl",
                 path=os.path.join(jobdir, opt.mtz)),
     qtrapi.File(key="XYZIN", title="Input Model", type="xyz",
-                path=os.path.join(jobdir, opt.pdb))
+                path=os.path.join(jobdir, opt.pdbs[0]))
 ])
 
 qtrapi_text = qtrapi.Text("")
