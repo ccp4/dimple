@@ -8,7 +8,7 @@ from c4.cell import Cell
 class MtzMeta(Cell):
     def __init__(self, cell, symmetry, sg_number, dmin, dmax, columns,
                  filename):
-        assert type(columns[0]) == tuple
+        assert isinstance(columns[0], tuple)
         Cell.__init__(self, cell)
         self.symmetry = symmetry
         self.sg_number = sg_number
