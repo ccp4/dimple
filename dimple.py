@@ -13,7 +13,7 @@ from c4.pdb import is_pdb_id, download_pdb
 import c4.workflow
 from c4 import coot
 
-__version__ = '2.1.1'
+__version__ = '2.1.2'
 
 def dimple(wf, opt):
     comment("%8s### Dimple v%s. Problems and suggestions:"
@@ -178,7 +178,7 @@ def dimple(wf, opt):
 
     comment("\nFinal restrained refinement, 8 cycles.")
     if opt.weight:
-        refmac_weight = "matrix 0.2"
+        refmac_weight = "matrix %f" % opt.weight
     else:
         refmac_weight = "auto"
     restr_job = wf.refmac5(hklin=prepared_mtz, xyzin=refmac_xyzin,
