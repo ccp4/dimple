@@ -13,7 +13,7 @@ from c4.pdb import is_pdb_id, download_pdb
 import c4.workflow
 from c4 import coot
 
-__version__ = '2.1.2'
+__version__ = '2.1.3'
 
 def dimple(wf, opt):
     comment("%8s### Dimple v%s. Problems and suggestions:"
@@ -176,20 +176,29 @@ def dimple(wf, opt):
                       f="FC", phi="PHIC", pdbout="prepared_wat.pdb", sigma=2)
         refmac_xyzin = "prepared_wat.pdb"
 
-    comment("\nFinal restrained refinement, 8 cycles.")
     if opt.weight:
         refmac_weight = "matrix %f" % opt.weight
     else:
         refmac_weight = "auto"
+    restr_ref_keys="""make hydrogen all hout no cispeptide yes ssbridge yes
+     refinement type restrained
+     weight %s
+     scale type simple lssc anisotropic experimental
+     solvent yes vdwprob 1.4 ionprob 0.8 mshrink 0.8
+     """ % refmac_weight
+    if opt.jelly:
+        comment("\nJelly-body refinement, %d cycles." % opt.jelly)
+        wf.refmac5(hklin=prepared_mtz, xyzin=refmac_xyzin,
+                   hklout="jelly.mtz", xyzout="jelly.pdb",
+                   labin=refmac_labin, labout=refmac_labout, libin=opt.libin,
+                   keys=restr_ref_keys+"ridge distance sigma 0.01\n"
+                                       "ncycle %d" % opt.jelly).run()
+        refmac_xyzin = "jelly.pdb"
+    comment("\nFinal restrained refinement, 8 cycles.")
     restr_job = wf.refmac5(hklin=prepared_mtz, xyzin=refmac_xyzin,
                  hklout=opt.hklout, xyzout=opt.xyzout,
                  labin=refmac_labin, labout=refmac_labout, libin=opt.libin,
-                 keys="""make hydrogen all hout no cispeptide yes ssbridge yes
-                         refinement type restrained
-                         weight %s
-                         scale type simple lssc anisotropic experimental
-                         solvent yes vdwprob 1.4 ionprob 0.8 mshrink 0.8
-                         ncycle 8""" % refmac_weight).run()
+                 keys=restr_ref_keys+"ncycle 8").run()
     if opt.summary:
         comment("".join(restr_job.data["selected_lines"]))
     # if that run is repeated with --from-job it's useful to compare Rfree
@@ -361,6 +370,8 @@ def parse_dimple_commands(args):
     parser.add_argument('-f', choices=['png', 'jpeg', 'tiff', 'none'],
                         default='png', dest='img_format',
                         help='format of generated images'+dstr)
+    parser.add_argument('--jelly', metavar='N_ITER', type=int,
+                    help='run refmac jelly-body before the final refinement')
     parser.add_argument('--weight', metavar='VALUE', type=float,
                         help='refmac matrix weight (default: auto-weight)')
     parser.add_argument('--libin', metavar='CIF',
@@ -475,6 +486,7 @@ def main(args):
             wf.delete_files(["pointless.mtz", "truncate.mtz", "unique.mtz",
                              "free.mtz", "prepared.mtz", "prepared2.mtz",
                              "refmacRB.mtz", "refmacRB.pdb",
+                             "jelly.mtz", "jelly.pdb",
                              "molrep.pdb", "molrep_dimer.pdb", "molrep.crd",
                              "phaser.1.pdb", "phaser.1.mtz"])
     except c4.workflow.JobError, e: # avoid "as e" for the sake of Py2.4

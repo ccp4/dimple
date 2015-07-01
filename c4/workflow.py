@@ -637,9 +637,13 @@ class Workflow:
                               keys.splitlines()),
                        parser="_refmac_parser")
         words = keys.split()
+        ref_type = "?"
         for n, w in enumerate(words[:-2]):
             if w == "refinement" and words[n+1] == "type":
-                job.name += " " + words[n+2][:5]
+                ref_type = words[n+2][:5]
+            elif w == "ridge":
+                ref_type = "jelly"
+        job.name += " " + ref_type
         job.ncyc = -1
         for n, w in enumerate(words[:-1]):
             if w.startswith("ncyc"):
