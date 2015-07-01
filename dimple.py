@@ -23,17 +23,8 @@ def dimple(wf, opt):
     mtz_meta.check_col_type(opt.icolumn, 'J')
     mtz_meta.check_col_type(opt.sigicolumn, 'Q')
     _comment_summary_line("MTZ", mtz_meta)
-    if opt.dls_filename_matching:
-        # the same filtering as in solve_o_matic's select_pdb.py in Diamond LS
-        match_pdbs = [arg for arg in opt.pdbs
-                      if os.path.basename(arg).split('.')[0] in os.getcwd()]
-        if match_pdbs != opt.pdbs:
-            comment("\n%d of %d PDBs have filenames matching data directory"
-                    % (len(match_pdbs), len(opt.pdbs)))
-            if match_pdbs:
-                opt.pdbs = match_pdbs
-            else:
-                comment("\nWARNING: using PDBs with non-matching filenames.")
+    if opt.dls_naming:
+        opt.pdbs = dls_name_filter(opt.pdbs)
     for p in opt.pdbs:
         wf.file_info[p] = wf.read_pdb_metadata(p)
     if len(opt.pdbs) > 1:
@@ -395,7 +386,7 @@ def parse_dimple_commands(args):
                         help='remove intermediate files on exit')
     parser.add_argument('--seed-freerflag', action='store_true',
                         help=argparse.SUPPRESS)
-    parser.add_argument('--dls-filename-matching', action='store_true',
+    parser.add_argument('--dls-naming', action='store_true',
                         help=argparse.SUPPRESS)
     parser.add_argument('--from-job', metavar='N', type=int, default=0,
                         help=argparse.SUPPRESS)
@@ -459,6 +450,22 @@ def parse_dimple_commands(args):
     opt.sigicolumn = opt.sigicolumn.replace('<ICOL>', opt.icolumn)
 
     return opt
+
+def dls_name_filter(pdbs):
+    # Filename matching used in Diamond synchrotron. PDB filenames
+    # are matched against the current (!) directory.
+    # It's more relaxed than in solve_o_matic's select_pdb.py:
+    # case-insensitive and ignoring non-alphanumeric characters.
+    pattern = ''.join(a for a in os.getcwd().lower()
+                      if a.isalnum() or a == '/')
+    def token(arg):
+        part = os.path.basename(arg).split('.')[0]
+        return ''.join(a for a in part.lower() if a.isalnum())
+    matched_pdbs = [arg for arg in pdbs if token(arg) in pattern]
+    if matched_pdbs != pdbs:
+        comment("\n%d of %d PDBs have filenames matching data directory"
+                % (len(matched_pdbs), len(pdbs)))
+    return matched_pdbs
 
 
 def main(args):
