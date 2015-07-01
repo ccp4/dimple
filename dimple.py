@@ -185,11 +185,11 @@ def dimple(wf, opt):
                    keys=restr_ref_keys+"ridge distance sigma 0.01\n"
                                        "ncycle %d" % opt.jelly).run()
         refmac_xyzin = "jelly.pdb"
-    comment("\nFinal restrained refinement, 8 cycles.")
+    comment("\nFinal restrained refinement, %d cycles." % opt.restr_cycles)
     restr_job = wf.refmac5(hklin=prepared_mtz, xyzin=refmac_xyzin,
                  hklout=opt.hklout, xyzout=opt.xyzout,
                  labin=refmac_labin, labout=refmac_labout, libin=opt.libin,
-                 keys=restr_ref_keys+"ncycle 8").run()
+                 keys=restr_ref_keys+("ncycle %d" % opt.restr_cycles)).run()
     if opt.summary:
         comment("".join(restr_job.data["selected_lines"]))
     # if that run is repeated with --from-job it's useful to compare Rfree
@@ -365,6 +365,8 @@ def parse_dimple_commands(args):
                     help='run refmac jelly-body before the final refinement')
     parser.add_argument('--weight', metavar='VALUE', type=float,
                         help='refmac matrix weight (default: auto-weight)')
+    parser.add_argument('--restr-cycles', metavar='N', type=int, default=8,
+                        help='cycles of refmac final refinement'+dstr)
     parser.add_argument('--libin', metavar='CIF',
                         help='ligand descriptions for refmac (LIBIN)')
     parser.add_argument('-R', '--free-r-flags', metavar='MTZ_FILE',
