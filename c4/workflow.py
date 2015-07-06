@@ -218,10 +218,18 @@ def _refmac_parser(job):
         elif line.startswith(" $TEXT:Result: $$ Final results $$") or (
                 selected and not selected[-1].startswith(" $$")):
             selected.append(line)
-    return "%2d/%d   R/Rfree  %.4f/%.4f  ->  %.4f/%.4f" % (
-            job.data["cycle"], job.ncyc,
-            job.data["ini_overall_r"], job.data["ini_free_r"],
-            job.data["overall_r"], job.data["free_r"])
+    cycle_str = "%2d/%d" % (job.data["cycle"], job.ncyc)
+    if job.data["ini_free_r"]:
+        return "%s   R/Rfree  %.4f/%.4f  ->  %.4f/%.4f" % (
+                cycle_str,
+                job.data["ini_overall_r"], job.data["ini_free_r"],
+                job.data["overall_r"], job.data["free_r"])
+    elif job.data["ini_overall_r"]:
+        return "%s   R  %.4f  ->  %.4f" % (
+                cycle_str,
+                job.data["ini_overall_r"], job.data["overall_r"])
+    else:
+        return cycle_str
 
 # example:
 #     Alternative reindexing        Lklhd      CC     R(E^2)    Number Cell_deviation

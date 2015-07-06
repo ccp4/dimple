@@ -108,31 +108,32 @@ def dimple(wf, opt):
     else:
         rb_xyzin = ini_pdb
 
-    refmac_labin = "FP=F SIGFP=SIGF FREE=%s" % free_col
+    refmac_labin_nofree = "FP=F SIGFP=SIGF"
+    refmac_labin = "%s FREE=%s" % (refmac_labin_nofree, free_col)
     refmac_labout = ("FC=FC PHIC=PHIC FWT=2FOFCWT PHWT=PH2FOFCWT "
                      "DELFWT=FOFCWT PHDELWT=PHFOFCWT")
 
     refmac_xyzin = None
     cell_diff = calculate_difference_metric(pdb_meta, pointless_mtz_meta)
-    if cell_diff > 0.25 and opt.mr_when_rfree < 1:
+    if cell_diff > 0.25 and opt.mr_when_r < 1:
         comment("\nQuite different unit cells, start from MR.")
     else:
         comment("\nRigid-body refinement with resolution 3.5 A, 10 cycles.")
         wf.refmac5(hklin=prepared_mtz, xyzin=rb_xyzin,
                    hklout="refmacRB.mtz", xyzout="refmacRB.pdb",
-                   labin=refmac_labin, labout=refmac_labout, libin=None,
+                   labin=refmac_labin_nofree, labout=refmac_labout, libin=None,
                    keys="""refinement type rigidbody resolution 15 3.5
                            scale type simple lssc anisotropic experimental
                            solvent yes vdwprob 1.4 ionprob 0.8 mshrink 0.8
                            rigidbody ncycle 10""").run()
 
-        if "free_r" not in wf.jobs[-1].data:
-            comment("\nWARNING: unknown free_r, something went wrong.")
+        if not wf.jobs[-1].data.get("overall_r"):
+            comment("\nWARNING: unknown R factor, something went wrong.")
             refmac_xyzin = "refmacRB.pdb"
-        elif wf.jobs[-1].data["free_r"] > opt.mr_when_rfree:
-            comment("\nRun MR for R_free > %g" % opt.mr_when_rfree)
+        elif wf.jobs[-1].data["overall_r"] > opt.mr_when_r:
+            comment("\nRun MR for R_free > %g" % opt.mr_when_r)
         else:
-            comment("\nNo MR for R_free < %g" % opt.mr_when_rfree)
+            comment("\nNo MR for R_free < %g" % opt.mr_when_r)
             refmac_xyzin = "refmacRB.pdb"
 
     if refmac_xyzin is None:
@@ -371,7 +372,7 @@ def parse_dimple_commands(args):
                         help='ligand descriptions for refmac (LIBIN)')
     parser.add_argument('-R', '--free-r-flags', metavar='MTZ_FILE',
                     help='reference file with all reflections and freeR flags')
-    parser.add_argument('-M', '--mr-when-rfree', type=float, default=0.4,
+    parser.add_argument('-M', '--mr-when-r', type=float, default=0.4,
                         metavar='NUM',
                         help='threshold for Molecular Replacement'+dstr)
     parser.add_argument('--MR-prog', choices=['phaser', 'molrep'],
