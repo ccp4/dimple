@@ -632,9 +632,9 @@ class Workflow:
                         input=["cell %g %g %g %g %g %g" % cell])
 
     def refmac5(self, hklin, xyzin, hklout, xyzout, labin, labout, libin, keys):
-        job = ccp4_job(self, "refmac5", logical=locals(),
-                       input=(["labin %s" % labin, "labout %s" % labout] +
-                              keys.splitlines()),
+        inp = ["labin %s" % labin, "labout %s" % labout] + keys.splitlines()
+        #inp += ['free 6']  # for testing
+        job = ccp4_job(self, "refmac5", logical=locals(), input=inp,
                        parser="_refmac_parser")
         words = keys.split()
         ref_type = "?"
