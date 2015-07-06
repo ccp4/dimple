@@ -73,7 +73,7 @@ def dimple(wf, opt):
             wf.unique(hklout="unique.mtz",
                       cell=pointless_data['output_cell'],
                       symmetry=pdb_meta.symmetry,
-                      resolution=mtz_meta.dmax,
+                      resolution=mtz_meta.dmax-mtz_meta.d_eps,
                       labout="F=F_UNIQUE SIGF=SIGF_UNIQUE").run()
             wf.freerflag(hklin="unique.mtz", hklout=free_mtz, keys="SEED").run()
         else:
@@ -93,7 +93,7 @@ def dimple(wf, opt):
            keys="""labin file 1 ALL
                    labin file 2 E1=%s
                    reso file 2 1000.0 %g
-                   """ % (free_col, mtz_meta.dmax)).run()
+                   """ % (free_col, mtz_meta.dmax-mtz_meta.d_eps)).run()
     freerflag_missing = get_num_missing(wf.path(prepared_mtz), free_col)
     if freerflag_missing:
         comment("\nHmmm, missing free-R flags for %d reflections. Adding."

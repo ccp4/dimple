@@ -6,6 +6,7 @@ from c4.utils import put_error, comment
 from c4.cell import Cell
 
 class MtzMeta(Cell):
+    d_eps = 0.00051 # dmax precision (so low b/c it is read from mtzdump)
     def __init__(self, cell, symmetry, sg_number, dmin, dmax, columns,
                  filename):
         assert isinstance(columns[0], tuple)
