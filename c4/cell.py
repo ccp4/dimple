@@ -6,6 +6,7 @@ class Cell(object):
         if parameters is None:
             self.cell = None
             return
+        assert isinstance(parameters, tuple)
         assert len(parameters) == 6
         self.a, self.b, self.c = parameters[:3]
         self.alpha, self.beta, self.gamma = parameters[3:]
@@ -50,7 +51,7 @@ class Cell(object):
     def to_standard(self):
         if self.alpha == self.beta == self.gamma == 90 and (
                 self.a > self.b or self.b > self.c):
-            return Cell(sorted(self.cell[:3]) + self.cell[3:])
+            return Cell(tuple(sorted(self.cell[:3])) + self.cell[3:])
         return self
 
 

@@ -16,7 +16,7 @@ class PdbMeta(Cell):
         alpha = float(cryst1_line[33:40])
         beta = float(cryst1_line[40:47])
         gamma = float(cryst1_line[47:54])
-        Cell.__init__(self, [a, b, c, alpha, beta, gamma])
+        Cell.__init__(self, (a, b, c, alpha, beta, gamma))
         self.symmetry = cryst1_line[55:66].strip()
         try:
             self.z = int(cryst1_line[66:70])
