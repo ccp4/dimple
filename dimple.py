@@ -47,7 +47,7 @@ def dimple(wf, opt):
     else:
         # until recently (2015) pointless did't print CC for non-ambiguous
         # spacegroups (e.g. C2), but now it always prints (?)
-        comment("\n    ooops, no good indexing")
+        comment("\n    no good indexing")
     pointless_mtz_meta = wf.read_mtz_metadata("pointless.mtz")
     if pointless_mtz_meta.symmetry != mtz_meta.symmetry:
         _comment_summary_line('reindexed MTZ', pointless_mtz_meta)
@@ -96,7 +96,7 @@ def dimple(wf, opt):
                    """ % (free_col, mtz_meta.dmax-mtz_meta.d_eps)).run()
     freerflag_missing = get_num_missing(wf.path(prepared_mtz), free_col)
     if freerflag_missing:
-        comment("\nHmmm, missing free-R flags for %d reflections. Adding."
+        comment("\nAdding free-R flags for %d reflections."
                 % freerflag_missing)
         wf.freerflag(hklin=prepared_mtz, hklout="prepared2.mtz",
                      keys="COMPLETE FREE="+free_col).run()
@@ -131,9 +131,9 @@ def dimple(wf, opt):
             comment("\nWARNING: unknown R factor, something went wrong.")
             refmac_xyzin = "refmacRB.pdb"
         elif wf.jobs[-1].data["overall_r"] > opt.mr_when_r:
-            comment("\nRun MR for R_free > %g" % opt.mr_when_r)
+            comment("\nRun MR for R > %g" % opt.mr_when_r)
         else:
-            comment("\nNo MR for R_free < %g" % opt.mr_when_r)
+            comment("\nNo MR for R < %g" % opt.mr_when_r)
             refmac_xyzin = "refmacRB.pdb"
 
     if refmac_xyzin is None:
