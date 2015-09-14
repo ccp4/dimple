@@ -58,6 +58,7 @@ def log_section(name):
 def log_value(key, value):
     global _logfile  # pylint: disable=global-variable-not-assigned
     if _logfile:
+        # TODO: store data structures with json.dumps() for easier parsing
         value = str(value).rstrip().replace("\n", "\n ")
         _logfile.write("%s: %s\n" % (key, value))
 

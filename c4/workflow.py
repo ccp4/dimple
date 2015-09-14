@@ -246,9 +246,9 @@ def _pointless_parser(job):
             elif line.startswith("Number of reflections:"):
                 job.data["refl_ref"] = int(line.split(":")[1])
             elif _POINTLESS_ALTREINDEX_MATCH.match(line):
-                reindex = job.data.setdefault('alt_reindex', [])
                 s = line.split()
-                reindex.append({'op': s[0], 'cc': s[2], 'cell_deviat': s[-1]})
+                job.data.setdefault('alt_reindex', []).append(
+                        {'op': s[0], 'cc': s[2], 'cell_deviat': s[-1]})
             elif line.startswith("   Cell:") and 'output_cell' not in job.data:
                 s = line.split()[1:]
                 job.data["output_cell"] = tuple(float(i) for i in s)

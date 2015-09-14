@@ -36,7 +36,8 @@ def dimple(wf, opt):
     ini_pdb = "ini.pdb"
     wf.copy_uncompressed(opt.pdbs[0], ini_pdb)
     pdb_meta = wf.file_info[opt.pdbs[0]]
-    wf.pointless(hklin=opt.mtz, xyzin=ini_pdb, hklout="pointless.mtz",
+    reindexed_mtz = "pointless.mtz"
+    wf.pointless(hklin=opt.mtz, xyzin=ini_pdb, hklout=reindexed_mtz,
                  keys="TOLERANCE 2").run()
     pointless_data = wf.jobs[-1].data
     alt_reindex = pointless_data.get('alt_reindex')
@@ -48,16 +49,17 @@ def dimple(wf, opt):
         # until recently (2015) pointless did't print CC for non-ambiguous
         # spacegroups (e.g. C2), but now it always prints (?)
         comment("\n    no good indexing")
-    pointless_mtz_meta = wf.read_mtz_metadata("pointless.mtz")
+        # exit?  reindexed_mtz = opt.mtz?
+    pointless_mtz_meta = wf.read_mtz_metadata(reindexed_mtz)
     if pointless_mtz_meta.symmetry != mtz_meta.symmetry:
         _comment_summary_line('reindexed MTZ', pointless_mtz_meta)
     #comment("\nCalculate structure factor amplitudes")
     if opt.ItoF_prog == 'truncate':
-        wf.truncate(hklin="pointless.mtz", hklout="truncate.mtz",
+        wf.truncate(hklin=reindexed_mtz, hklout="truncate.mtz",
                   labin="IMEAN=%s SIGIMEAN=%s" % (opt.icolumn, opt.sigicolumn),
                   labout="F=F SIGF=SIGF").run()
     else:
-        wf.ctruncate(hklin="pointless.mtz", hklout="truncate.mtz",
+        wf.ctruncate(hklin=reindexed_mtz, hklout="truncate.mtz",
                      colin="/*/*/[%s,%s]" % (opt.icolumn, opt.sigicolumn)).run()
 
     if opt.free_r_flags:
@@ -491,24 +493,24 @@ def main(args):
     c4.utils.start_log_screen(os.path.join(options.output_dir, "screen.log"))
     try:
         dimple(wf=wf, opt=options)
-        comment("\n")
-        if options.cleanup:
-            wf.delete_files(["pointless.mtz", "truncate.mtz", "unique.mtz",
-                             "free.mtz", "prepared.mtz", "prepared2.mtz",
-                             "refmacRB.mtz", "refmacRB.pdb",
-                             "jelly.mtz", "jelly.pdb",
-                             "molrep.pdb", "molrep_dimer.pdb", "molrep.crd",
-                             "phaser.1.pdb", "phaser.1.mtz"])
+        exit_status = 0
     except c4.workflow.JobError, e: # avoid "as e" for the sake of Py2.4
         put_error(e.msg, comment=e.note)
-        wf.pickle_jobs()
-        sys.exit(1)
+        exit_status = 1
     except RuntimeError, e:
         put_error(e)
-        wf.pickle_jobs()
-        sys.exit(1)
+        exit_status = 1
+    comment("\n")
+    if options.cleanup:
+        wf.delete_files(["pointless.mtz", "truncate.mtz", "unique.mtz",
+                         "free.mtz", "prepared.mtz", "prepared2.mtz",
+                         "refmacRB.mtz", "refmacRB.pdb",
+                         "jelly.mtz", "jelly.pdb",
+                         "molrep.pdb", "molrep_dimer.pdb", "molrep.crd",
+                         "phaser.1.pdb", "phaser.1.mtz"])
     wf.options = options
     wf.pickle_jobs()
+    return exit_status
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    sys.exit(main(sys.argv[1:]))
