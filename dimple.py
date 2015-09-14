@@ -118,7 +118,7 @@ def dimple(wf, opt):
                      "DELFWT=FOFCWT PHDELWT=PHFOFCWT")
 
     refmac_xyzin = None
-    cell_diff = calculate_difference_metric(pdb_meta, pointless_mtz_meta)
+    cell_diff = calculate_difference_metric(pdb_meta, reindexed_mtz_meta)
     if cell_diff > 0.1 and opt.mr_when_r < 1:
         comment("\nQuite different unit cells, start from MR.")
     else:
@@ -173,7 +173,7 @@ def dimple(wf, opt):
             phaser_data = wf.jobs[-1].data
             if phaser_data['status'].startswith('Sorry'):
                 return
-            if phaser_data['SG'] != pointless_mtz_meta.symmetry:
+            if phaser_data['SG'] != reindexed_mtz_meta.symmetry:
                 comment("\nSpacegroup changed to %s" % phaser_data['SG'])
             refmac_xyzin = "phaser.1.pdb"
             prepared_mtz = "phaser.1.mtz"
