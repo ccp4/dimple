@@ -13,7 +13,7 @@ from c4.pdb import is_pdb_id, download_pdb
 import c4.workflow
 from c4 import coot
 
-__version__ = '2.1.6'
+__version__ = '2.1.7'
 
 def dimple(wf, opt):
     comment("%8s### Dimple v%s. Problems and suggestions:"
@@ -36,23 +36,26 @@ def dimple(wf, opt):
     ini_pdb = "ini.pdb"
     wf.copy_uncompressed(opt.pdbs[0], ini_pdb)
     pdb_meta = wf.file_info[opt.pdbs[0]]
-    reindexed_mtz = "pointless.mtz"
-    wf.pointless(hklin=opt.mtz, xyzin=ini_pdb, hklout=reindexed_mtz,
-                 keys="TOLERANCE 2").run()
-    pointless_data = wf.jobs[-1].data
-    alt_reindex = pointless_data.get('alt_reindex')
-    if alt_reindex:
-        for ar in alt_reindex:
-            comment("\n    %-10s CC: %-8s cell_deviation: %s" % (
-                    ar['op'], ar['cc'], ar['cell_deviat']))
+    if match_symmetry(mtz_meta, pdb_meta):
+        reindexed_mtz = "pointless.mtz"
+        wf.pointless(hklin=opt.mtz, xyzin=ini_pdb, hklout=reindexed_mtz,
+                     keys="TOLERANCE 5").run()
+        pointless_data = wf.jobs[-1].data
+        alt_reindex = pointless_data.get('alt_reindex')
+        if alt_reindex:
+            for ar in alt_reindex:
+                comment("\n    %-10s CC: %-8s cell_deviation: %s" % (
+                        ar['op'], ar['cc'], ar['cell_deviat']))
+        else:
+            # until recently (2015) pointless did't print CC for non-ambiguous
+            # spacegroups (e.g. C2), but now it always prints (?)
+            comment("\n    no good indexing")
+            # exit?  reindexed_mtz = opt.mtz?
+        pointless_mtz_meta = wf.read_mtz_metadata(reindexed_mtz)
+        if pointless_mtz_meta.symmetry != mtz_meta.symmetry:
+            _comment_summary_line('reindexed MTZ', pointless_mtz_meta)
     else:
-        # until recently (2015) pointless did't print CC for non-ambiguous
-        # spacegroups (e.g. C2), but now it always prints (?)
-        comment("\n    no good indexing")
-        # exit?  reindexed_mtz = opt.mtz?
-    pointless_mtz_meta = wf.read_mtz_metadata(reindexed_mtz)
-    if pointless_mtz_meta.symmetry != mtz_meta.symmetry:
-        _comment_summary_line('reindexed MTZ', pointless_mtz_meta)
+        reindexed_mtz = ini_pdb
     #comment("\nCalculate structure factor amplitudes")
     if opt.ItoF_prog == 'truncate':
         wf.truncate(hklin=reindexed_mtz, hklout="truncate.mtz",
