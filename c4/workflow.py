@@ -101,6 +101,7 @@ class Job:
         self.std_input = ""
         self.stdin_file = None # if set, it overwrites std_input
         # the rest is set after the job is run
+        self.exit_status = None
         self.out = Output("out")
         self.err = Output("err")
         self.started = None  # will be set to time.time() at start
@@ -520,7 +521,7 @@ class Workflow:
             end_time = time.time()
             job.total_time = end_time - job.started
             c4.utils.log_time("end_time", end_time)
-            retcode = process.poll()
+            job.exit_status = process.poll()
             if new_line:
                 c4.utils.put(_elapsed_fmt % job.total_time)
             parse_output = job.parse()
@@ -532,8 +533,8 @@ class Workflow:
                 if k == "selected_lines":
                     v = "\n" + "".join(v) # selected_lines have newlines
                 c4.utils.log_value(k, v)
-        if retcode:
-            c4.utils.log_value("exit_status", retcode)
+        if job.exit_status:
+            c4.utils.log_value("exit_status", job.exit_status)
             all_args = job.args_as_str()
             notes = [all_args, ""]
             if job.out.saved_to:
@@ -541,7 +542,8 @@ class Workflow:
                                                job.out.saved_to)]
             if job.err:
                 notes += ["stderr:", job.err.summary()]
-            raise JobError("%s failed (exit status %d)" % (job.name, retcode),
+            raise JobError("%s failed (exit status %d)" % (job.name,
+                                                           job.exit_status),
                            note="\n".join(notes))
         return job
 

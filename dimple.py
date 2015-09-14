@@ -13,7 +13,7 @@ from c4.pdb import is_pdb_id, download_pdb
 import c4.workflow
 from c4 import coot
 
-__version__ = '2.1.5'
+__version__ = '2.1.6'
 
 def dimple(wf, opt):
     comment("%8s### Dimple v%s. Problems and suggestions:"
@@ -117,19 +117,30 @@ def dimple(wf, opt):
 
     refmac_xyzin = None
     cell_diff = calculate_difference_metric(pdb_meta, pointless_mtz_meta)
-    if cell_diff > 0.25 and opt.mr_when_r < 1:
+    if cell_diff > 0.1 and opt.mr_when_r < 1:
         comment("\nQuite different unit cells, start from MR.")
     else:
         comment("\nRigid-body refinement with resolution 3.5 A, 10 cycles.")
-        wf.refmac5(hklin=prepared_mtz, xyzin=rb_xyzin,
-                   hklout="refmacRB.mtz", xyzout="refmacRB.pdb",
-                   labin=refmac_labin_nofree, labout=refmac_labout, libin=None,
-                   keys="""refinement type rigidbody resolution 15 3.5
-                           scale type simple lssc anisotropic experimental
-                           solvent yes vdwprob 1.4 ionprob 0.8 mshrink 0.8
-                           rigidbody ncycle 10""").run()
-
-        if not wf.jobs[-1].data.get("overall_r"):
+        try:  # it may fail because of "Disagreement between mtz and pdb"
+            wf.refmac5(hklin=prepared_mtz, xyzin=rb_xyzin,
+                       hklout="refmacRB.mtz", xyzout="refmacRB.pdb",
+                       labin=refmac_labin_nofree, labout=refmac_labout,
+                       libin=None,
+                       keys="""refinement type rigidbody resolution 15 3.5
+                               scale type simple lssc anisotropic experimental
+                               solvent yes vdwprob 1.4 ionprob 0.8 mshrink 0.8
+                               rigidbody ncycle 10""").run()
+        except c4.workflow.JobError, e:
+            if wf.jobs[-1].exit_status == 1:  # possibly mtz/pdb disagreement
+                comment("\n" + e.msg)
+                if opt.mr_when_r >= 1:
+                    comment("\n" + e.note)
+                    return
+            else:  # other reasons
+                raise
+        if wf.jobs[-1].exit_status == 1:
+            comment("\nTry MR.")
+        elif not wf.jobs[-1].data.get("overall_r"):
             comment("\nWARNING: unknown R factor, something went wrong.")
             refmac_xyzin = "refmacRB.pdb"
         elif wf.jobs[-1].data["overall_r"] > opt.mr_when_r:
