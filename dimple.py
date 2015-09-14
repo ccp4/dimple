@@ -50,12 +50,11 @@ def dimple(wf, opt):
             # until recently (2015) pointless did't print CC for non-ambiguous
             # spacegroups (e.g. C2), but now it always prints (?)
             comment("\n    no good indexing")
-            # exit?  reindexed_mtz = opt.mtz?
         pointless_mtz_meta = wf.read_mtz_metadata(reindexed_mtz)
         if pointless_mtz_meta.symmetry != mtz_meta.symmetry:
             _comment_summary_line('reindexed MTZ', pointless_mtz_meta)
     else:
-        reindexed_mtz = ini_pdb
+        reindexed_mtz = opt.mtz
     #comment("\nCalculate structure factor amplitudes")
     if opt.ItoF_prog == 'truncate':
         wf.truncate(hklin=reindexed_mtz, hklout="truncate.mtz",
