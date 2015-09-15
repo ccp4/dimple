@@ -187,7 +187,9 @@ def dimple(wf, opt):
         refmac_weight = "matrix %f" % opt.weight
     else:
         refmac_weight = "auto"
-    restr_ref_keys="""make hydrogen all hout no cispeptide yes ssbridge yes
+    restr_ref_keys="""\
+     make hydrogen all hout no cispeptide yes ssbridge yes
+     make newligand continue
      refinement type restrained
      weight %s
      scale type simple lssc anisotropic experimental
