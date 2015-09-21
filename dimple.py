@@ -36,6 +36,9 @@ def dimple(wf, opt):
     ini_pdb = "ini.pdb"
     wf.copy_uncompressed(opt.pdbs[0], ini_pdb)
     pdb_meta = wf.file_info[opt.pdbs[0]]
+    if pdb_meta is None:
+        put_error("Failed to read CRYST1 record from pdb file")
+        return
     if match_symmetry(mtz_meta, pdb_meta):
         reindexed_mtz = "pointless.mtz"
         wf.pointless(hklin=opt.mtz, xyzin=ini_pdb, hklout=reindexed_mtz,
@@ -187,7 +190,7 @@ def dimple(wf, opt):
         refmac_weight = "matrix %f" % opt.weight
     else:
         refmac_weight = "auto"
-    restr_ref_keys="""\
+    restr_ref_keys = """\
      make hydrogen all hout no cispeptide yes ssbridge yes
      make newligand continue
      refinement type restrained
@@ -278,8 +281,12 @@ def match_symmetry(meta1, meta2):
     return sig(meta1.symmetry) == sig(meta2.symmetry)
 
 def calculate_difference_metric(meta1, meta2):
-    if not match_symmetry(meta1, meta2):
+    match = match_symmetry(meta1, meta2)
+    # wrong or corrupted file (no CRYST1) is worse than non-matching file
+    if match is None:
         return sys.float_info.max
+    if match is False:
+        return sys.float_info.max / 2
     #return sum(abs(a-b) for a,b in zip(meta1.cell, meta2.cell))
     return meta1.to_standard().max_shift_in_mapping(meta2.to_standard())
 
