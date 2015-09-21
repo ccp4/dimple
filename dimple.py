@@ -377,6 +377,8 @@ def parse_dimple_commands(args):
     parser.add_argument('pos_arg2')
     parser.add_argument('pos_arg3')
     parser.add_argument('more_args', nargs='*')
+    parser.add_argument('--slow', action='store_true',
+                        help='more refinement cycles, etc')
     parser.add_argument('--hklout', metavar='out.mtz', default='final.mtz',
                         help='output mtz file'+dstr)
     parser.add_argument('--xyzout', metavar='out.pdb', default='final.pdb',
@@ -390,8 +392,8 @@ def parse_dimple_commands(args):
                     help='run refmac jelly-body before the final refinement')
     parser.add_argument('--weight', metavar='VALUE', type=float,
                         help='refmac matrix weight (default: auto-weight)')
-    parser.add_argument('--restr-cycles', metavar='N', type=int, default=8,
-                        help='cycles of refmac final refinement'+dstr)
+    parser.add_argument('--restr-cycles', metavar='N', type=int,
+                        help='cycles of refmac final refinement (default: 8)')
     parser.add_argument('--libin', metavar='CIF',
                         help='ligand descriptions for refmac (LIBIN)')
     parser.add_argument('-R', '--free-r-flags', metavar='MTZ_FILE',
@@ -407,8 +409,7 @@ def parse_dimple_commands(args):
     parser.add_argument('--sigicolumn', metavar='SIGICOL',
                         default='SIG<ICOL>', help='SIGI column label'+dstr)
     parser.add_argument('--ItoF-prog', choices=['truncate', 'ctruncate'],
-                        default='truncate',
-                        help='program to calculate amplitudes'+dstr)
+            help='program to calculate amplitudes (default: truncate)')
     parser.add_argument('--cleanup', action='store_true',
                         help='remove intermediate files on exit')
     parser.add_argument('--seed-freerflag', action='store_true',
@@ -475,6 +476,13 @@ def parse_dimple_commands(args):
 
     # the default value of sigicolumn ('SIG<ICOL>') needs substitution
     opt.sigicolumn = opt.sigicolumn.replace('<ICOL>', opt.icolumn)
+
+    if opt.restr_cycles is None:
+        opt.restr_cycles = (12 if opt.slow else 8)
+    if opt.ItoF_prog is None:
+        opt.ItoF_prog = ('ctruncate' if opt.slow else 'truncate')
+    if opt.jelly is None and opt.slow:
+        pass # opt.jelly = 50  # isn't it too slow?
 
     return opt
 
