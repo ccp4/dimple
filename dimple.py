@@ -47,7 +47,7 @@ def dimple(wf, opt):
         alt_reindex = pointless_data.get('alt_reindex')
         if alt_reindex:
             for ar in alt_reindex:
-                comment("\n    %-10s CC: %-8s cell_deviation: %s" % (
+                comment("\n    %-10s CC: %-8.3f cell diff: %.1fA" % (
                         ar['op'], ar['cc'], ar['cell_deviat']))
         else:
             # until recently (2015) pointless did't print CC for non-ambiguous

@@ -238,6 +238,13 @@ def _refmac_parser(job):
 #    [-k,-l,h+k+l]           0.079    0.029    0.506     61253      2.99
 _POINTLESS_ALTREINDEX_MATCH = re.compile(r"^\s+\[[hkl+, -]+\][ \t0-9+.eE-]+$")
 
+def _float_or_nan(s):
+    try:
+        x = float(s)
+    except ValueError:
+        x = float('nan')
+    return x
+
 def _pointless_parser(job):
     # the line with 'reflections copied' is the last we read
     # to avoid reading 'Alternative reindexing' duplicated in the summary
@@ -250,7 +257,9 @@ def _pointless_parser(job):
             elif _POINTLESS_ALTREINDEX_MATCH.match(line):
                 s = line.split()
                 job.data.setdefault('alt_reindex', []).append(
-                        {'op': s[0], 'cc': s[2], 'cell_deviat': s[-1]})
+                        {'op': s[0],
+                         'cc': _float_or_nan(s[2]),
+                         'cell_deviat': _float_or_nan(s[-1])})
             elif line.startswith("   Cell:") and 'output_cell' not in job.data:
                 s = line.split()[1:]
                 job.data["output_cell"] = tuple(float(i) for i in s)
