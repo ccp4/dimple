@@ -222,19 +222,20 @@ def dimple(wf, opt):
                     restr_job.data["free_r"] - prev[0].data["free_r"]))
 
     fb_job = wf.find_blobs(opt.hklout, opt.xyzout, sigma=0.8).run()
-    if opt.img_format != 'none':
-        blobs = fb_job.data["blobs"]
-        if blobs:
-            if len(blobs) == 1:
-                comment("\nRendering density blob at (%.1f, %.1f, %.1f)" %
-                        blobs[0])
-            else:
-                comment("\nRendering 2 largest blobs: at (%.1f, %.1f, %.1f) "
-                        "and at (%.1f, %.1f, %.1f)" % (blobs[0]+blobs[1]))
-            if _check_picture_tools():
-                _generate_pictures(wf, opt, fb_job)
+    blobs = fb_job.data["blobs"]
+    img_format = None
+    if opt.img_format != 'none' and blobs and _check_picture_tools():
+        img_format = opt.img_format
+        if len(blobs) == 1:
+            comment("\nRendering density blob at (%.1f, %.1f, %.1f)" %
+                    blobs[0])
         else:
-            comment("\nUnmodelled blobs not found.")
+            comment("\nRendering 2 largest blobs: at (%.1f, %.1f, %.1f) "
+                    "and at (%.1f, %.1f, %.1f)" % (blobs[0]+blobs[1]))
+    if blobs:
+        _generate_scripts_and_pictures(wf, opt, img_format, fb_job)
+    else:
+        comment("\nUnmodelled blobs not found.")
 
 
 def _comment_summary_line(name, meta):
@@ -314,7 +315,7 @@ def _check_picture_tools():
     return ok
 
 
-def _generate_pictures(wf, opt, fb_job):
+def _generate_scripts_and_pictures(wf, opt, img_format, fb_job):
     blobs = fb_job.data["blobs"]
     com = fb_job.data["center"]
 
@@ -344,6 +345,8 @@ def _generate_pictures(wf, opt, fb_job):
         rs, names = coot.r3d_script(b, com, blobname="blob%s"%(n+1))
         script += rs
         basenames += names
+    if img_format is None:
+        return
     try:
         wf.coot_py(script).run()
     except c4.workflow.JobError:
@@ -357,7 +360,7 @@ def _generate_pictures(wf, opt, fb_job):
                               "with the --no-graphics mode.")
         raise
     for n, basename in enumerate(basenames):
-        job = wf.render_r3d(basename, img_format=opt.img_format)
+        job = wf.render_r3d(basename, img_format=img_format)
         if n % 3 == 0:
             job.run()
         else: # minimal output
