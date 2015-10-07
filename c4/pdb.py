@@ -34,12 +34,18 @@ def read_metadata(pdb):
         f = gzip.open(pdb, 'rb')
     else:
         f = open(pdb)
+    meta = None
     for line in f:
         if line.startswith("CRYST1"):
-            f.close()
-            return PdbMeta(line)
+            meta = PdbMeta(line)
+            break
+    if meta is None:
+        if f.tell() == 0:
+            put_error("empty file: %s" % pdb)
+        else:
+            put_error("CRYST1 line not found in %s" % pdb)
     f.close()
-    put_error("CRYST1 line not found in %s" % pdb)
+    return meta
 
 def remove_hetatm(filename_in, file_out):
     "remove HETATM and related lines"
