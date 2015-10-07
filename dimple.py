@@ -191,7 +191,6 @@ def dimple(wf, opt):
     else:
         refmac_weight = "auto"
     restr_ref_keys = """\
-     make hydrogen all hout no cispeptide yes ssbridge yes
      make newligand continue
      refinement type restrained
      weight %s
@@ -204,6 +203,7 @@ def dimple(wf, opt):
                    hklout="jelly.mtz", xyzout="jelly.pdb",
                    labin=refmac_labin, labout=refmac_labout, libin=opt.libin,
                    keys=restr_ref_keys+"ridge distance sigma 0.01\n"
+                                       "make hydrogen no\n"
                                        "ncycle %d" % opt.jelly).run()
         refmac_xyzin = "jelly.pdb"
     comment("\nFinal restrained refinement, %d cycles." % opt.restr_cycles)
