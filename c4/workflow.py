@@ -642,7 +642,7 @@ class Workflow:
         return job
 
     def cad(self, hklin, hklout, keys):
-        assert type(hklin) is list
+        assert isinstance(hklin, list)
         job = ccp4_job(self, "cad", logical={}, input=keys,
                        parser="_cad_parser")
         # is hklinX only for cad?
