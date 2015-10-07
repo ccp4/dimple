@@ -31,6 +31,7 @@ def dimple(wf, opt):
         comment("\nPDBs in order of similarity (using the first one):")
         opt.pdbs.sort(key=lambda x: calculate_difference_metric(wf.file_info[x],
                                                                 mtz_meta))
+    c4.utils.log_value("pdb_files", opt.pdbs)
     for p in opt.pdbs:
         _comment_summary_line(os.path.basename(p), wf.file_info[p])
     ini_pdb = "ini.pdb"
