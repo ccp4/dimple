@@ -37,6 +37,7 @@ def start_log(filename, output_dir):
             _logfile.write(" %s\n" % arg)
     log_value("output_dir", output_dir)
     log_value("CCP4", os.getenv("CCP4", ""))
+    log_value("CCP4_SCR", os.getenv("CCP4_SCR", ""))
     _logfile.flush()
 
 def _log_comment(text):
@@ -185,22 +186,30 @@ def _report_quota(quota_prog, mount_point):
             comment('\nUsed quota on %s: %s / %s kB (%s)' %
                     (mount_point, blocks, quota, percent))
 
-def report_disk_space(path):
-    try:
-        s = os.statvfs(path)
-    except AttributeError:
+def report_disk_space(paths):
+    if os.name == 'nt':
         return
-    free = s.f_frsize * s.f_bavail
-    mount = _find_mount_point(path)
-    comment('\nFree space on %s: %.0f MB' % (mount, free / (1024.*1024)))
-    for d in os.environ["PATH"].split(os.pathsep):
-        quota = os.path.join(d, 'quota')
-        if os.path.exists(quota):
-            _report_quota(quota, mount)
-            break
+    previous_mount_points = []
+    for path in paths:
+        mount = _find_mount_point(path)
+        if mount in previous_mount_points:
+            continue
+        previous_mount_points.append(mount)
+        try:
+            s = os.statvfs(mount)
+        except AttributeError:
+            return
+        free = s.f_frsize * s.f_bavail
+        comment('\nFree space on %s: %.0f MB' % (mount, free / (1024.*1024)))
+        for d in os.environ['PATH'].split(os.pathsep):
+            quota = os.path.join(d, 'quota')
+            if os.path.exists(quota):
+                _report_quota(quota, mount)
+                break
+
 
 if __name__ == '__main__':
     print '--- testing report_disk_space() ---'
-    path_arg = sys.argv[1] if len(sys.argv) > 1 else '.'
-    report_disk_space(path_arg)
+    path_args = sys.argv[1:] if len(sys.argv) > 1 else ['.']
+    report_disk_space(path_args)
     print
