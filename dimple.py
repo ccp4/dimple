@@ -13,7 +13,7 @@ from c4.pdb import is_pdb_id, download_pdb
 import c4.workflow
 from c4 import coot
 
-__version__ = '2.1.8'
+__version__ = '2.1.9'
 
 def dimple(wf, opt):
     comment("%8s### Dimple v%s. Problems and suggestions:"
@@ -331,7 +331,6 @@ def _generate_scripts_and_pictures(wf, opt, fb_job):
     open(script_path, "w").write(script)
 
     # blob images, for now for not more than two blobs
-    basenames = []
     for n, b in enumerate(blobs[:2]):
         py_path = os.path.join(wf.output_dir, "blob%d-coot.py" % (n+1))
         with open(py_path, "w") as blob_py:
@@ -339,14 +338,6 @@ def _generate_scripts_and_pictures(wf, opt, fb_job):
             blob_py.write(coot.basic_script(pdb=os.path.join(d, opt.xyzout),
                                             mtz=os.path.join(d, opt.hklout),
                                             center=blobs[n], toward=com))
-        if n != 0:
-            # workaround for buggy coot: reloading maps
-            script += coot.basic_script(pdb=opt.xyzout, mtz=opt.hklout,
-                                        center=b, toward=com)
-        rs, names = coot.r3d_script(b, com, blobname="blob%s"%(n+1))
-        script += rs
-        basenames += names
-
     # coot.sh - one-line script for convenience
     if blobs:
         coot_sh_text = '{coot} --no-guano {out}/blob1-coot.py\n'
@@ -364,6 +355,15 @@ def _generate_scripts_and_pictures(wf, opt, fb_job):
     if opt.img_format == 'none':
         return
 
+    script = ''
+    basenames = []
+    # as a workaround for buggy coot the maps are reloaded for each blob
+    for n, b in enumerate(blobs[:2]):
+        script += coot.basic_script(pdb=opt.xyzout, mtz=opt.hklout,
+                                    center=b, toward=com)
+        rs, names = coot.r3d_script(b, com, blobname="blob%s"%(n+1))
+        script += rs
+        basenames += names
     try:
         wf.coot_py(script).run()
     except c4.workflow.JobError:
