@@ -430,8 +430,10 @@ def parse_dimple_commands(args):
                         default='SIG<ICOL>', help='SIGI column label'+dstr)
     parser.add_argument('--ItoF-prog', choices=['truncate', 'ctruncate'],
             help='program to calculate amplitudes (default: truncate)')
+    parser.add_argument('--no-cleanup', dest='cleanup', action='store_false',
+                        help='leave intermediate files')
     parser.add_argument('--cleanup', action='store_true',
-                        help='remove intermediate files on exit')
+                        help=argparse.SUPPRESS)  # obsolete
     parser.add_argument('--seed-freerflag', action='store_true',
                         help=argparse.SUPPRESS)
     parser.add_argument('--dls-naming', action='store_true',
