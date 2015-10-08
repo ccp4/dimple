@@ -176,10 +176,10 @@ def _report_quota(quota_prog, mount_point):
         if lines[1].split()[1:3] == ['blocks', 'quota']:
             blocks, quota = lines[2].split()[1:3]
             try:
-                percent = 100. * int(blocks) / int(quota)
+                percent = '%.0f%%' % (100. * int(blocks) / int(quota))
             except ValueError:
                 percent = '???'
-            comment('\nUsed quota on %s: %s / %s kB (%s%%)' %
+            comment('\nUsed quota on %s: %s / %s kB (%s)' %
                     (mount_point, blocks, quota, percent))
 
 def report_disk_space(path):
