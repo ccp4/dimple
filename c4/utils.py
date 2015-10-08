@@ -170,9 +170,9 @@ def _find_mount_point(path):
 
 
 def _report_quota(quota_prog, mount_point):
-    args = [quota_prog, '-w', '-p', '-f', mount_point]
     try:
-        out = subprocess.check_output(args, stderr=subprocess.STDOUT)
+        out = subprocess.check_output([quota_prog, '-w', '-p', '-f',
+                                       mount_point], stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError:
         return
     lines = out.splitlines()
@@ -185,6 +185,15 @@ def _report_quota(quota_prog, mount_point):
                 percent = '???'
             comment('\nUsed quota on %s: %s / %s kB (%s)' %
                     (mount_point, blocks, quota, percent))
+    else:
+        try:
+            out = subprocess.check_output([quota_prog],
+                                          stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError:
+            return
+        if out:
+            _log_comment(out)
+
 
 def report_disk_space(paths):
     if os.name == 'nt':
