@@ -1,5 +1,6 @@
 import os
 import sys
+import platform
 import subprocess
 import time
 
@@ -26,6 +27,8 @@ def start_log(filename, output_dir):
     _logfile.write("# workflow log (compatible with Python ConfigParser)\n")
     _logfile_sections = set()
     log_section("workflow")
+    log_value("host", platform.node())
+    log_value("platform", platform.platform())
     log_value("cwd", os.getcwd())
     log_value("prog", sys.argv[0])
     if len(sys.argv) > 1:
