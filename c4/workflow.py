@@ -200,8 +200,6 @@ def _refmac_parser(job):
     if "cycle" not in job.data:
         # ini_free_r, free_r and iter_free_r are set optionally
         job.data["cycle"] = 0
-        job.data["overall_r"] = 0.
-        job.data["ini_overall_r"] = 0
         job.data["selected_lines"] = []
         # iter_*_r values were added in dimple 1.5
         job.data["iter_overall_r"] = []
@@ -215,7 +213,7 @@ def _refmac_parser(job):
             job.data['iter_free_r'].append(job.data['free_r'])
         elif line.startswith("Overall R factor"):
             job.data['overall_r'] = float(line.split('=')[-1])
-            if not job.data['ini_overall_r']:
+            if 'ini_overall_r' not in job.data:
                 job.data['ini_overall_r'] = job.data['overall_r']
             job.data['iter_overall_r'].append(job.data['overall_r'])
         elif (line.startswith("     Rigid body cycle =") or
@@ -225,17 +223,15 @@ def _refmac_parser(job):
                 selected and not selected[-1].startswith(" $$")):
             selected.append(line)
     cycle_str = "%2d/%d" % (job.data["cycle"], job.ncyc)
-    if 'ini_free_r' in job.data:
-        return "%s   R/Rfree  %.4f/%.4f  ->  %.4f/%.4f" % (
-                cycle_str,
-                job.data["ini_overall_r"], job.data["ini_free_r"],
-                job.data["overall_r"], job.data["free_r"])
-    elif job.data["ini_overall_r"]:
+    if 'ini_overall_r' in job.data:
+        if 'ini_free_r' in job.data:
+            return "%s   R/Rfree  %.4f/%.4f  ->  %.4f/%.4f" % (
+                    cycle_str,
+                    job.data["ini_overall_r"], job.data["ini_free_r"],
+                    job.data["overall_r"], job.data["free_r"])
         return "%s   R  %.4f  ->  %.4f" % (
-                cycle_str,
-                job.data["ini_overall_r"], job.data["overall_r"])
-    else:
-        return cycle_str
+                cycle_str, job.data["ini_overall_r"], job.data["overall_r"])
+    return cycle_str
 
 # example:
 #     Alternative reindexing        Lklhd      CC     R(E^2)    Number Cell_deviation
