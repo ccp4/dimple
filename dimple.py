@@ -546,6 +546,7 @@ def main(args):
         exit_status = 0
     except c4.workflow.JobError, e: # avoid "as e" for the sake of Py2.4
         put_error(e.msg, comment=e.note)
+        c4.utils.report_disk_space(wf.output_dir)
         exit_status = 1
     except RuntimeError, e:
         put_error(e)

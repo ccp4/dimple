@@ -1,5 +1,6 @@
 import os
 import sys
+import subprocess
 import time
 
 _logfile = None
@@ -157,3 +158,46 @@ def adjust_path(path, relative_to):
     else:
         return os.path.relpath(path, relative_to)
 
+def _find_mount_point(path):
+    path = os.path.abspath(path)
+    while not os.path.ismount(path):
+        path = os.path.dirname(path)
+    return path
+
+
+def _report_quota(quota_prog, mount_point):
+    args = [quota_prog, '-w', '-p', '-f', mount_point]
+    try:
+        out = subprocess.check_output(args, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError:
+        return
+    lines = out.splitlines()
+    if len(lines) == 3:
+        if lines[1].split()[1:3] == ['blocks', 'quota']:
+            blocks, quota = lines[2].split()[1:3]
+            try:
+                percent = 100. * int(blocks) / int(quota)
+            except ValueError:
+                percent = '???'
+            comment('\nUsed quota on %s: %s / %s kB (%s%%)' %
+                    (mount_point, blocks, quota, percent))
+
+def report_disk_space(path):
+    try:
+        s = os.statvfs(path)
+    except AttributeError:
+        return
+    free = s.f_frsize * s.f_bavail
+    mount = _find_mount_point(path)
+    comment('\nFree space on %s: %.0f MB' % (mount, free / (1024.*1024)))
+    for d in os.environ["PATH"].split(os.pathsep):
+        quota = os.path.join(d, 'quota')
+        if os.path.exists(quota):
+            _report_quota(quota, mount)
+            break
+
+if __name__ == '__main__':
+    print '--- testing report_disk_space() ---'
+    path_arg = sys.argv[1] if len(sys.argv) > 1 else '.'
+    report_disk_space(path_arg)
+    print
