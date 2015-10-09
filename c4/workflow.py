@@ -585,6 +585,7 @@ class Workflow:
                    solvent_percent=None):
         lines = ['MODE MR_AUTO',
                  'SEARCH METHOD FAST',
+                 'SEARCH DEEP OFF',
                  'HKLIN "%s"' % hklin,
                  'LABIN %s' % labin,
                  'SGALTERNATIVE SELECT %s' % sg_alt]
