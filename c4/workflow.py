@@ -398,6 +398,7 @@ class Workflow:
         self.output_dir = os.path.abspath(output_dir)
         self.jobs = []
         self.file_info = {}
+        self.temporary_files = set()
         self.from_job = from_job # skip jobs before from_job (for testing)
         if from_job >= 1:
             try:

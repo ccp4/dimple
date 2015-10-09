@@ -42,6 +42,7 @@ def dimple(wf, opt):
         return
     if match_symmetry(mtz_meta, pdb_meta):
         reindexed_mtz = "pointless.mtz"
+        wf.temporary_files.add(reindexed_mtz)
         wf.pointless(hklin=opt.mtz, xyzin=ini_pdb, hklout=reindexed_mtz,
                      keys="TOLERANCE 5").run()
         pointless_data = wf.jobs[-1].data
@@ -60,6 +61,7 @@ def dimple(wf, opt):
     if reindexed_mtz_meta.symmetry != mtz_meta.symmetry:
         _comment_summary_line('reindexed MTZ', reindexed_mtz_meta)
     #comment("\nCalculate structure factor amplitudes")
+    wf.temporary_files.add("truncate.mtz")
     if opt.ItoF_prog == 'truncate':
         wf.truncate(hklin=reindexed_mtz, hklout="truncate.mtz",
                   labin="IMEAN=%s SIGIMEAN=%s" % (opt.icolumn, opt.sigicolumn),
@@ -76,6 +78,7 @@ def dimple(wf, opt):
     else:
         comment("\nGenerate free-R flags")
         free_mtz = "free.mtz"
+        wf.temporary_files |= {"unique.mtz", free_mtz}
         # CCP4 freerflag uses always the same pseudo-random sequence by default
         if opt.seed_freerflag:
             wf.unique(hklout="unique.mtz",
@@ -96,6 +99,7 @@ def dimple(wf, opt):
         free_col = 'FreeR_flag'
 
     prepared_mtz = "prepared.mtz"
+    wf.temporary_files.add(prepared_mtz)
     # TODO: add SYSAB_KEEP key if spacegroup is to be searched
     wf.cad(hklin=["truncate.mtz", free_mtz], hklout=prepared_mtz,
            keys="""labin file 1 ALL
@@ -109,8 +113,10 @@ def dimple(wf, opt):
         wf.freerflag(hklin=prepared_mtz, hklout="prepared2.mtz",
                      keys="COMPLETE FREE="+free_col).run()
         prepared_mtz = "prepared2.mtz"
+        wf.temporary_files.add(prepared_mtz)
     if False:
         rb_xyzin = "prepared_nohet.pdb"
+        wf.temporary_files.add(rb_xyzin)
         n_het = wf.remove_hetatm(xyzin=ini_pdb, xyzout=rb_xyzin)
         comment("\nRemoved %s atoms marked as HETATM in pdb." % n_het)
     else:
@@ -127,6 +133,7 @@ def dimple(wf, opt):
         comment("\nQuite different unit cells, start from MR.")
     else:
         comment("\nRigid-body refinement with resolution 3.5 A, 10 cycles.")
+        wf.temporary_files |= {"refmacRB.pdb", "refmacRB.mtz"}
         try:  # it may fail because of "Disagreement between mtz and pdb"
             wf.refmac5(hklin=prepared_mtz, xyzin=rb_xyzin,
                        hklout="refmacRB.mtz", xyzout="refmacRB.pdb",
@@ -157,6 +164,8 @@ def dimple(wf, opt):
 
     if refmac_xyzin is None:
         if opt.MR_prog == 'molrep':
+            wf.temporary_files |= {"molrep.pdb", "molrep_dimer.pdb",
+                                   "molrep.crd"}
             wf.molrep(f=prepared_mtz, m=rb_xyzin).run()
             refmac_xyzin = "molrep.pdb"
         else:
@@ -167,6 +176,7 @@ def dimple(wf, opt):
             if num != 1:
                 comment("\nSearching %d molecules, mtz cell %.1f x larger "
                         "than model" % (num, vol_ratio))
+            wf.temporary_files |= {"phaser.1.pdb", "phaser.1.mtz"}
             wf.phaser_auto(hklin=prepared_mtz,
                       #labin="I = %s SIGI = %s" % (opt.icolumn, opt.sigicolumn),
                       labin="F = F SIGF = SIGF",
@@ -183,7 +193,7 @@ def dimple(wf, opt):
             prepared_mtz = "phaser.1.mtz"
 
     if False:
-        wf.findwaters(pdbin=refmac_xyzin, hklin="refmacRB.mtz",
+        wf.findwaters(pdbin=refmac_xyzin, hklin=prepared_mtz,
                       f="FC", phi="PHIC", pdbout="prepared_wat.pdb", sigma=2)
         refmac_xyzin = "prepared_wat.pdb"
 
@@ -200,6 +210,7 @@ def dimple(wf, opt):
      """ % refmac_weight
     if opt.jelly:
         comment("\nJelly-body refinement, %d cycles." % opt.jelly)
+        wf.temporary_files |= {"jelly.pdb", "jelly.mtz"}
         wf.refmac5(hklin=prepared_mtz, xyzin=refmac_xyzin,
                    hklout="jelly.mtz", xyzout="jelly.pdb",
                    labin=refmac_labin, labout=refmac_labout, libin=opt.libin,
@@ -555,12 +566,7 @@ def main(args):
         exit_status = 1
     comment("\n")
     if options.cleanup:
-        wf.delete_files(["pointless.mtz", "truncate.mtz", "unique.mtz",
-                         "free.mtz", "prepared.mtz", "prepared2.mtz",
-                         "refmacRB.mtz", "refmacRB.pdb",
-                         "jelly.mtz", "jelly.pdb",
-                         "molrep.pdb", "molrep_dimer.pdb", "molrep.crd",
-                         "phaser.1.pdb", "phaser.1.mtz"])
+        wf.delete_files(wf.temporary_files)
     wf.options = options
     wf.pickle_jobs()
     return exit_status
