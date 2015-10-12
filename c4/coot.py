@@ -46,9 +46,9 @@ def basic_script(pdb, mtz, center, toward):
     if center:
         lines += ['set_rotation_centre(%g, %g, %g)' % center,
                   'set_zoom(30.)']
-    if toward:
-        lines += ['set_view_quaternion(%g, %g, %g, %g)'
-                  % view_as_quat(center, toward)]
+        if toward:
+            lines += ['set_view_quaternion(%g, %g, %g, %g)'
+                      % view_as_quat(center, toward)]
     if mtz:
         if same_dir:
             lines += ['mtz = os.path.join(this_dir, "%s")' % mtz]

@@ -181,7 +181,7 @@ def _find_blobs_parser(job):
             ctr = tuple(float(x) for x in sp)
             job.data["center"] = ctr
         elif line.startswith("Density std.dev"):
-            job.data["density_info"] = line
+            job.data["density_info"] = line.strip()
     scores = job.data["scores"]
     if scores:
         return "Blob scores: " + " ".join("%.0f" % sc for sc in scores)
