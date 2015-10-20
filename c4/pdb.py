@@ -96,7 +96,7 @@ def download_pdb(pdb_id, output_dir):
 
 
 def main():
-    if sys.argv[0] < 2:
+    if len(sys.argv) < 2:
         sys.stderr.write("No filenames.\n")
         sys.exit(1)
     if sys.argv[1] == "nohet":
