@@ -97,7 +97,7 @@ def download_pdb(pdb_id, output_dir):
 
 def main():
     if len(sys.argv) < 2:
-        sys.stderr.write("No filenames.\n")
+        sys.stderr.write("Usage: pdb.py [get|vol|nohet] file1.pdb ...\n")
         sys.exit(1)
     if sys.argv[1] == "nohet":
         remove_hetatm(sys.argv[2], sys.stdout)
