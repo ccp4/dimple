@@ -13,7 +13,7 @@ from c4.pdb import is_pdb_id, download_pdb, check_hetatm_x
 import c4.workflow
 from c4 import coot
 
-__version__ = '2.1.9'
+__version__ = '2.2.0'
 
 def dimple(wf, opt):
     comment("%8s### Dimple v%s. Problems and suggestions:"

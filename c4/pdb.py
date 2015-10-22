@@ -72,7 +72,7 @@ def remove_hetatm(filename_in, file_out, remove_all):
     for line in file_in:
         record = line[:6]
         if record == "HETATM":
-            if remove_all or line[76:77] == ' X':
+            if remove_all or line[76:78] == " X":
                 atom_serial_num = int(line[6:11])
                 removed.add(atom_serial_num)
                 continue
