@@ -22,6 +22,7 @@ class PdbMeta(Cell):
             self.z = int(cryst1_line[66:70])
         except ValueError:
             self.z = None
+        self.has_hetatm_x = None
 
     def __str__(self):
         return '''\
@@ -47,8 +48,21 @@ def read_metadata(pdb):
     f.close()
     return meta
 
-def remove_hetatm(filename_in, file_out):
-    "remove HETATM and related lines"
+
+def check_hetatm_x(filename, meta):
+    if meta.has_hetatm_x is None:
+        with open(filename) as f:
+            meta.has_hetatm_x = any(line[:6] == "HETATM" and line[76:78] == " X"
+                                    for line in f)
+    return meta.has_hetatm_x
+
+
+def remove_hetatm(filename_in, file_out, remove_all):
+    """Remove HETATM and related lines.
+    If remove_all is False, remove only element X which happens in many PDB
+    entries but is not accepted by pointless, refmac, phaser, etc
+    """
+    # we could instead zero occupancy of the atoms and replace X with Y
     file_in = open(filename_in)
     removed = set()
 
@@ -58,9 +72,10 @@ def remove_hetatm(filename_in, file_out):
     for line in file_in:
         record = line[:6]
         if record == "HETATM":
-            atom_serial_num = int(line[6:11])
-            removed.add(atom_serial_num)
-            continue
+            if remove_all or line[76:77] == ' X':
+                atom_serial_num = int(line[6:11])
+                removed.add(atom_serial_num)
+                continue
         elif record in ("HET   ", "HETNAM", "HETSYN", "FORMUL"):
             continue
         elif line.startswith("ANISOU"):
@@ -100,7 +115,7 @@ def main():
         sys.stderr.write("Usage: pdb.py [get|vol|nohet] file1.pdb ...\n")
         sys.exit(1)
     if sys.argv[1] == "nohet":
-        remove_hetatm(sys.argv[2], sys.stdout)
+        remove_hetatm(sys.argv[2], sys.stdout, remove_all=True)
     elif sys.argv[1] == "vol":
         print read_metadata(sys.argv[2]).get_volume()
     elif sys.argv[1] == "get":

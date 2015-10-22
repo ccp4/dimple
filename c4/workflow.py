@@ -567,9 +567,9 @@ class Workflow:
         for output in (job.out, job.err):
             output.save_output(self.output_dir, log_basename)
 
-    def remove_hetatm(self, xyzin, xyzout):
+    def remove_hetatm(self, xyzin, xyzout, remove_all):
         with open(self.path(xyzout), "wb") as out:
-            return c4.pdb.remove_hetatm(self.path(xyzin), out)
+            return c4.pdb.remove_hetatm(self.path(xyzin), out, remove_all)
 
     def read_pdb_metadata(self, xyzin):
         if xyzin not in self.file_info:

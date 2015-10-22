@@ -8,8 +8,8 @@ if sys.version_info[:2] != (2, 7):
 import argparse
 import c4.utils
 from c4.utils import comment, put_error, adjust_path
-from c4.mtz import check_freerflags_column, get_num_missing
-from c4.pdb import is_pdb_id, download_pdb
+from c4.mtz import check_freerflags_column
+from c4.pdb import is_pdb_id, download_pdb, check_hetatm_x
 import c4.workflow
 from c4 import coot
 
@@ -37,12 +37,23 @@ def dimple(wf, opt):
     wf.copy_uncompressed(opt.pdbs[0], ini_pdb)
     pdb_meta = wf.file_info[opt.pdbs[0]]
     if pdb_meta is None:
-        put_error("Failed to read CRYST1 record from pdb file")
+        put_error("Failed to read CRYST1 record from the pdb file")
         return
+    remove_hetatm = False
+    if remove_hetatm or check_hetatm_x(wf.path(ini_pdb), pdb_meta):
+        if not remove_hetatm:
+            comment("\nHETATM marked as element X would choke many programs.")
+        rb_xyzin = "prepared.pdb"
+        wf.temporary_files.add(rb_xyzin)
+        n_het = wf.remove_hetatm(xyzin=ini_pdb, xyzout=rb_xyzin,
+                                 remove_all=remove_hetatm)
+        comment("\nRemoved %d HETATM atoms" % n_het)
+    else:
+        rb_xyzin = ini_pdb
     if match_symmetry(mtz_meta, pdb_meta):
         reindexed_mtz = "pointless.mtz"
         wf.temporary_files.add(reindexed_mtz)
-        wf.pointless(hklin=opt.mtz, xyzin=ini_pdb, hklout=reindexed_mtz,
+        wf.pointless(hklin=opt.mtz, xyzin=rb_xyzin, hklout=reindexed_mtz,
                      keys="TOLERANCE 5").run()
         pointless_data = wf.jobs[-1].data
         alt_reindex = pointless_data.get('alt_reindex')
@@ -113,13 +124,6 @@ def dimple(wf, opt):
                      keys="COMPLETE FREE="+free_col).run()
         prepared_mtz = "prepared2.mtz"
         wf.temporary_files.add(prepared_mtz)
-    if False:
-        rb_xyzin = "prepared_nohet.pdb"
-        wf.temporary_files.add(rb_xyzin)
-        n_het = wf.remove_hetatm(xyzin=ini_pdb, xyzout=rb_xyzin)
-        comment("\nRemoved %s atoms marked as HETATM in pdb." % n_het)
-    else:
-        rb_xyzin = ini_pdb
 
     refmac_labin_nofree = "FP=F SIGFP=SIGF"
     refmac_labin = "%s FREE=%s" % (refmac_labin_nofree, free_col)
