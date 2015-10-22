@@ -20,6 +20,8 @@ _jobindex_fmt = "%3d "
 _jobname_fmt = "%-15s"
 _elapsed_fmt = "%5.1fs  "
 
+PICKLE_FILENAME = "workflow.pickle"
+
 
 # heh, python from MSYS2 is handy, but needs some monkey-patching
 if sys.platform == 'msys':
@@ -27,7 +29,7 @@ if sys.platform == 'msys':
     def new_opjoin(*args):
         for n in range(len(args)-1, -1, -1):
             if n == 0 or os.path.isabs(args[n]):
-                return old_opjoin(*args[n:])  # pylint: disable=star-args
+                return old_opjoin(*args[n:])
     os.path.join = new_opjoin
 
 
@@ -399,10 +401,12 @@ class Workflow:
         self.jobs = []
         self.file_info = {}
         self.temporary_files = set()
-        self.from_job = from_job # skip jobs before from_job (for testing)
+        self.from_job = from_job  # skip jobs before from_job (for testing)
         if from_job >= 1:
             try:
-                self.repl_jobs = self.unpickle_jobs().jobs
+                _pkl = self.load_pickle()
+                self.repl_jobs = _pkl.jobs
+                self.file_info = _pkl.file_info
             except:
                 self.repl_jobs = None
         self.dry_run = False
@@ -430,12 +434,12 @@ class Workflow:
     def path(self, rel_path):
         return os.path.join(self.output_dir, rel_path)
 
-    def pickle_jobs(self, filename="workflow.pickle"):
-        with open(self.path(filename), "wb") as f:
+    def dump_pickle(self):
+        with open(self.path(PICKLE_FILENAME), "wb") as f:
             pickle.dump(self, f, -1)
 
-    def unpickle_jobs(self, filename="workflow.pickle"):
-        with open(self.path(filename), "rb") as f:
+    def load_pickle(self):
+        with open(self.path(PICKLE_FILENAME), "rb") as f:
             return pickle.load(f)
 
     def silently_run_job(self, job):
@@ -568,10 +572,20 @@ class Workflow:
             return c4.pdb.remove_hetatm(self.path(xyzin), out)
 
     def read_pdb_metadata(self, xyzin):
-        return c4.pdb.read_metadata(self.path(xyzin))
+        if xyzin not in self.file_info:
+            self.file_info[xyzin] = c4.pdb.read_metadata(self.path(xyzin))
+        return self.file_info[xyzin]
 
     def read_mtz_metadata(self, hklin):
-        return c4.mtz.read_metadata(self.path(hklin))
+        if hklin not in self.file_info:
+            self.file_info[hklin] = c4.mtz.read_metadata(self.path(hklin))
+        return self.file_info[hklin]
+
+    def count_mtz_missing(self, hklin, col):
+        key = (hklin, 'missing', col)
+        if key not in self.file_info:
+            self.file_info[key] = c4.mtz.get_num_missing(self.path(hklin), col)
+        return self.file_info[key]
 
     def molrep(self, f, m, keys=""):
         job = Job(self, c4.utils.cbin("molrep"))
@@ -738,7 +752,7 @@ class Workflow:
 
 def open_pickled_workflow(file_or_dir):
     if os.path.isdir(file_or_dir):
-        pkl = os.path.join(file_or_dir, "workflow.pickle")
+        pkl = os.path.join(file_or_dir, PICKLE_FILENAME)
     else:
         pkl = file_or_dir
     if not os.path.exists(pkl):

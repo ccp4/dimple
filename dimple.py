@@ -19,14 +19,13 @@ def dimple(wf, opt):
     comment("%8s### Dimple v%s. Problems and suggestions:"
             " ccp4@ccp4.ac.uk ###" % ('', __version__))
     mtz_meta = wf.read_mtz_metadata(opt.mtz)
-    wf.file_info[opt.mtz] = mtz_meta
     mtz_meta.check_col_type(opt.icolumn, 'J')
     mtz_meta.check_col_type(opt.sigicolumn, 'Q')
     _comment_summary_line("MTZ", mtz_meta)
     if opt.dls_naming:
         opt.pdbs = dls_name_filter(opt.pdbs)
     for p in opt.pdbs:
-        wf.file_info[p] = wf.read_pdb_metadata(p)
+        wf.read_pdb_metadata(p)
     if len(opt.pdbs) > 1:
         comment("\nPDBs in order of similarity (using the first one):")
         opt.pdbs.sort(key=lambda x: calculate_difference_metric(wf.file_info[x],
@@ -106,7 +105,7 @@ def dimple(wf, opt):
                    labin file 2 E1=%s
                    reso file 2 1000.0 %g
                    """ % (free_col, mtz_meta.dmax-mtz_meta.d_eps)).run()
-    freerflag_missing = get_num_missing(wf.path(prepared_mtz), free_col)
+    freerflag_missing = wf.count_mtz_missing(prepared_mtz, free_col)
     if freerflag_missing:
         comment("\nAdding free-R flags for %d reflections."
                 % freerflag_missing)
@@ -568,7 +567,7 @@ def main(args):
     if options.cleanup:
         wf.delete_files(wf.temporary_files)
     wf.options = options
-    wf.pickle_jobs()
+    wf.dump_pickle()
     return exit_status
 
 if __name__ == "__main__":
