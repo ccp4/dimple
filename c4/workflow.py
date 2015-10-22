@@ -270,11 +270,8 @@ def _pointless_parser(job):
                 break
     resol_txt = _format("%.2f", job.data.get("resol"))
     refl_out = job.data.get("refl_out", "")
-    refl_ref = job.data.get("refl_ref", "")
-    txt = "resol. %4s A   #refl: %5s of %s" % (resol_txt, refl_out, refl_ref)
-    if refl_out and refl_ref:
-        txt += " (%.1f%%)" % (100.*refl_out/refl_ref)
-    return txt
+    #refl_ref = job.data.get("refl_ref", "")
+    return "resol. %4s A   #refl: %5s" % (resol_txt, refl_out)
 
 
 def _phaser_parser(job):
