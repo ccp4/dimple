@@ -224,7 +224,7 @@ def dimple(wf, opt):
                  keys=restr_ref_keys+("ncycle %d" % opt.restr_cycles)).run()
     if opt.summary:
         comment("".join(restr_job.data["selected_lines"]))
-    # if that run is repeated with --from-job it's useful to compare Rfree
+    # if that run is repeated with --from-step it's useful to compare Rfree
     if wf.from_job > 0 and wf.from_job <= len(wf.jobs): # from_job is 1-based
         prev = [j for j in wf.repl_jobs if j.name == restr_job.name]
         if prev and prev[0].data and "free_r" in prev[0].data:
@@ -448,7 +448,7 @@ def parse_dimple_commands(args):
                         help=argparse.SUPPRESS)
     parser.add_argument('--dls-naming', action='store_true',
                         help=argparse.SUPPRESS)
-    parser.add_argument('--from-job', metavar='N', type=int, default=0,
+    parser.add_argument('--from-step', metavar='N', type=int, default=0,
                         help=argparse.SUPPRESS)
     parser.add_argument('--version', action='version',
                         version='%(prog)s '+__version__)
@@ -548,7 +548,7 @@ def main(args):
 
     options = parse_dimple_commands(args)
 
-    wf = c4.workflow.Workflow(options.output_dir, from_job=options.from_job)
+    wf = c4.workflow.Workflow(options.output_dir, from_job=options.from_step)
     c4.utils.start_log(os.path.join(options.output_dir, "dimple.log"),
                        output_dir=options.output_dir)
     c4.utils.log_value("version", __version__)
