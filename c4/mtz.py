@@ -41,7 +41,8 @@ columns: %(columns)s""" % self.__dict__
 def _run_mtzdump(hklin, keys):
     try:
         p = subprocess.Popen(["mtzdump", "HKLIN", hklin],
-                             stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
     except OSError as e:
         put_error("Cannot run mtzdump: %s" % e)
         sys.exit(1)
@@ -49,7 +50,7 @@ def _run_mtzdump(hklin, keys):
     stdoutdata, _ = p.communicate(input="\n".join(keys))
     retcode = p.poll()
     if retcode:
-        raise RuntimeError("mtzdump of %s failed." % hklin)
+        raise RuntimeError("mtzdump of %s failed" % hklin)
     return stdoutdata
 
 def read_metadata(hklin):
