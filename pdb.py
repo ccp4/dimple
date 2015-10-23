@@ -3,8 +3,8 @@ import os
 import sys
 import urllib2
 
-from c4.cell import Cell
-from c4.utils import comment, put_error
+from dimple.cell import Cell
+from dimple.utils import comment, put_error
 
 
 class PdbMeta(Cell):

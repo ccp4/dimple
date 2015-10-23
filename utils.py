@@ -7,7 +7,11 @@ import time
 _logfile = None
 _logfile_sections = None
 _screen_logfile = None
-_c4_dir = os.path.abspath(os.path.dirname(__file__))
+
+# To make testing easier, programs found in the directory of these scripts
+# take precedence over programs in standard locations.
+# So it's possible to just copy here, say, refmac5 binary and test it.
+_dimple_dir = os.path.abspath(os.path.dirname(__file__))
 
 # start log in ini-like format,
 # readable for humans and easily parsed in Python:
@@ -131,19 +135,19 @@ def check_prog(dirname, prog):
 
 
 def cbin(prog):
-    """If prog/prog.exe is not in c4/ then $CCP4/bin is assumed.
+    """$CCP4/bin unless prog or prog.exe is found in the dimple directory.
     Return value: path with filename without extension.
     """
     assert os.environ.get("CCP4")
-    return check_prog(_c4_dir, prog) or \
+    return check_prog(_dimple_dir, prog) or \
             os.path.join(os.environ["CCP4"], "bin", prog)
 
 
 def syspath(prog):
-    """If prog/prog.exe is not in c4/ then search in the system $PATH.
+    """Search prog(.exe) in the dimple directory and in the system $PATH.
     Return value: path with filename without extension.
     """
-    dirs = [_c4_dir] + os.environ["PATH"].split(os.pathsep)
+    dirs = [_dimple_dir] + os.environ["PATH"].split(os.pathsep)
     for d in dirs:
         path = check_prog(d, prog)
         if path:

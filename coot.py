@@ -1,8 +1,8 @@
 
 import os
 import math
-import c4.utils
 import subprocess
+from dimple import utils
 
 M_SQRT1_2 = 0.5**0.5
 
@@ -12,9 +12,9 @@ def find_path():
         if os.path.exists(default_path):
             return default_path
         else:
-            c4.utils.put_error("WinCoot not found.")
+            utils.put_error("WinCoot not found.")
     else:
-        return c4.utils.syspath("coot")
+        return utils.syspath("coot")
 
 # returns tuple: coot path and version string
 def find_path_and_version():

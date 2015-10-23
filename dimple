@@ -1,7 +1,8 @@
 #!/bin/sh
 
-if [ -e "$0".py ]; then
-  $CCP4/bin/ccp4-python "$0".py "$@"  # development (source tree) version
+local_file="$(cd "$(dirname "$0")" && pwd)"/main.py
+if [ -e "$local_file" ] && [ "$(dirname "$local_file")" != "$CBIN" ]; then
+  $CCP4/bin/ccp4-python "$local_file" "$@"  # development (source tree) version
 else
   $CCP4/bin/ccp4-python -m dimple "$@"  # installed module
 fi

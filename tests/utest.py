@@ -5,8 +5,9 @@ import unittest
 import numpy as np
 from numpy.testing import assert_allclose
 from numpy import linalg
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from c4.cell import Cell, Mat3
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(
+                         os.path.abspath(__file__)))))
+from dimple.cell import Cell, Mat3
 
 def to_np(m):
     return np.array([[m[0], m[1], m[2]],
@@ -42,7 +43,7 @@ class TestMat3(unittest.TestCase):
 
 class TestCell(unittest.TestCase):
     def setUp(self):
-        self.cell = Cell([22.84, 32.84, 42.84, 80.84, 90.84, 100.84])
+        self.cell = Cell((22.84, 32.84, 42.84, 80.84, 90.84, 100.84))
     def test_orth(self):
         orth = self.cell.get_orth_matrix()
         expected = np.array([[22.84, -6.17612, -0.628045],

@@ -6,14 +6,17 @@ if sys.version_info[:2] != (2, 7):
     sys.stderr.write("Error. Python 2.7 is required.\n")
     sys.exit(1)
 import argparse
-import c4.utils
-from c4.utils import comment, put_error, adjust_path
-from c4.mtz import check_freerflags_column
-from c4.pdb import is_pdb_id, download_pdb, check_hetatm_x
-import c4.workflow
-from c4 import coot
+if __name__ == "__main__" and __package__ is None:
+    sys.path.insert(1,
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from dimple import utils
+from dimple.utils import comment, put_error
+from dimple.mtz import check_freerflags_column
+from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
+from dimple import workflow
+from dimple import coot
 
-__version__ = '2.2.1'
+__version__ = '2.3.0'
 
 def dimple(wf, opt):
     comment("%8s### Dimple v%s. Problems and suggestions:"
@@ -30,7 +33,7 @@ def dimple(wf, opt):
         comment("\nPDBs in order of similarity (using the first one):")
         opt.pdbs.sort(key=lambda x: calculate_difference_metric(wf.file_info[x],
                                                                 mtz_meta))
-    c4.utils.log_value("pdb_files", opt.pdbs)
+    utils.log_value("pdb_files", opt.pdbs)
     for p in opt.pdbs:
         _comment_summary_line(os.path.basename(p), wf.file_info[p])
     ini_pdb = "ini.pdb"
@@ -146,7 +149,7 @@ def dimple(wf, opt):
                                scale type simple lssc anisotropic experimental
                                solvent yes vdwprob 1.4 ionprob 0.8 mshrink 0.8
                                rigidbody ncycle 10""").run()
-        except c4.workflow.JobError, e:
+        except workflow.JobError as e:
             if wf.jobs[-1].exit_status == 1:  # possibly mtz/pdb disagreement
                 comment("\n" + e.msg)
                 if opt.mr_when_r >= 1:
@@ -311,7 +314,7 @@ def _check_picture_tools():
     else:
         put_error("No coot, no pictures")
         ok = False
-    if not c4.utils.syspath("render"):
+    if not utils.syspath("render"):
         put_error("No Raster3d, no pictures")
         ok = False
     return ok
@@ -360,10 +363,10 @@ def _generate_scripts_and_pictures(wf, opt, fb_job):
     coot_sh_path = os.path.join(wf.output_dir, "coot.sh")
     try:
         with open(coot_sh_path, 'w') as f:
-            f.write(coot_sh_text.format(coot=c4.coot.find_path(),
+            f.write(coot_sh_text.format(coot=coot.find_path(),
                                         out=wf.output_dir))
         _make_executable(coot_sh_path)
-    except (IOError, OSError), e:
+    except (IOError, OSError) as e:
         put_error(e)
 
     if opt.img_format == 'none':
@@ -380,7 +383,7 @@ def _generate_scripts_and_pictures(wf, opt, fb_job):
         basenames += names
     try:
         wf.coot_py(script).run()
-    except c4.workflow.JobError:
+    except workflow.JobError:
         # check for a possible cause to hint the user
         # (possible workaround: change $HOME to non-existing directory)
         retcode = wf.silently_run_job(wf.coot_py(script_text=""))
@@ -403,7 +406,7 @@ def parse_dimple_commands(args):
     dstr = ' (default: %(default)s)'
     parser = argparse.ArgumentParser(
                 usage='%(prog)s [options...] input.mtz input.pdb output_dir',
-                epilog=c4.workflow.commands_help, prog="dimple",
+                epilog=workflow.commands_help, prog="dimple",
                 formatter_class=argparse.RawDescriptionHelpFormatter)
     # positional args can be separated by options, but not after the 3rd one
     # see http://bugs.python.org/issue15112 , http://bugs.python.org/issue14191
@@ -503,12 +506,12 @@ def parse_dimple_commands(args):
         sys.exit(1)
 
     # Since we'll execute programs from opt.output_dir, adjust paths.
-    opt.mtz = adjust_path(opt.mtz, opt.output_dir)
-    opt.pdbs = [adjust_path(a, opt.output_dir) for a in opt.pdbs]
+    opt.mtz = utils.adjust_path(opt.mtz, opt.output_dir)
+    opt.pdbs = [utils.adjust_path(a, opt.output_dir) for a in opt.pdbs]
     if opt.free_r_flags:
-        opt.free_r_flags = adjust_path(opt.free_r_flags, opt.output_dir)
+        opt.free_r_flags = utils.adjust_path(opt.free_r_flags, opt.output_dir)
     if opt.libin:
-        opt.libin = adjust_path(opt.libin, opt.output_dir)
+        opt.libin = utils.adjust_path(opt.libin, opt.output_dir)
 
     # the default value of sigicolumn ('SIG<ICOL>') needs substitution
     opt.sigicolumn = opt.sigicolumn.replace('<ICOL>', opt.icolumn)
@@ -540,7 +543,7 @@ def dls_name_filter(pdbs):
 
 
 def main(args):
-    if c4.workflow.parse_workflow_commands():
+    if workflow.parse_workflow_commands():
         return
 
     for necessary_var in ("CCP4", "CCP4_SCR"):
@@ -552,19 +555,19 @@ def main(args):
 
     options = parse_dimple_commands(args)
 
-    wf = c4.workflow.Workflow(options.output_dir, from_job=options.from_step)
-    c4.utils.start_log(os.path.join(options.output_dir, "dimple.log"),
-                       output_dir=options.output_dir)
-    c4.utils.log_value("version", __version__)
-    c4.utils.start_log_screen(os.path.join(options.output_dir, "screen.log"))
+    wf = workflow.Workflow(options.output_dir, from_job=options.from_step)
+    utils.start_log(os.path.join(options.output_dir, "dimple.log"),
+                    output_dir=options.output_dir)
+    utils.log_value("version", __version__)
+    utils.start_log_screen(os.path.join(options.output_dir, "screen.log"))
     try:
         dimple(wf=wf, opt=options)
         exit_status = 0
-    except c4.workflow.JobError, e: # avoid "as e" for the sake of Py2.4
+    except workflow.JobError as e:
         put_error(e.msg, comment=e.note)
-        c4.utils.report_disk_space([wf.output_dir, os.getenv("CCP4_SCR")])
+        utils.report_disk_space([wf.output_dir, os.getenv("CCP4_SCR")])
         exit_status = 1
-    except RuntimeError, e:
+    except RuntimeError as e:
         put_error(e)
         exit_status = 1
     comment("\n")

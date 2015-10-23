@@ -2,8 +2,8 @@
 import subprocess
 from collections import OrderedDict
 import sys
-from c4.utils import put_error, comment
-from c4.cell import Cell
+from dimple.utils import put_error, comment
+from dimple.cell import Cell
 
 class MtzMeta(Cell):
     d_eps = 0.00051 # dmax precision (so low b/c it is read from mtzdump)

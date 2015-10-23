@@ -10,10 +10,10 @@ import Queue
 import time
 import cPickle as pickle
 import shutil
-import c4.utils
-import c4.mtz
-import c4.pdb
-import c4.coot
+from dimple import utils
+from dimple import mtz
+from dimple import pdb
+from dimple import coot
 
 
 _jobindex_fmt = "%3d "
@@ -79,7 +79,7 @@ class Output:
                 for line in self.lines:
                     f.write(line)
             self.saved_to = filename
-            c4.utils.log_value("std"+self.role, filename)
+            utils.log_value("std"+self.role, filename)
             if remove_long_list and len(self.lines) > 5:
                 self.lines = []
 
@@ -317,7 +317,7 @@ def ccp4_job(workflow, prog, logical=None,
     input string or list of lines that are to be passed though stdin
     add_end adds "end" as the last line of stdin
     """
-    job = Job(workflow, c4.utils.cbin(prog))
+    job = Job(workflow, utils.cbin(prog))
     if logical:
         for a in ["hklin", "hklout", "hklref", "xyzin", "xyzout", "libin"]:
             if logical.get(a):
@@ -336,8 +336,8 @@ def _print_progress(job, event):
         p = job.parse()
         if p is not None:
             text = (_elapsed_fmt % (time.time() - job.started)) + p
-            c4.utils.put_temporarily(text)
-            c4.utils.reset_color()
+            utils.put_temporarily(text)
+            utils.reset_color()
 
 
 def _start_enqueue_thread(file_obj):
@@ -376,7 +376,7 @@ def _run_and_parse(process, job):
             job_input = _get_input_as_string(job)
             process.stdin.write(job_input)
         except IOError as e:
-            c4.utils.put("\nWarning: passing input to %s failed.\n" % job.name)
+            utils.put("\nWarning: passing input to %s failed.\n" % job.name)
             if e.errno not in (errno.EPIPE, e.errno != errno.EINVAL):
                 raise
         process.stdin.close()
@@ -412,12 +412,12 @@ class Workflow:
             try:
                 os.makedirs(self.output_dir)
             except OSError as e:
-                c4.utils.put_error(e)
+                utils.put_error(e)
                 sys.exit(1)
         # this can seriously affect Refmac compiled with GFortran
         bad_var = os.getenv('GFORTRAN_UNBUFFERED_ALL')
         if bad_var and bad_var[0] not in ('0', 'n', 'N'):
-            c4.utils.put_error(
+            utils.put_error(
                     '$GFORTRAN_UNBUFFERED_ALL may terribly slow down Refmac',
                     comment='It is unset internally in dimple.')
             del os.environ['GFORTRAN_UNBUFFERED_ALL']
@@ -464,12 +464,12 @@ class Workflow:
         self.jobs.append(job)
         job_num = len(self.jobs)
         if new_line:
-            c4.utils.put("\n" + _jobindex_fmt % job_num)
-            c4.utils.put_green(_jobname_fmt % job.name)
+            utils.put("\n" + _jobindex_fmt % job_num)
+            utils.put_green(_jobname_fmt % job.name)
         else:
-            c4.utils.put(" / %d" % job_num)
+            utils.put(" / %d" % job_num)
         sys.stdout.flush()
-        c4.utils.log_section(job.name)
+        utils.log_section(job.name)
 
         job_idx = len(self.jobs) - 1
         if job_idx < self.from_job - 1: # from_job is 1-based
@@ -478,26 +478,25 @@ class Workflow:
                 old_job = self.repl_jobs[job_idx]
                 if old_job.name == job.name:
                     job = old_job
-                    c4.utils.put("unpickled")
-                    c4.utils.log_value("not_run", "unpickled")
+                    utils.put("unpickled")
+                    utils.log_value("not_run", "unpickled")
                     self.jobs[-1] = job
                 else:
-                    c4.utils.put("skipped (mismatch)")
-                    c4.utils.log_value("not_run", "unpickled/mismatch")
+                    utils.put("skipped (mismatch)")
+                    utils.log_value("not_run", "unpickled/mismatch")
             else:
-                c4.utils.put("skipped")
-                c4.utils.log_value("not_run", "skipped")
+                utils.put("skipped")
+                utils.log_value("not_run", "skipped")
             return job
 
         job.started = time.time()
-        c4.utils.log_time("start_time", job.started)
+        utils.log_time("start_time", job.started)
         if job.stdin_file:
-            c4.utils.log_value("stdin", job.stdin_file)
+            utils.log_value("stdin", job.stdin_file)
         elif job.std_input:
-            c4.utils.log_value("input", job.std_input)
-        c4.utils.log_value("prog", job.args[0])
-        c4.utils.log_value("args",
-                           " ".join(pipes.quote(a) for a in job.args[1:]))
+            utils.log_value("input", job.std_input)
+        utils.log_value("prog", job.args[0])
+        utils.log_value("args", " ".join(pipes.quote(a) for a in job.args[1:]))
         #job.args[0] = "true"  # for debugging
         try:
             process = Popen(job.args, stdin=PIPE, stdout=PIPE, stderr=PIPE,
@@ -532,21 +531,21 @@ class Workflow:
                 progress_thread.join()
             end_time = time.time()
             job.total_time = end_time - job.started
-            c4.utils.log_time("end_time", end_time)
+            utils.log_time("end_time", end_time)
             job.exit_status = process.poll()
             if new_line:
-                c4.utils.put(_elapsed_fmt % job.total_time)
+                utils.put(_elapsed_fmt % job.total_time)
             parse_output = job.parse()
-            c4.utils.put("%s" % (parse_output or ""))
+            utils.put("%s" % (parse_output or ""))
             if parse_output:
-                c4.utils.log_value("info", parse_output)
+                utils.log_value("info", parse_output)
             self._write_logs(job)
             for k, v in job.data.iteritems():
                 if k == "selected_lines":
                     v = "\n" + "".join(v) # selected_lines have newlines
-                c4.utils.log_value(k, v)
+                utils.log_value(k, v)
         if job.exit_status:
-            c4.utils.log_value("exit_status", job.exit_status)
+            utils.log_value("exit_status", job.exit_status)
             all_args = job.args_as_str()
             notes = [all_args, ""]
             if job.out.saved_to:
@@ -566,26 +565,26 @@ class Workflow:
 
     def remove_hetatm(self, xyzin, xyzout, remove_all):
         with open(self.path(xyzout), "wb") as out:
-            return c4.pdb.remove_hetatm(self.path(xyzin), out, remove_all)
+            return pdb.remove_hetatm(self.path(xyzin), out, remove_all)
 
     def read_pdb_metadata(self, xyzin):
         if xyzin not in self.file_info:
-            self.file_info[xyzin] = c4.pdb.read_metadata(self.path(xyzin))
+            self.file_info[xyzin] = pdb.read_metadata(self.path(xyzin))
         return self.file_info[xyzin]
 
     def read_mtz_metadata(self, hklin):
         if hklin not in self.file_info:
-            self.file_info[hklin] = c4.mtz.read_metadata(self.path(hklin))
+            self.file_info[hklin] = mtz.read_metadata(self.path(hklin))
         return self.file_info[hklin]
 
     def count_mtz_missing(self, hklin, col):
         key = (hklin, 'missing', col)
         if key not in self.file_info:
-            self.file_info[key] = c4.mtz.get_num_missing(self.path(hklin), col)
+            self.file_info[key] = mtz.get_num_missing(self.path(hklin), col)
         return self.file_info[key]
 
     def molrep(self, f, m, keys=""):
-        job = Job(self, c4.utils.cbin("molrep"))
+        job = Job(self, utils.cbin("molrep"))
         job.args += ["-f", f, "-m", m]
         if keys:
             job.args.append("-i")
@@ -689,18 +688,18 @@ class Workflow:
                      "--pdbout", pdbout, "--sigma", "%g" % sigma]
         return job
 
-    def find_blobs(self, mtz, pdb, sigma=1.0):
+    def find_blobs(self, hklin, xyzin, sigma=1.0):
         # for now search in PATH (which normally includes CBIN)
-        job = Job(self, c4.utils.syspath("find-blobs"))
-        job.args += ["-c", "-s%g" % sigma, mtz, pdb]
+        job = Job(self, utils.syspath("find-blobs"))
+        job.args += ["-c", "-s%g" % sigma, hklin, xyzin]
         job.parser = "_find_blobs_parser"
         return job
 
-    def rwcontents(self, pdb):
-        return ccp4_job(self, "rwcontents", logical=dict(xyzin=pdb))
+    def rwcontents(self, xyzin):
+        return ccp4_job(self, "rwcontents", logical=dict(xyzin=xyzin))
 
     def coot_py(self, script_text):
-        job = Job(self, c4.coot.find_path())
+        job = Job(self, coot.find_path())
         job.args += ["--python", "--no-graphics", "--no-guano"]
         script_text += "\ncoot_real_exit(0)"
         # On some Wincoot installations coot-real.exe is started from
@@ -717,7 +716,7 @@ class Workflow:
         return job
 
     def render_r3d(self, name, img_format="png"):
-        job = Job(self, c4.utils.syspath("render"))
+        job = Job(self, utils.syspath("render"))
         # render writes normal output to stderr (and nothing to stdout)
         job.out.file_extension = "out"
         job.err.file_extension = "log"
@@ -744,7 +743,7 @@ class Workflow:
                 try:
                     os.remove(path)
                 except OSError, e:
-                    c4.utils.put_error(e)
+                    utils.put_error(e)
 
 
 def open_pickled_workflow(file_or_dir):
@@ -753,8 +752,8 @@ def open_pickled_workflow(file_or_dir):
     else:
         pkl = file_or_dir
     if not os.path.exists(pkl):
-        c4.utils.put_error("workflow data file not found",
-                           "No such file or directory: %s" % pkl)
+        utils.put_error("workflow data file not found",
+                        "No such file or directory: %s" % pkl)
         sys.exit(1)
     f = open(pkl, "rb")
     return pickle.load(f)
@@ -848,7 +847,7 @@ def parse_workflow_commands():
                     job.data = {}  # reset data from parsing
                     job.run()
                 except JobError as e:
-                    c4.utils.put_error(e.msg, comment=e.note)
+                    utils.put_error(e.msg, comment=e.note)
                     sys.exit(1)
         return True
 

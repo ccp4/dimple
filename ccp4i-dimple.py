@@ -7,21 +7,21 @@ sys.path.append(os.path.join(os.environ["CCP4"], "share", "smartie"))
 import qtrapi
 
 # monkey-patch put() before dimple is imported
-import c4.utils
-orig_put = c4.utils.put
+import dimple.utils
+orig_put = dimple.utils.put
 def our_put(text, ansi_code=None):
     orig_put(text)
     qtrapi_text[0] += text
-    for n in (1,2):
+    for n in (1, 2):
         if (' blob%dv3.png' % n) in text:
             add_blob(n)
 
     report.flush()
-c4.utils.put = our_put
+dimple.utils.put = our_put
 
 def add_blob(n):
     dfiles = qtrapi.Decorations(title=("Blob %d" % n))
-    for i in range(1,4):
+    for i in range(1, 4):
         path = os.path.join(jobdir, "blob%dv%d.png" % (n, i))
         dfiles.append(qtrapi.File(key="DECORATION", type="image", path=path))
         path = os.path.join(jobdir, "blob%d-coot.py" % n)
@@ -31,9 +31,9 @@ def add_blob(n):
     vfiles.append(coot_view)
     section_output.extend([dfiles, vfiles])
 
-import dimple
+from dimple.main import parse_dimple_commands, main
 
-opt = dimple.parse_dimple_commands(sys.argv[1:])
+opt = parse_dimple_commands(sys.argv[1:])
 jobdir = os.path.abspath(opt.output_dir)
 if not os.path.exists(jobdir):
     os.makedirs(jobdir) # it would be created by dimple, but too late
@@ -63,4 +63,4 @@ report = qtrapi.Report(title="Dimple", path=jobdir)
 report.extend([section_info, section_input, section_output])
 report.flush()
 
-dimple.main(sys.argv[1:])
+main(sys.argv[1:])
