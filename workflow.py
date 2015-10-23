@@ -13,7 +13,7 @@ import shutil
 from dimple import utils
 from dimple import mtz
 from dimple import pdb
-from dimple import coot
+from dimple import coots
 
 
 _jobindex_fmt = "%3d "
@@ -699,7 +699,7 @@ class Workflow:
         return ccp4_job(self, "rwcontents", logical=dict(xyzin=xyzin))
 
     def coot_py(self, script_text):
-        job = Job(self, coot.find_path())
+        job = Job(self, coots.find_path())
         job.args += ["--python", "--no-graphics", "--no-guano"]
         script_text += "\ncoot_real_exit(0)"
         # On some Wincoot installations coot-real.exe is started from

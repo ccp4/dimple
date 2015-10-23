@@ -14,7 +14,7 @@ from dimple.utils import comment, put_error
 from dimple.mtz import check_freerflags_column
 from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
-from dimple import coot
+from dimple import coots
 
 __version__ = '2.3.0'
 
@@ -299,7 +299,7 @@ def calculate_difference_metric(meta1, meta2):
 
 def _check_picture_tools():
     ok = True
-    coot_path, coot_ver = coot.find_path_and_version()
+    coot_path, coot_ver = coots.find_path_and_version()
     if coot_path:
         if coot_ver is None:
             put_error("coot not working(?), no pictures")
@@ -343,7 +343,7 @@ def _generate_scripts_and_pictures(wf, opt, fb_job):
     # There are blobN-coot.py scripts generated below with absolute paths.
     # write coot script (apart from pictures) that centers on the biggest blob
     script_path = os.path.join(wf.output_dir, "run-coot.py")
-    script = coot.basic_script(pdb=opt.xyzout, mtz=opt.hklout,
+    script = coots.basic_script(pdb=opt.xyzout, mtz=opt.hklout,
                                center=(blobs and blobs[0]), toward=com)
     open(script_path, "w").write(script)
 
@@ -352,9 +352,9 @@ def _generate_scripts_and_pictures(wf, opt, fb_job):
         py_path = os.path.join(wf.output_dir, "blob%d-coot.py" % (n+1))
         with open(py_path, "w") as blob_py:
             d = os.path.abspath(wf.output_dir)
-            blob_py.write(coot.basic_script(pdb=os.path.join(d, opt.xyzout),
-                                            mtz=os.path.join(d, opt.hklout),
-                                            center=blobs[n], toward=com))
+            blob_py.write(coots.basic_script(pdb=os.path.join(d, opt.xyzout),
+                                             mtz=os.path.join(d, opt.hklout),
+                                             center=blobs[n], toward=com))
     # coot.sh - one-line script for convenience
     if blobs:
         coot_sh_text = '{coot} --no-guano {out}/blob1-coot.py\n'
@@ -363,7 +363,7 @@ def _generate_scripts_and_pictures(wf, opt, fb_job):
     coot_sh_path = os.path.join(wf.output_dir, "coot.sh")
     try:
         with open(coot_sh_path, 'w') as f:
-            f.write(coot_sh_text.format(coot=coot.find_path(),
+            f.write(coot_sh_text.format(coot=coots.find_path(),
                                         out=wf.output_dir))
         _make_executable(coot_sh_path)
     except (IOError, OSError) as e:
@@ -376,9 +376,9 @@ def _generate_scripts_and_pictures(wf, opt, fb_job):
     basenames = []
     # as a workaround for buggy coot the maps are reloaded for each blob
     for n, b in enumerate(blobs[:2]):
-        script += coot.basic_script(pdb=opt.xyzout, mtz=opt.hklout,
-                                    center=b, toward=com)
-        rs, names = coot.r3d_script(b, com, blobname="blob%s"%(n+1))
+        script += coots.basic_script(pdb=opt.xyzout, mtz=opt.hklout,
+                                     center=b, toward=com)
+        rs, names = coots.r3d_script(b, com, blobname="blob%s"%(n+1))
         script += rs
         basenames += names
     try:
