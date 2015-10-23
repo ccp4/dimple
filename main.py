@@ -16,7 +16,7 @@ from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
 from dimple import coots
 
-__version__ = '2.3.0'
+__version__ = '2.3.1'
 
 def dimple(wf, opt):
     comment("%8s### Dimple v%s. Problems and suggestions:"
@@ -146,7 +146,6 @@ def dimple(wf, opt):
                        labin=refmac_labin_nofree, labout=refmac_labout,
                        libin=None,
                        keys="""refinement type rigidbody resolution 15 3.5
-                               scale type simple lssc anisotropic experimental
                                rigidbody ncycle 10""").run()
         except workflow.JobError as e:
             if wf.jobs[-1].exit_status == 1:  # possibly mtz/pdb disagreement
@@ -210,7 +209,6 @@ def dimple(wf, opt):
      make newligand continue
      refinement type restrained
      weight %s
-     scale type simple lssc anisotropic experimental
      """ % refmac_weight
     if opt.jelly:
         comment("\nJelly-body refinement, %d cycles." % opt.jelly)
