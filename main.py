@@ -16,7 +16,7 @@ from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
 from dimple import coots
 
-__version__ = '2.3.1'
+__version__ = '2.3.2'
 
 def dimple(wf, opt):
     comment("%8s### Dimple v%s. Problems and suggestions:"
@@ -53,6 +53,13 @@ def dimple(wf, opt):
         comment("\nRemoved %d HETATM atoms" % n_het)
     else:
         rb_xyzin = ini_pdb
+    wf.rwcontents(xyzin=rb_xyzin).run()
+    solvent_percent = wf.jobs[-1].data.get('solvent_percent')
+    if solvent_percent is None:
+        raise RuntimeError("rwcontents could not interpret %s." % rb_xyzin)
+    if abs(wf.jobs[-1].data.get('volume', 0) - pdb_meta.get_volume() > 1.0):
+        comment("\ndebug: problem when calculating volume?")
+
     if match_symmetry(mtz_meta, pdb_meta):
         reindexed_mtz = "pointless.mtz"
         wf.temporary_files.add(reindexed_mtz)
@@ -186,7 +193,7 @@ def dimple(wf, opt):
                       labin="F = F SIGF = SIGF",
                       sg_alt="ALL",
                       model=dict(pdb=rb_xyzin, identity=100, num=num),
-                      solvent_percent=_get_solvent_percent(wf, rb_xyzin),
+                      solvent_percent=solvent_percent,
                       root='phaser').run()
             phaser_data = wf.jobs[-1].data
             if phaser_data['status'].startswith('Sorry'):
@@ -250,25 +257,6 @@ def _comment_summary_line(name, meta):
     else:
         line = '\n%-21s ???' % name
     comment(line)
-
-
-# returns only part of the script
-def _get_solvent_percent(wf, pdb):
-    rw = wf.rwcontents(pdb)
-    if wf.silently_run_job(rw) != 0:
-        raise RuntimeError("rwcontents of %s failed." % pdb)
-    def val(key):
-        for line in rw.out.lines:
-            if key in line:
-                return float(line[line.find(key)+len(key):])
-    Vm = val('The Matthews Coefficient is :')
-    #mw = val('Molecular Weight of protein:')
-    #vol = val('Cell volume:')
-    #data_num = int(round(mtz_meta.get_volume() / mw / Vm))
-    if not Vm:
-        raise RuntimeError("rwcontents could not interpret %s." % pdb)
-    # 1.23 is used in phaser/src/Composition.cc
-    return (1 - 1.23/Vm) * 100
 
 
 def match_symmetry(meta1, meta2):

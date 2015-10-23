@@ -192,6 +192,27 @@ def _find_blobs_parser(job):
     else:
         return ""
 
+def _rwcontents_parser(job):
+    d = job.data
+    for line in job.out.read_line():
+        if line.startswith(' Cell volume:'):
+            d["volume"] = float(line.split(':')[-1])
+        elif line.startswith(' Molecular Weight of protein:'):
+            d["weight"] = float(line.split(':')[-1])
+        elif line.startswith(' Number of molecules ='):
+            d["num_mol"] = int(line.split('=')[-1])
+        if line.startswith(' The Matthews Coefficient is :'):
+            Vm = float(line.split(':')[-1])
+            d["Vm"] = Vm
+            # 1.23 is used in phaser/src/Composition.cc
+            d["solvent_percent"] = (1 - 1.23/Vm) * 100
+    return u"%d x %.0fkDa in %.fnm3  Vm=%.2f (%.0f%% of solvent)" % (
+            d.get('num_mol', 0),
+            d.get('weight', 0) / 1000, # Da -> kDa
+            d.get('volume', 0) / 1000, # A^2 -> nm^3
+            d.get('Vm', 0),
+            d.get('solvent_percent', 0))
+
 def _cad_parser(job):
     for line in job.out.read_line():
         if line.startswith(' Final Total of Unique records to HKLOUT ='):
@@ -592,7 +613,7 @@ class Workflow:
         return job
 
     def phaser_auto(self, hklin, labin, model, root, sg_alt="NONE",
-                   solvent_percent=None):
+                    solvent_percent=None):
         lines = ['MODE MR_AUTO',
                  'SEARCH METHOD FAST',
                  'SEARCH DEEP OFF',
@@ -696,7 +717,8 @@ class Workflow:
         return job
 
     def rwcontents(self, xyzin):
-        return ccp4_job(self, "rwcontents", logical=dict(xyzin=xyzin))
+        return ccp4_job(self, "rwcontents", logical=dict(xyzin=xyzin),
+                        parser="_rwcontents_parser")
 
     def coot_py(self, script_text):
         job = Job(self, coots.find_path())
