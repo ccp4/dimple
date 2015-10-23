@@ -147,7 +147,7 @@ def dimple(wf, opt):
                        libin=None,
                        keys="""refinement type rigidbody resolution 15 3.5
                                scale type simple lssc anisotropic experimental
-                               solvent yes vdwprob 1.4 ionprob 0.8 mshrink 0.8
+                               solvent yes ionprob 0.8 mshrink 0.8
                                rigidbody ncycle 10""").run()
         except workflow.JobError as e:
             if wf.jobs[-1].exit_status == 1:  # possibly mtz/pdb disagreement
@@ -212,7 +212,7 @@ def dimple(wf, opt):
      refinement type restrained
      weight %s
      scale type simple lssc anisotropic experimental
-     solvent yes vdwprob 1.4 ionprob 0.8 mshrink 0.8
+     solvent yes ionprob 0.8 mshrink 0.8
      """ % refmac_weight
     if opt.jelly:
         comment("\nJelly-body refinement, %d cycles." % opt.jelly)
