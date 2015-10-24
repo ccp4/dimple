@@ -18,6 +18,7 @@ from dimple import coots
 
 __version__ = '2.3.2'
 
+
 def dimple(wf, opt):
     comment("%8s### Dimple v%s. Problems and suggestions:"
             " ccp4@ccp4.ac.uk ###" % ('', __version__))
@@ -54,9 +55,11 @@ def dimple(wf, opt):
     else:
         rb_xyzin = ini_pdb
     wf.rwcontents(xyzin=rb_xyzin).run()
-    solvent_percent = wf.jobs[-1].data.get('solvent_percent')
-    if solvent_percent is None:
+    solvent_pct = wf.jobs[-1].data.get('solvent_percent')
+    if solvent_pct is None:
         raise RuntimeError("rwcontents could not interpret %s." % rb_xyzin)
+    if solvent_pct > 70:
+        comment("\nHmm... %.1f%% of solvent looks suspicious" % solvent_pct)
     if abs(wf.jobs[-1].data.get('volume', 0) - pdb_meta.get_volume() > 1.0):
         comment("\ndebug: problem when calculating volume?")
 
@@ -174,7 +177,8 @@ def dimple(wf, opt):
             refmac_xyzin = "refmacRB.pdb"
 
     if refmac_xyzin is None:
-        if opt.MR_prog == 'molrep':
+        if opt.MR_prog == 'molrep' or (opt.MR_prog is None and
+                                       solvent_pct > 70):
             wf.temporary_files |= {"molrep.pdb", "molrep_dimer.pdb",
                                    "molrep.crd"}
             wf.molrep(f=prepared_mtz, m=rb_xyzin).run()
@@ -189,12 +193,11 @@ def dimple(wf, opt):
                         "than model" % (num, vol_ratio))
             wf.temporary_files |= {"phaser.1.pdb", "phaser.1.mtz"}
             wf.phaser_auto(hklin=prepared_mtz,
-                      #labin="I = %s SIGI = %s" % (opt.icolumn, opt.sigicolumn),
-                      labin="F = F SIGF = SIGF",
-                      sg_alt="ALL",
-                      model=dict(pdb=rb_xyzin, identity=100, num=num),
-                      solvent_percent=solvent_percent,
-                      root='phaser').run()
+                           labin="F = F SIGF = SIGF",
+                           sg_alt="ALL",
+                           model=dict(pdb=rb_xyzin, identity=100, num=num),
+                           solvent_percent=solvent_pct,
+                           root='phaser').run()
             phaser_data = wf.jobs[-1].data
             if phaser_data['status'].startswith('Sorry'):
                 return
@@ -423,8 +426,7 @@ def parse_dimple_commands(args):
                         metavar='NUM',
                         help='threshold for Molecular Replacement'+dstr)
     parser.add_argument('--MR-prog', choices=['phaser', 'molrep'],
-                        default='phaser',
-                        help='Molecular Replacement program'+dstr)
+                        help='Molecular Replacement program')
     parser.add_argument('-I', '--icolumn', metavar='ICOL',
                         default='IMEAN', help='I column label'+dstr)
     parser.add_argument('--sigicolumn', metavar='SIGICOL',
@@ -447,8 +449,8 @@ def parse_dimple_commands(args):
     parser._action_groups[:1] = []  # pylint: disable=protected-access
 
     # special mode for compatibility with ccp4i
-    legacy_args = { "HKLIN": "", "XYZIN": "",
-                    "HKLOUT": "--hklout", "XYZOUT": "--xyzout" }
+    legacy_args = {"HKLIN": "", "XYZIN": "",
+                   "HKLOUT": "--hklout", "XYZOUT": "--xyzout"}
     if len(args) == 8 and args[0] in legacy_args:
         args = [legacy_args.get(a) or a
                 for a in args if legacy_args.get(a) != ""]
