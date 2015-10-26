@@ -63,7 +63,7 @@ class Cell(object):
                 reordered = sorted(zip(self.cell[:3], sym_splitted[1:]))
                 new_cell, new_symm = zip(*reordered)
                 return Cell(new_cell + (90., 90., 90.),
-                            symmetry=' '.join(['P'] + new_symm))
+                            symmetry=' '.join(('P',) + new_symm))
         return self
 
 
