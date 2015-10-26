@@ -57,7 +57,13 @@ class Cell(object):
     def to_standard(self):
         if self.alpha == self.beta == self.gamma == 90 and (
                 self.a > self.b or self.b > self.c):
-            return Cell(tuple(sorted(self.cell[:3])) + self.cell[3:])
+            sym_splitted = self.symmetry.split()
+            # i'm not sure if the condition below is redundant
+            if len(sym_splitted) == 4 and sym_splitted[0] == 'P':
+                reordered = sorted(zip(self.cell[:3], sym_splitted[1:]))
+                new_cell, new_symm = zip(*reordered)
+                return Cell(new_cell + (90., 90., 90.),
+                            symmetry=' '.join(['P'] + new_symm))
         return self
 
 
