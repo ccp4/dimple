@@ -625,10 +625,10 @@ class Workflow:
                       'COMPOSITION PERCENTAGE %f' % solvent_percent]
         lines += ('ENSEMBLE p PDBFILE %(pdb)s IDENTITY %(identity)g\n'
                   'SEARCH ENSEMBLE p NUM %(num)d' % model).splitlines()
-        # test TNCS for pseudo-tripling/quadrupling of the cell
-        # (it shouldn't be num in general case
-        #if n_tncs:
-        #    lines += 'TNCS NMOL %d' % n_tncs
+        # For tNCS we go with what phaser does by default -- tNCS of order 2
+        # are handled automatically. While we could specify tNCS for
+        # pseudo-tripling/quadrupling of the cell (TNCS NMOL 3) I don't know
+        # if it'd do more good or bad.
         lines += ["ROOT %s" % root]
         job = ccp4_job(self, "phaser", input=lines, parser="_phaser_parser")
         return job

@@ -10,8 +10,7 @@ class MtzMeta(Cell):
     def __init__(self, cell, symmetry, sg_number, dmin, dmax, columns,
                  filename):
         assert isinstance(columns[0], tuple)
-        Cell.__init__(self, cell)
-        self.symmetry = symmetry
+        Cell.__init__(self, cell, symmetry)
         self.sg_number = sg_number
         self.dmin = dmin
         self.dmax = dmax

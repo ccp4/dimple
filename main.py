@@ -11,12 +11,13 @@ if __name__ == "__main__" and __package__ is None:
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dimple import utils
 from dimple.utils import comment, put_error
+from dimple.cell import match_symmetry
 from dimple.mtz import check_freerflags_column
 from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
 from dimple import coots
 
-__version__ = '2.3.2'
+__version__ = '2.3.3'
 
 
 def dimple(wf, opt):
@@ -56,6 +57,7 @@ def dimple(wf, opt):
         rb_xyzin = ini_pdb
     wf.rwcontents(xyzin=rb_xyzin).run()
     solvent_pct = wf.jobs[-1].data.get('solvent_percent')
+    pdb_num_mol = wf.jobs[-1].data.get('num_mol')
     if solvent_pct is None:
         raise RuntimeError("rwcontents could not interpret %s." % rb_xyzin)
     if solvent_pct > 70:
@@ -184,9 +186,8 @@ def dimple(wf, opt):
             wf.molrep(f=prepared_mtz, m=rb_xyzin).run()
             refmac_xyzin = "molrep.pdb"
         else:
-            # FIXME: should be the ratio of ASU
-            vol_ratio = mtz_meta.get_volume() / pdb_meta.get_volume()
-            # FIXME account for strict NCS (MTRIX records without iGiven)
+            # pdb_num_mol accounts for strict NCS (MTRIX without iGiven)
+            vol_ratio = mtz_meta.asu_volume() / pdb_meta.asu_volume(pdb_num_mol)
             num = max(int(round(vol_ratio)), 1)
             if num != 1:
                 comment("\nSearching %d molecules, mtz cell %.1f x larger "
@@ -261,17 +262,6 @@ def _comment_summary_line(name, meta):
         line = '\n%-21s ???' % name
     comment(line)
 
-
-def match_symmetry(meta1, meta2):
-    if not meta1 or not meta2:
-        return None
-    def sig(sym):
-        first_chars = [a[0] for a in sym.split()]
-        s = first_chars[0] + ''.join(sorted(first_chars[1:]))
-        if s == 'I112': # I2 is equivalent to C2
-            return 'C112'
-        return s
-    return sig(meta1.symmetry) == sig(meta2.symmetry)
 
 def calculate_difference_metric(meta1, meta2):
     match = match_symmetry(meta1, meta2)

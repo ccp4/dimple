@@ -2,7 +2,7 @@ from math import radians, sin, cos, acos, sqrt, pi
 
 
 class Cell(object):
-    def __init__(self, parameters):
+    def __init__(self, parameters, symmetry):
         if parameters is None:
             self.cell = None
             return
@@ -11,6 +11,7 @@ class Cell(object):
         self.a, self.b, self.c = parameters[:3]
         self.alpha, self.beta, self.gamma = parameters[3:]
         self.cell = parameters
+        self.symmetry = symmetry  # international SG symbol w/ spaces
 
     def get_volume(self):
         ca = cos(radians(self.alpha))
@@ -18,6 +19,11 @@ class Cell(object):
         cg = cos(radians(self.gamma))
         return self.a * self.b * self.c * sqrt((1 - ca*ca - cb*cb - cg*cg) +
                                                2 * ca*cb*cg)
+
+    def asu_volume(self, z=None):
+        if z is None:
+            z = calculate_z_order(self.symmetry)
+        return self.get_volume() / z
 
     def __str__(self):
         return str(self.cell)
@@ -153,5 +159,38 @@ class Mat3(object):
             phi = acos(r) / 3.
         eig1 = q + 2 * p * cos(phi)
         return sqrt(eig1)
+
+# space group
+def match_symmetry(meta1, meta2):
+    if not meta1 or not meta2:
+        return None
+    def sig(sym):
+        first_chars = [a[0] for a in sym.split()]
+        s = first_chars[0] + ''.join(sorted(first_chars[1:]))
+        if s == 'I112': # I2 is equivalent to C2
+            return 'C112'
+        return s
+    return sig(meta1.symmetry) == sig(meta2.symmetry)
+
+
+_centering_n = {'P': 1, 'A': 2, 'B': 2, 'C': 2, 'I': 2,
+                'R': 3, 'S': 3, 'T': 3, 'F': 4}
+
+_pg_symop = {'1': 1,
+             '2': 2, '121': 2,
+             '222': 4,
+             '4': 4,
+             '422': 8,
+             '3': 3,
+             '32': 6, '312': 6, '321': 6,
+             '6': 6,
+             '622': 12,
+             '23': 12,
+             '432': 24,
+            }
+
+def calculate_z_order(hm):
+    pg = ''.join(a[0] for a in hm.split()[1:])
+    return _centering_n[hm[0]] * _pg_symop[pg]
 
 
