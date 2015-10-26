@@ -199,13 +199,13 @@ def _rwcontents_parser(job):
             d["volume"] = float(line.split(':')[-1])
         elif line.startswith(' Molecular Weight of protein:'):
             d["weight"] = float(line.split(':')[-1])
-        elif line.startswith(' Number of molecules ='):
-            d["num_mol"] = int(line.split('=')[-1])
         if line.startswith(' The Matthews Coefficient is :'):
             Vm = float(line.split(':')[-1])
             d["Vm"] = Vm
             # 1.23 is used in phaser/src/Composition.cc
             d["solvent_percent"] = (1 - 1.23/Vm) * 100
+    if 'volume' in d and 'weight' in d and 'Vm' in d and 'num_mol' not in d:
+        d['num_mol'] = int(round(d['volume'] / d['weight'] / d['Vm']))
     return u"%d x %.0fkDa in %.fnm3  Vm=%.2f (%.0f%% of solvent)" % (
             d.get('num_mol', 0),
             d.get('weight', 0) / 1000, # Da -> kDa
