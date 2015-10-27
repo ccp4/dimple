@@ -14,6 +14,6 @@ if (WIN32)
   install(PROGRAMS dimple.bat DESTINATION bin)
 endif()
 install(FILES ccp4i-dimple.py DESTINATION ${CCP4_PY2_DIR})
-install(FILES __init__.py coot.py pdb.py utils.py
+install(FILES __init__.py coots.py pdb.py utils.py
               cell.py main.py mtz.py workflow.py
         DESTINATION ${CCP4_PY2_DIR}/dimple)
