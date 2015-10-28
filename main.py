@@ -17,7 +17,7 @@ from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
 from dimple import coots
 
-__version__ = '2.3.3'
+__version__ = '2.3.4'
 
 
 def dimple(wf, opt):
@@ -179,6 +179,11 @@ def dimple(wf, opt):
             refmac_xyzin = "refmacRB.pdb"
 
     if refmac_xyzin is None:
+        # pdb_num_mol accounts for strict NCS (MTRIX without iGiven)
+        vol_ratio = mtz_meta.asu_volume() / pdb_meta.asu_volume(pdb_num_mol)
+        if vol_ratio < 0.66:
+            comment("\nasu %.0f%% smaller than in the model"
+                    % ((1 - vol_ratio) * 100))
         if opt.MR_prog == 'molrep' or (opt.MR_prog is None and
                                        solvent_pct > 70):
             wf.temporary_files |= {"molrep.pdb", "molrep_dimer.pdb",
@@ -186,12 +191,11 @@ def dimple(wf, opt):
             wf.molrep(f=prepared_mtz, m=rb_xyzin).run()
             refmac_xyzin = "molrep.pdb"
         else:
-            # pdb_num_mol accounts for strict NCS (MTRIX without iGiven)
-            vol_ratio = mtz_meta.asu_volume() / pdb_meta.asu_volume(pdb_num_mol)
-            num = max(int(round(vol_ratio)), 1)
-            if num != 1:
-                comment("\nSearching %d molecules, mtz cell %.1f x larger "
-                        "than model" % (num, vol_ratio))
+            num = 1
+            if vol_ratio > 1.5:
+                num = int(round(vol_ratio))
+                comment("\nSearching %d molecules, asu is %.1f x larger "
+                        "than in the model" % (num, vol_ratio))
             wf.temporary_files |= {"phaser.1.pdb", "phaser.1.mtz"}
             wf.phaser_auto(hklin=prepared_mtz,
                            labin="F = F SIGF = SIGF",
