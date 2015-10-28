@@ -362,13 +362,13 @@ def _generate_scripts_and_pictures(wf, opt, fb_job):
         rs, names = coots.r3d_script(b, com, blobname="blob%s"%(n+1))
         script += rs
         basenames += names
+    coot_job = wf.coot_py(script)
     try:
-        wf.coot_py(script).run()
+        coot_job.run()
     except workflow.JobError:
         # check for a possible cause to hint the user
         # (possible workaround: change $HOME to non-existing directory)
-        retcode = wf.silently_run_job(wf.coot_py(script_text=""))
-        if retcode != 0:
+        if utils.silently_run(coot_job.args, cwd=wf.output_dir)[0] != 0:
             put_error("coot fails with options: --no-graphics --python",
                       comment="It happens when scripts in .coot or "
                               ".coot-preferences are not compatible\n"

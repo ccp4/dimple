@@ -1,8 +1,7 @@
 
-import subprocess
 from collections import OrderedDict
 import sys
-from dimple.utils import put_error, comment
+from dimple.utils import put_error, comment, silently_run
 from dimple.cell import Cell
 
 class MtzMeta(Cell):
@@ -38,19 +37,12 @@ columns: %(columns)s""" % self.__dict__
 
 
 def _run_mtzdump(hklin, keys):
-    try:
-        p = subprocess.Popen(["mtzdump", "HKLIN", hklin],
-                             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-    except OSError as e:
-        put_error("Cannot run mtzdump: %s" % e)
-        sys.exit(1)
-    keys.append("END")
-    stdoutdata, _ = p.communicate(input="\n".join(keys))
-    retcode = p.poll()
-    if retcode:
+    retcode, out, _ = silently_run(['mtzdump', 'HKLIN', hklin],
+                                   stdin_text="\n".join(keys + ['END']))
+    if retcode != 0:
         raise RuntimeError("mtzdump of %s failed" % hklin)
-    return stdoutdata
+    return out
+
 
 def read_metadata(hklin):
     "for now using mtzdump, directly calling libccp4/mtzlib would be better"

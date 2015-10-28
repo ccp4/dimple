@@ -382,12 +382,6 @@ def _get_input_as_string(job):
     else:
         return job.std_input
 
-def _just_run(process, job):
-    job_input = _get_input_as_string(job)
-    out, err = process.communicate(input=job_input)
-    job.out.lines = out.splitlines(True)
-    job.err.lines = err.splitlines(True)
-
 def _run_and_parse(process, job):
     try:
         # job.*.que can be used by parsers (via Output.read_line() or directly)
@@ -460,25 +454,6 @@ class Workflow:
         with open(self.path(PICKLE_FILENAME), "rb") as f:
             return pickle.load(f)
 
-    def silently_run_job(self, job):
-        job.started = time.time()
-        try:
-            process = Popen(job.args, stdin=PIPE, stdout=PIPE, stderr=PIPE,
-                            cwd=self.output_dir)
-        except OSError as e:
-            if e.errno == errno.ENOENT:
-                raise JobError("Program not found: %s\n" % job.args[0])
-            else:
-                raise
-        try:
-            _just_run(process, job)
-        except KeyboardInterrupt:
-            raise JobError("KeyboardInterrupt while running %s" % job.name,
-                           note=job.args_as_str())
-        finally:
-            job.total_time = time.time() - job.started
-        return process.poll()
-
     def run_job(self, job, show_progress, new_line=True):
         if not hasattr(sys.stdout, 'isatty') or not sys.stdout.isatty():
             show_progress = False
@@ -542,7 +517,10 @@ class Workflow:
             if job.parser is not None or show_progress:
                 _run_and_parse(process, job)
             else:
-                _just_run(process, job)
+                job_input = _get_input_as_string(job)
+                out, err = process.communicate(input=job_input)
+                job.out.lines = out.splitlines(True)
+                job.err.lines = err.splitlines(True)
         except KeyboardInterrupt:
             raise JobError("KeyboardInterrupt while running %s" % job.name,
                            note=job.args_as_str())

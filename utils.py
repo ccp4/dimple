@@ -1,7 +1,8 @@
+import errno
 import os
 import sys
 import platform
-import subprocess
+from subprocess import Popen, PIPE, STDOUT, check_output, CalledProcessError
 import time
 
 _logfile = None
@@ -175,9 +176,9 @@ def _find_mount_point(path):
 
 def _report_quota(quota_prog, mount_point):
     try:
-        out = subprocess.check_output([quota_prog, '-w', '-p', '-f',
-                                       mount_point], stderr=subprocess.STDOUT)
-    except subprocess.CalledProcessError:
+        out = check_output([quota_prog, '-w', '-p', '-f', mount_point],
+                           stderr=STDOUT)
+    except CalledProcessError:
         return
     lines = out.splitlines()
     if len(lines) == 3:
@@ -191,9 +192,8 @@ def _report_quota(quota_prog, mount_point):
                     (mount_point, blocks, quota, percent))
     else:
         try:
-            out = subprocess.check_output([quota_prog],
-                                          stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError:
+            out = check_output([quota_prog], stderr=STDOUT)
+        except CalledProcessError:
             return
         if out:
             _log_comment(out)
@@ -219,6 +219,21 @@ def report_disk_space(paths):
             if os.path.exists(quota):
                 _report_quota(quota, mount)
                 break
+
+def silently_run(args, stdin_text="", cwd=None):
+    try:
+        process = Popen(args, stdin=PIPE, stdout=PIPE, stderr=PIPE, cwd=cwd)
+    except OSError as e:
+        if e.errno == errno.ENOENT:
+            raise RuntimeError("Program not found: %s\n" % args[0])
+        else:
+            raise
+    try:
+        out, err = process.communicate(input=stdin_text)
+    except KeyboardInterrupt:
+        raise RuntimeError("Interrupted silent running of %s" % args[0])
+    return process.poll(), out, err
+
 
 
 if __name__ == '__main__':
