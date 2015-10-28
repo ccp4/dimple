@@ -590,24 +590,29 @@ class Workflow:
             job.std_input = keys.strip() + "\nend"
         return job
 
-    def phaser_auto(self, hklin, labin, model, root, sg_alt="NONE",
-                    solvent_percent=None):
+    def phaser_auto(self, hklin, labin, model, root, solvent_percent,
+                    sg_alt="NONE"):
         lines = ['MODE MR_AUTO',
                  'SEARCH METHOD FAST',
                  'SEARCH DEEP OFF',
+                 'ENSEMBLE p PDBFILE "%(pdb)s" IDENTITY %(identity)g' % model,
+                 'SEARCH ENSEMBLE p NUM %(num)d' % model,
+                 'COMPOSITION BY SOLVENT',
+                 'COMPOSITION PERCENTAGE %f' % solvent_percent,
+                 # Since Phaser 2.5.6 template matched solutions are moved
+                 # to the template solution origin. Which is better than
+                 # getting a solution one cell away, so we set template here.
+                 'SOLUTION TEMPLATE original_model',
+                 'SOLUTION 6DIM ENSE p EULER 0 0 0 FRAC 0 0 0',
                  'HKLIN "%s"' % hklin,
                  'LABIN %s' % labin,
-                 'SGALTERNATIVE SELECT %s' % sg_alt]
-        if solvent_percent:
-            lines += ['COMPOSITION BY SOLVENT',
-                      'COMPOSITION PERCENTAGE %f' % solvent_percent]
-        lines += ('ENSEMBLE p PDBFILE %(pdb)s IDENTITY %(identity)g\n'
-                  'SEARCH ENSEMBLE p NUM %(num)d' % model).splitlines()
-        # For tNCS we go with what phaser does by default -- tNCS of order 2
+                 'SGALTERNATIVE SELECT %s' % sg_alt,
+                 'ROOT %s' % root,
+                 ]
+        # tNCS: we go with what phaser does by default -- tNCS of order 2
         # are handled automatically. While we could specify tNCS for
         # pseudo-tripling/quadrupling of the cell (TNCS NMOL 3) I don't know
         # if it'd do more good or bad.
-        lines += ["ROOT %s" % root]
         job = ccp4_job(self, "phaser", input=lines, parser="_phaser_parser")
         return job
 

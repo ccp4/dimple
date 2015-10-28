@@ -199,9 +199,9 @@ def dimple(wf, opt):
             wf.temporary_files |= {"phaser.1.pdb", "phaser.1.mtz"}
             wf.phaser_auto(hklin=prepared_mtz,
                            labin="F = F SIGF = SIGF",
-                           sg_alt="ALL",
                            model=dict(pdb=rb_xyzin, identity=100, num=num),
                            solvent_percent=solvent_pct,
+                           sg_alt="ALL",
                            root='phaser').run()
             phaser_data = wf.jobs[-1].data
             if phaser_data['status'].startswith('Sorry'):
