@@ -159,8 +159,9 @@ def dimple(wf, opt):
                        libin=None,
                        keys="""refinement type rigidbody resolution 15 3.5
                                rigidbody ncycle 10""").run()
+        # if the error is caused by mtz/pdb disagreement, continue with MR
         except workflow.JobError as e:
-            if wf.jobs[-1].exit_status == 1:  # possibly mtz/pdb disagreement
+            if wf.jobs[-1].exit_status == 1 and "Interrupt" not in e.msg:
                 comment("\n" + e.msg)
                 if opt.mr_when_r >= 1:
                     comment("\n" + e.note)
