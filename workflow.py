@@ -108,8 +108,7 @@ class Job:
         self.err = Output("err")
         self.started = None  # will be set to time.time() at start
         self.total_time = None  # will be set when job ends
-        # possible values: None (default),
-        #                  'preview' (stdout preview),
+        # possible values: None (stdout preview),
         #                  string starting with space (' ') that is just shown,
         #                  or name of global function that parses output
         self.parser = None
@@ -135,22 +134,19 @@ class Job:
         return self.workflow.run_job(job=self, show_progress=True)
 
     def parse(self):
-        preview_mode = (self.parser == "preview")
-        if self.parser is None or preview_mode:
+        if self.parser is None:  # preview mode
             # generic non-parser
             line = ""
             for line in self.out.read_line():
                 pass
-
-            if preview_mode and line:
+            if line:
                 # we only remove \e[1m (bold), it can be generalized if needed
                 trimmed = line.strip().replace('\033[1m', '')
-                return "[%d] %-44.44s" % (len(self.out.lines), trimmed)
-
-            ret = "stdout:%11s" % self.out.size_as_str()
-            if self.err:
-                ret += " stderr: %s" % self.err.size_as_str()
-            if preview_mode:
+                ret = "[%d] %-44.44s" % (len(self.out.lines), trimmed)
+            else:
+                ret = "stdout:%11s" % self.out.size_as_str()
+                if self.err:
+                    ret += " stderr: %s" % self.err.size_as_str()
                 ret = ret.ljust(50)
             return ret
 
@@ -717,7 +713,6 @@ class Workflow:
             job.args.append(helper_path)
         else:
             job.std_input = script_text
-        job.parser = "preview"
         return job
 
     def render_r3d(self, name, img_format="png"):
