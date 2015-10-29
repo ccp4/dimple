@@ -628,9 +628,9 @@ class Workflow:
                                "labout %s" % labout],
                         parser="")
 
-    def freerflag(self, hklin, hklout, keys=""):
+    def freerflag(self, hklin, hklout, keys="", parser=""):
         return ccp4_job(self, "freerflag", logical=locals(), input=keys,
-                        parser="")
+                        parser=parser)
 
     #def reindex(self, hklin, hklout, symmetry):
     #    return ccp4_job(self, "reindex", logical=locals(),

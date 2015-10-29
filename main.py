@@ -133,10 +133,10 @@ def dimple(wf, opt):
                    """ % (free_col, mtz_meta.dmax-mtz_meta.d_eps)).run()
     freerflag_missing = wf.count_mtz_missing(prepared_mtz, free_col)
     if freerflag_missing:
-        comment("\nAdding free-R flags for %d reflections."
-                % freerflag_missing)
         wf.freerflag(hklin=prepared_mtz, hklout="prepared2.mtz",
-                     keys="COMPLETE FREE="+free_col).run()
+                     keys="COMPLETE FREE="+free_col,
+                     parser=" (again, for %d refl. more)" % freerflag_missing
+                    ).run()
         prepared_mtz = "prepared2.mtz"
         wf.temporary_files.add(prepared_mtz)
 
