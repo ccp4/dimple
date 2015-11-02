@@ -326,20 +326,18 @@ def _ctruncate_parser(job):
             _format("%.2f", d.get("L-test")))
 
 
-def ccp4_job(workflow, prog, logical=None,
-             input="",  # pylint: disable=redefined-builtin
-             parser=None, add_end=True):
+def ccp4_job(workflow, prog, logical=None, ki="", parser=None, add_end=True):
     """Handle traditional convention for arguments of CCP4 programs.
-    logical is dictionary with where keys are so-called logical names,
-    input string or list of lines that are to be passed though stdin
-    add_end adds "end" as the last line of stdin
+    logical - dictionary with where keys are so-called logical names.
+    ki (string or list of lines) - Keyworded Input to be passed through stdin.
+    add_end - adds "end" as the last line of stdin
     """
     job = Job(workflow, utils.cbin(prog))
     if logical:
         for a in ["hklin", "hklout", "hklref", "xyzin", "xyzout", "libin"]:
             if logical.get(a):
                 job.args += [a.upper(), logical[a]]
-    lines = (input.splitlines() if isinstance(input, basestring) else input)
+    lines = ki.splitlines() if isinstance(ki, basestring) else ki
     stripped = [a.strip() for a in lines if a and not a.isspace()]
     if add_end and not (stripped and stripped[-1].lower() == "end"):
         stripped.append("end")
@@ -609,38 +607,38 @@ class Workflow:
         # are handled automatically. While we could specify tNCS for
         # pseudo-tripling/quadrupling of the cell (TNCS NMOL 3) I don't know
         # if it'd do more good or bad.
-        job = ccp4_job(self, "phaser", input=lines, parser="_phaser_parser")
+        job = ccp4_job(self, "phaser", ki=lines, parser="_phaser_parser")
         return job
 
     # functions below use logical=locals()
     # pylint: disable=unused-argument
 
     def pointless(self, hklin, xyzin, hklref=None, hklout=None, keys=""):
-        return ccp4_job(self, "pointless", logical=locals(), input=keys,
+        return ccp4_job(self, "pointless", logical=locals(), ki=keys,
                         parser="_pointless_parser")
 
     def unique(self, hklout, cell, symmetry, resolution,
                labout="F=F_UNIQUE SIGF=SIGF_UNIQUE"):
         return ccp4_job(self, "unique", logical=locals(),
-                        input=["cell %g %g %g %g %g %g" % tuple(cell),
-                               "symmetry '%s'" % symmetry,
-                               "resolution %.3f" % resolution,
-                               "labout %s" % labout],
+                        ki=["cell %g %g %g %g %g %g" % tuple(cell),
+                            "symmetry '%s'" % symmetry,
+                            "resolution %.3f" % resolution,
+                            "labout %s" % labout],
                         parser="")
 
     def freerflag(self, hklin, hklout, keys="", parser=""):
-        return ccp4_job(self, "freerflag", logical=locals(), input=keys,
+        return ccp4_job(self, "freerflag", logical=locals(), ki=keys,
                         parser=parser)
 
     #def reindex(self, hklin, hklout, symmetry):
     #    return ccp4_job(self, "reindex", logical=locals(),
-    #                    input=["symmetry '%s'" % symmetry,
-    #                           "reindex h,k,l"])
+    #                    ki=["symmetry '%s'" % symmetry,
+    #                        "reindex h,k,l"])
 
     def truncate(self, hklin, hklout, labin, labout):
         return ccp4_job(self, "truncate", logical=locals(),
-                        input=["labin %s" % labin, "labout %s" % labout,
-                               "NOHARVEST"],
+                        ki=["labin %s" % labin, "labout %s" % labout,
+                            "NOHARVEST"],
                         parser="_truncate_parser")
 
     def ctruncate(self, hklin, hklout, colin):
@@ -651,7 +649,7 @@ class Workflow:
 
     def cad(self, hklin, hklout, keys):
         assert isinstance(hklin, list)
-        job = ccp4_job(self, "cad", logical={}, input=keys,
+        job = ccp4_job(self, "cad", logical={}, ki=keys,
                        parser="_cad_parser")
         # is hklinX only for cad?
         for n, name in enumerate(hklin):
@@ -661,12 +659,12 @@ class Workflow:
 
     def pdbset(self, xyzin, xyzout, cell):
         return ccp4_job(self, "pdbset", logical=locals(),
-                        input=["cell %g %g %g %g %g %g" % cell])
+                        ki=["cell %g %g %g %g %g %g" % cell])
 
     def refmac5(self, hklin, xyzin, hklout, xyzout, labin, labout, libin, keys):
         inp = ["labin %s" % labin, "labout %s" % labout] + keys.splitlines()
         #inp += ['free 6']  # for testing
-        job = ccp4_job(self, "refmac5", logical=locals(), input=inp,
+        job = ccp4_job(self, "refmac5", logical=locals(), ki=inp,
                        parser="_refmac_parser")
         words = keys.split()
         ref_type = "?"
