@@ -241,7 +241,7 @@ def _refmac_parser(job):
         elif line.startswith(" $TEXT:Result: $$ Final results $$") or (
                 selected and not selected[-1].startswith(" $$")):
             selected.append(line)
-    cycle_str = "%2d/%d" % (job.data["cycle"], job.ncyc)
+    cycle_str = "%2d/%d" % (job.data["cycle"], job.data["ncyc"])
     if 'ini_overall_r' in job.data:
         if 'ini_free_r' in job.data:
             return "%s   R/Rfree  %.4f/%.4f  ->  %.4f/%.4f" % (
@@ -674,10 +674,10 @@ class Workflow:
             elif w == "ridge":
                 ref_type = "jelly"
         job.name += " " + ref_type
-        job.ncyc = -1
+        job.data["ncyc"] = -1
         for n, w in enumerate(words[:-1]):
             if w.startswith("ncyc"):
-                job.ncyc = int(words[n+1])
+                job.data["ncyc"] = int(words[n+1])
         return job
 
     def findwaters(self, pdbin, hklin, f, phi, pdbout, sigma=2.0):
