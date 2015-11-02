@@ -17,7 +17,7 @@ from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
 from dimple import coots
 
-__version__ = '2.3.4'
+__version__ = '2.3.5'
 
 
 def dimple(wf, opt):
@@ -101,7 +101,7 @@ def dimple(wf, opt):
                                            expected_symmetry=pdb_meta.symmetry)
         comment("\nFree-R flags from the reference file, column %s." % free_col)
     else:
-        comment("\nGenerate free-R flags")
+        comment("\nGenerate free-R flags (repeatably)")
         free_mtz = "free.mtz"
         wf.temporary_files |= {"unique.mtz", free_mtz}
         # CCP4 freerflag uses always the same pseudo-random sequence by default
@@ -125,12 +125,12 @@ def dimple(wf, opt):
 
     prepared_mtz = "prepared.mtz"
     wf.temporary_files.add(prepared_mtz)
-    # TODO: add SYSAB_KEEP key if spacegroup is to be searched
+    cad_reso = opt.reso or (mtz_meta.dmax - mtz_meta.d_eps)
     wf.cad(hklin=["truncate.mtz", free_mtz], hklout=prepared_mtz,
-           keys="""labin file 1 ALL
-                   labin file 2 E1=%s
-                   reso file 2 1000.0 %g
-                   """ % (free_col, mtz_meta.dmax-mtz_meta.d_eps)).run()
+           keys=["labin file 1 ALL",
+                 "labin file 2 E1=%s" % free_col,
+                 "sysab_keep",  # does it matter?
+                 "reso overall 1000.0 %g" % cad_reso]).run()
     freerflag_missing = wf.count_mtz_missing(prepared_mtz, free_col)
     if freerflag_missing:
         wf.freerflag(hklin=prepared_mtz, hklout="prepared2.mtz",
@@ -409,6 +409,7 @@ def parse_dimple_commands(args):
                         help='format of generated images'+dstr)
     parser.add_argument('--jelly', metavar='N_ITER', type=int,
                     help='run refmac jelly-body before the final refinement')
+    parser.add_argument('--reso', type=float, help='limit the resolution [A]')
     parser.add_argument('--weight', metavar='VALUE', type=float,
                         help='refmac matrix weight (default: auto-weight)')
     parser.add_argument('--restr-cycles', metavar='N', type=int,
