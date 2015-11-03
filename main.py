@@ -152,23 +152,18 @@ def dimple(wf, opt):
     else:
         comment("\nRigid-body refinement with resolution 3.5 A, 10 cycles.")
         wf.temporary_files |= {"refmacRB.pdb", "refmacRB.mtz"}
-        try:  # it may fail because of "Disagreement between mtz and pdb"
-            wf.refmac5(hklin=prepared_mtz, xyzin=rb_xyzin,
-                       hklout="refmacRB.mtz", xyzout="refmacRB.pdb",
-                       labin=refmac_labin_nofree, labout=refmac_labout,
-                       libin=None,
-                       keys="""refinement type rigidbody resolution 15 3.5
-                               rigidbody ncycle 10""").run()
+        # it may fail because of "Disagreement between mtz and pdb"
+        wf.refmac5(hklin=prepared_mtz, xyzin=rb_xyzin,
+                   hklout="refmacRB.mtz", xyzout="refmacRB.pdb",
+                   labin=refmac_labin_nofree, labout=refmac_labout,
+                   libin=None,
+                   keys="""refinement type rigidbody resolution 15 3.5
+                           rigidbody ncycle 10""").run(may_fail=True)
         # if the error is caused by mtz/pdb disagreement, continue with MR
-        except workflow.JobError as e:
-            if wf.jobs[-1].exit_status == 1 and "Interrupt" not in e.msg:
-                comment("\n" + e.msg)
-                if opt.mr_when_r >= 1:
-                    comment("\n" + e.note)
-                    return
-            else:  # other reasons
-                raise
-        if wf.jobs[-1].exit_status == 1:
+        if wf.jobs[-1].exit_status != 0:
+            if opt.mr_when_r >= 1:
+                comment("\nFailed. Would try MR, but it is disabled.")
+                return
             comment("\nTry MR.")
         elif not wf.jobs[-1].data.get("overall_r"):
             comment("\nWARNING: unknown R factor, something went wrong.")
@@ -203,9 +198,11 @@ def dimple(wf, opt):
                            model=dict(pdb=rb_xyzin, identity=100, num=num),
                            solvent_percent=solvent_pct,
                            sg_alt="ALL",
-                           root='phaser').run()
+                           root='phaser').run(may_fail=True)
             phaser_data = wf.jobs[-1].data
-            if phaser_data['status'].startswith('Sorry'):
+            if (wf.jobs[-1].exit_status != 0 or
+                    phaser_data['status'].startswith('Sorry')):
+                comment("\nGiving up.")
                 return
             if phaser_data['SG'] != reindexed_mtz_meta.symmetry:
                 comment("\nSpacegroup changed to %s" % phaser_data['SG'])
@@ -380,7 +377,7 @@ def _generate_scripts_and_pictures(wf, opt, fb_job):
         if n % 3 == 0:
             job.run()
         else: # minimal output
-            wf.run_job(job, show_progress=False, new_line=False)
+            job.run(show_progress=False, new_line=False)
     wf.delete_files([name+".r3d" for name in basenames])
 
 

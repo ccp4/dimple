@@ -130,8 +130,20 @@ class Job:
             s += " << EOF\n%s\nEOF" % self.std_input
         return s
 
-    def run(self):
-        return self.workflow.run_job(job=self, show_progress=True)
+    def run(self, show_progress=True, new_line=True, may_fail=False):
+        self.workflow.run_job(job=self,
+                              show_progress=show_progress, new_line=new_line)
+        if not may_fail and self.exit_status != 0:
+            notes = [self.args_as_str(), ""]
+            if self.out.saved_to:
+                notes += ["stdout -> %s/%s" % (self.workflow.output_dir,
+                                               self.out.saved_to)]
+            if self.err:
+                notes += ["stderr:", self.err.summary()]
+            raise JobError("%s failed (exit status %d)" % (self.name,
+                                                           self.exit_status),
+                           note="\n".join(notes))
+        return self
 
     def parse(self):
         if self.parser is None:  # preview mode
@@ -477,7 +489,7 @@ class Workflow:
             else:
                 utils.put("skipped")
                 utils.log_value("not_run", "skipped")
-            return job
+            return
 
         job.started = time.time()
         utils.log_time("start_time", job.started)
@@ -498,7 +510,7 @@ class Workflow:
                 raise
 
         if self.dry_run:
-            return job
+            return
 
         if show_progress:
             event = threading.Event()
@@ -537,19 +549,8 @@ class Workflow:
                 if k == "selected_lines":
                     v = "\n" + "".join(v) # selected_lines have newlines
                 utils.log_value(k, v)
-        if job.exit_status:
+        if job.exit_status != 0:
             utils.log_value("exit_status", job.exit_status)
-            all_args = job.args_as_str()
-            notes = [all_args, ""]
-            if job.out.saved_to:
-                notes += ["stdout -> %s/%s" % (self.output_dir,
-                                               job.out.saved_to)]
-            if job.err:
-                notes += ["stderr:", job.err.summary()]
-            raise JobError("%s failed (exit status %d)" % (job.name,
-                                                           job.exit_status),
-                           note="\n".join(notes))
-        return job
 
     def _write_logs(self, job):
         log_basename = "%02d-%s" % (len(self.jobs), job.name.replace(" ","_"))
