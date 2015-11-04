@@ -174,12 +174,15 @@ def match_symmetry(meta1, meta2):
         s = first_chars[0] + ''.join(sorted(first_chars[1:]))
         if s == 'I112': # I2 is equivalent to C2
             return 'C112'
+        # note: I see names such as 'H 3' used in ccp4, never 'R 3'
+        if s[0] == 'R':
+            s = 'H' + s[1:]
         return s
     return sig(meta1.symmetry) == sig(meta2.symmetry)
 
 
 _centering_n = {'P': 1, 'A': 2, 'B': 2, 'C': 2, 'I': 2,
-                'R': 3, 'S': 3, 'T': 3, 'F': 4}
+                'R': 3, 'H': 3, 'S': 3, 'T': 3, 'F': 4}
 
 _pg_symop = {'1': 1,
              '2': 2, '121': 2,
