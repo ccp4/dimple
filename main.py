@@ -17,7 +17,7 @@ from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
 from dimple import coots
 
-__version__ = '2.3.5'
+__version__ = '2.3.6'
 
 
 def dimple(wf, opt):
@@ -35,6 +35,7 @@ def dimple(wf, opt):
         comment("\nPDBs in order of similarity (using the first one):")
         opt.pdbs.sort(key=lambda x: calculate_difference_metric(wf.file_info[x],
                                                                 mtz_meta))
+    utils.log_value("data_file", opt.mtz)
     utils.log_value("pdb_files", opt.pdbs)
     for p in opt.pdbs:
         _comment_summary_line(os.path.basename(p), wf.file_info[p])
@@ -458,6 +459,26 @@ def parse_dimple_commands(args):
             or opt.output_dir.endswith('.gz')):
         put_error('The last argument should be output directory')
         sys.exit(1)
+    # special mode for re-running jobs
+    if all_args[0] == 'rerun':
+        if os.path.isdir(all_args[1]):
+            logfile = os.path.join(all_args[1], 'dimple.log')
+        else:
+            logfile = all_args[1]
+        old_wf = utils.read_section_from_log(logfile, 'workflow')
+        try:
+            old_dir = os.path.join(old_wf['cwd'], old_wf['output_dir'])
+            old_pdb = os.path.join(old_dir, 'ini.pdb')
+            if 'data_file' not in old_wf:  # temporary, to be removed soon
+                old_mtz_arg = [a for a in old_wf['args'].split()
+                               if a.endswith('.mtz')][0]
+                old_wf['data_file'] = os.path.join(old_wf['cwd'], old_mtz_arg)
+            old_mtz = os.path.join(old_dir, old_wf['data_file'])
+        except (TypeError, KeyError):
+            put_error('Reading logfile failed')
+            sys.exit(1)
+        all_args[0:2] = [old_pdb, old_mtz]
+
     mtz_args = [a for a in all_args if a.lower().endswith('.mtz')]
     if len(mtz_args) != 1:
         put_error("One mtz file should be given.")

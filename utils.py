@@ -1,4 +1,6 @@
+import ConfigParser
 import errno
+import json
 import os
 import sys
 import platform
@@ -75,6 +77,19 @@ def log_value(key, value):
 def log_time(key, timestamp):
     log_value(key, time.strftime("%Y-%m-%d %H:%M:%S",
                                  time.localtime(timestamp)))
+
+def read_section_from_log(logfile, section):
+    conf = ConfigParser.RawConfigParser()
+    conf.read(logfile)
+    if conf.has_section(section):
+        items = conf.items(section)
+        d = {}
+        for k, v in conf.items(section):
+            if v[:1] == '[':
+                d[k] = json.loads(v.replace("'", '"'))
+            else:
+                d[k] = v
+        return d
 
 def start_log_screen(filename):
     global _screen_logfile  # pylint: disable=global-statement
