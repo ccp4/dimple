@@ -63,7 +63,7 @@ def dimple(wf, opt):
         raise RuntimeError("rwcontents could not interpret %s." % rb_xyzin)
     if solvent_pct > 70:
         comment("\nHmm... %.1f%% of solvent looks suspicious" % solvent_pct)
-    if abs(wf.jobs[-1].data.get('volume', 0) - pdb_meta.get_volume() > 1.0):
+    if abs(wf.jobs[-1].data.get('volume', 0) - pdb_meta.get_volume()) > 10:
         comment("\ndebug: problem when calculating volume?")
 
     if match_symmetry(mtz_meta, pdb_meta):
