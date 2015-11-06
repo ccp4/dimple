@@ -619,11 +619,11 @@ class Workflow:
         return ccp4_job(self, "pointless", logical=locals(), ki=keys,
                         parser="_pointless_parser")
 
-    def unique(self, hklout, cell, symmetry, resolution,
+    def unique(self, hklout, ref, resolution,
                labout="F=F_UNIQUE SIGF=SIGF_UNIQUE"):
         return ccp4_job(self, "unique", logical=locals(),
-                        ki=["cell %g %g %g %g %g %g" % tuple(cell),
-                            "symmetry '%s'" % symmetry,
+                        ki=["cell %g %g %g %g %g %g" % tuple(ref.cell),
+                            "symmetry '%s'" % ref.symmetry,
                             "resolution %.3f" % resolution,
                             "labout %s" % labout],
                         parser="")

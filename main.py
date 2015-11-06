@@ -12,7 +12,7 @@ if __name__ == "__main__" and __package__ is None:
 from dimple import utils
 from dimple.utils import comment, put_error
 from dimple.cell import match_symmetry
-from dimple.mtz import check_freerflags_column
+from dimple.mtz import check_freerflags_column, MtzMeta
 from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
 from dimple import coots
@@ -66,6 +66,7 @@ def dimple(wf, opt):
     if abs(wf.jobs[-1].data.get('volume', 0) - pdb_meta.get_volume()) > 10:
         comment("\ndebug: problem when calculating volume?")
 
+    ####### pointless - reindexing #######
     if match_symmetry(mtz_meta, pdb_meta):
         reindexed_mtz = "pointless.mtz"
         wf.temporary_files.add(reindexed_mtz)
@@ -86,66 +87,22 @@ def dimple(wf, opt):
     reindexed_mtz_meta = wf.read_mtz_metadata(reindexed_mtz)
     if reindexed_mtz_meta.symmetry != mtz_meta.symmetry:
         _comment_summary_line('reindexed MTZ', reindexed_mtz_meta)
-    #comment("\nCalculate structure factor amplitudes")
-    wf.temporary_files.add("truncate.mtz")
+
+    ####### (c)truncate - calculate amplitudes #######
+    f_mtz = "amplit.mtz"
+    wf.temporary_files.add(f_mtz)
     if opt.ItoF_prog == 'truncate':
-        wf.truncate(hklin=reindexed_mtz, hklout="truncate.mtz",
+        wf.truncate(hklin=reindexed_mtz, hklout=f_mtz,
                   labin="IMEAN=%s SIGIMEAN=%s" % (opt.icolumn, opt.sigicolumn),
                   labout="F=F SIGF=SIGF").run()
     else:
-        wf.ctruncate(hklin=reindexed_mtz, hklout="truncate.mtz",
+        wf.ctruncate(hklin=reindexed_mtz, hklout=f_mtz,
                      colin="/*/*/[%s,%s]" % (opt.icolumn, opt.sigicolumn)).run()
 
-    if opt.free_r_flags:
-        free_mtz = opt.free_r_flags
-        free_col = check_freerflags_column(wf.path(free_mtz),
-                                           expected_symmetry=pdb_meta.symmetry)
-        comment("\nFree-R flags from the reference file, column %s." % free_col)
-    else:
-        comment("\nGenerate free-R flags (repeatably)")
-        free_mtz = "free.mtz"
-        wf.temporary_files |= {"unique.mtz", free_mtz}
-        # CCP4 freerflag uses always the same pseudo-random sequence by default
-        if opt.seed_freerflag:
-            wf.unique(hklout="unique.mtz",
-                      cell=pointless_data['output_cell'],
-                      symmetry=pdb_meta.symmetry,
-                      resolution=mtz_meta.dmax-mtz_meta.d_eps,
-                      labout="F=F_UNIQUE SIGF=SIGF_UNIQUE").run()
-            wf.freerflag(hklin="unique.mtz", hklout=free_mtz, keys="SEED").run()
-        else:
-            # here we'd like to have always the same set of free-r flags
-            # for given PDB file. That's why it's MTZ-agnostic.
-            wf.unique(hklout="unique.mtz",
-                      cell=pdb_meta.cell,
-                      symmetry=pdb_meta.symmetry,
-                      resolution=1.0, # somewhat arbitrary limit
-                      labout="F=F_UNIQUE SIGF=SIGF_UNIQUE").run()
-            wf.freerflag(hklin="unique.mtz", hklout=free_mtz).run()
-        free_col = 'FreeR_flag'
-
-    prepared_mtz = "prepared.mtz"
-    wf.temporary_files.add(prepared_mtz)
-    cad_reso = opt.reso or (mtz_meta.dmax - mtz_meta.d_eps)
-    wf.cad(hklin=["truncate.mtz", free_mtz], hklout=prepared_mtz,
-           keys=["labin file 1 ALL",
-                 "labin file 2 E1=%s" % free_col,
-                 "sysab_keep",  # does it matter?
-                 "reso overall 1000.0 %g" % cad_reso]).run()
-    freerflag_missing = wf.count_mtz_missing(prepared_mtz, free_col)
-    if freerflag_missing:
-        wf.freerflag(hklin=prepared_mtz, hklout="prepared2.mtz",
-                     keys="COMPLETE FREE="+free_col,
-                     parser=" (again, for %d refl. more)" % freerflag_missing
-                    ).run()
-        prepared_mtz = "prepared2.mtz"
-        wf.temporary_files.add(prepared_mtz)
-
+    ####### rigid body - check if model is good for refinement? #######
     refmac_labin_nofree = "FP=F SIGFP=SIGF"
-    refmac_labin = "%s FREE=%s" % (refmac_labin_nofree, free_col)
     refmac_labout = ("FC=FC PHIC=PHIC FWT=2FOFCWT PHWT=PH2FOFCWT "
                      "DELFWT=FOFCWT PHDELWT=PHFOFCWT")
-
     refmac_xyzin = None
     cell_diff = calculate_difference_metric(pdb_meta, reindexed_mtz_meta)
     if cell_diff > 0.1 and opt.mr_when_r < 1:
@@ -154,7 +111,7 @@ def dimple(wf, opt):
         comment("\nRigid-body refinement with resolution 3.5 A, 10 cycles.")
         wf.temporary_files |= {"refmacRB.pdb", "refmacRB.mtz"}
         # it may fail because of "Disagreement between mtz and pdb"
-        wf.refmac5(hklin=prepared_mtz, xyzin=rb_xyzin,
+        wf.refmac5(hklin=f_mtz, xyzin=rb_xyzin,
                    hklout="refmacRB.mtz", xyzout="refmacRB.pdb",
                    labin=refmac_labin_nofree, labout=refmac_labout,
                    libin=None,
@@ -175,6 +132,7 @@ def dimple(wf, opt):
             comment("\nNo MR for R < %g" % opt.mr_when_r)
             refmac_xyzin = "refmacRB.pdb"
 
+    ####### phaser/molrep - molecular replacement #######
     if refmac_xyzin is None:
         # pdb_num_mol accounts for strict NCS (MTRIX without iGiven)
         vol_ratio = mtz_meta.asu_volume() / pdb_meta.asu_volume(pdb_num_mol)
@@ -185,7 +143,7 @@ def dimple(wf, opt):
                                        solvent_pct > 70):
             wf.temporary_files |= {"molrep.pdb", "molrep_dimer.pdb",
                                    "molrep.crd"}
-            wf.molrep(f=prepared_mtz, m=rb_xyzin).run()
+            wf.molrep(f=f_mtz, m=rb_xyzin).run()
             refmac_xyzin = "molrep.pdb"
         else:
             num = 1
@@ -194,7 +152,7 @@ def dimple(wf, opt):
                 comment("\nSearching %d molecules, asu is %.1f x larger "
                         "than in the model" % (num, vol_ratio))
             wf.temporary_files |= {"phaser.1.pdb", "phaser.1.mtz"}
-            wf.phaser_auto(hklin=prepared_mtz,
+            wf.phaser_auto(hklin=f_mtz,
                            labin="F = F SIGF = SIGF",
                            model=dict(pdb=rb_xyzin, identity=100, num=num),
                            solvent_percent=solvent_pct,
@@ -208,13 +166,55 @@ def dimple(wf, opt):
             if phaser_data['SG'] != reindexed_mtz_meta.symmetry:
                 comment("\nSpacegroup changed to %s" % phaser_data['SG'])
             refmac_xyzin = "phaser.1.pdb"
-            prepared_mtz = "phaser.1.mtz"
+            f_mtz = "phaser.1.mtz"
 
     if False:
-        wf.findwaters(pdbin=refmac_xyzin, hklin=prepared_mtz,
+        wf.findwaters(pdbin=refmac_xyzin, hklin=f_mtz,
                       f="FC", phi="PHIC", pdbout="prepared_wat.pdb", sigma=2)
         refmac_xyzin = "prepared_wat.pdb"
 
+    ####### adding free-R flags #######
+    cad_reso = opt.reso or (reindexed_mtz_meta.dmax - MtzMeta.d_eps)
+    if opt.free_r_flags:
+        free_mtz = opt.free_r_flags
+        free_col = check_freerflags_column(wf.path(free_mtz),
+                                           expected_symmetry=pdb_meta.symmetry)
+        comment("\nFree-R flags from the reference file, column %s." % free_col)
+    else:
+        free_mtz = "free.mtz"
+        wf.temporary_files |= {"unique.mtz", free_mtz}
+        # CCP4 freerflag uses always the same pseudo-random sequence by default
+        if opt.seed_freerflag:
+            comment("\nGenerate free-R flags")
+            wf.unique(hklout="unique.mtz", ref=reindexed_mtz_meta,
+                      resolution=cad_reso).run()
+            wf.freerflag(hklin="unique.mtz", hklout=free_mtz, keys="SEED").run()
+        else:
+            comment("\nGenerate free-R flags (repeatably)")
+            # here we'd like to have always the same set of free-r flags
+            # for given PDB file. That's why it's using cell parameters
+            # from pdb not mtz and why always the same resolution is set.
+            wf.unique(hklout="unique.mtz", ref=pdb_meta, resolution=1.0).run()
+            wf.freerflag(hklin="unique.mtz", hklout=free_mtz).run()
+        free_col = 'FreeR_flag'
+
+    prepared_mtz = "prepared.mtz"
+    wf.temporary_files.add(prepared_mtz)
+    wf.cad(hklin=[f_mtz, free_mtz], hklout=prepared_mtz,
+           keys=["labin file 1 ALL",
+                 "labin file 2 E1=%s" % free_col,
+                 "sysab_keep",  # does it matter?
+                 "reso overall 1000.0 %g" % cad_reso]).run()
+    freerflag_missing = wf.count_mtz_missing(prepared_mtz, free_col)
+    if freerflag_missing:
+        wf.freerflag(hklin=prepared_mtz, hklout="prepared2.mtz",
+                     keys="COMPLETE FREE="+free_col,
+                     parser=" (again, for %d refl. more)" % freerflag_missing
+                    ).run()
+        prepared_mtz = "prepared2.mtz"
+        wf.temporary_files.add(prepared_mtz)
+
+    ####### refinement #######
     if opt.weight:
         refmac_weight = "matrix %f" % opt.weight
     else:
@@ -224,6 +224,7 @@ def dimple(wf, opt):
      refinement type restrained
      weight %s
      """ % refmac_weight
+    refmac_labin = "%s FREE=%s" % (refmac_labin_nofree, free_col)
     if opt.jelly:
         comment("\nJelly-body refinement, %d cycles." % opt.jelly)
         wf.temporary_files |= {"jelly.pdb", "jelly.mtz"}
@@ -249,6 +250,7 @@ def dimple(wf, opt):
                     prev[0].data["overall_r"], prev[0].data["free_r"],
                     restr_job.data["free_r"] - prev[0].data["free_r"]))
 
+    ####### check blobs and finish #######
     fb_job = wf.find_blobs(opt.hklout, opt.xyzout, sigma=0.8).run()
     _generate_scripts_and_pictures(wf, opt, fb_job)
 
