@@ -26,7 +26,7 @@ def dimple(wf, opt):
     mtz_meta = wf.read_mtz_metadata(opt.mtz)
     mtz_meta.check_col_type(opt.icolumn, 'J')
     mtz_meta.check_col_type(opt.sigicolumn, 'Q')
-    _comment_summary_line("MTZ", mtz_meta)
+    _comment_summary_line("MTZ (%.1fA)" % mtz_meta.dmax, mtz_meta)
     if opt.dls_naming:
         opt.pdbs = dls_name_filter(opt.pdbs)
     for p in opt.pdbs:
