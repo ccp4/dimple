@@ -310,8 +310,12 @@ def _phaser_parser(job):
             d['status'] = '[%s]' % line[19:70].strip().lower()
         if line.startswith('   SOLU SET ') and 'LLG=' in line:
             d['status'] = line[12:].strip()
+            if len(d['status']) > 52:
+                d['status'] = d['status'][:50].rsplit(' ', 1)[0] + '...'
         if line.startswith('   Sorry - No solution'):
             d['status'] = line.strip()
+            if 'No solution with all components' in line:
+                d['partial_solution'] = 'yes'
         if line.startswith('   SOLU SPAC '):
             d['SG'] = line[13:].strip()
     return "%-48s" % d.get('status', '')
@@ -611,6 +615,16 @@ class Workflow:
         # if it'd do more good or bad.
         job = ccp4_job(self, "phaser", ki=lines, parser="_phaser_parser")
         return job
+
+    def get_phaser_solu_set(self, root='phaser'):
+        sol_path = self.path(root + '.sol')
+        try:
+            with open(sol_path) as f:
+                for line in f:
+                    if f.startswith('SOLU SET '):
+                        return line[9:]
+        except IOError:
+            return
 
     # functions below use logical=locals()
     # pylint: disable=unused-argument

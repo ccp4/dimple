@@ -17,7 +17,7 @@ from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
 from dimple import coots
 
-__version__ = '2.3.6'
+__version__ = '2.3.7'
 
 
 def dimple(wf, opt):
@@ -160,9 +160,16 @@ def dimple(wf, opt):
                            root='phaser').run(may_fail=True)
             phaser_data = wf.jobs[-1].data
             if (wf.jobs[-1].exit_status != 0 or
-                    phaser_data['status'].startswith('Sorry')):
+                    phaser_data['status'] == 'Sorry - No solution'):
                 comment("\nGiving up.")
                 return
+            if phaser_data['status'].endswith('...'):
+                solu_set = wf.get_phaser_solu_set(root='phaser')
+                if solu_set:
+                    comment("\n... " + solu_set[len(phaser_data['status'])-3:])
+                    phaser_data['status'] = solu_set
+            if phaser_data.get('partial_solution'):
+                comment("\nOnly partial solution found")
             if phaser_data['SG'] != reindexed_mtz_meta.symmetry:
                 comment("\nSpacegroup changed to %s" % phaser_data['SG'])
             refmac_xyzin = "phaser.1.pdb"
