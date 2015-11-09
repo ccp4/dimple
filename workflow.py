@@ -621,8 +621,8 @@ class Workflow:
         try:
             with open(sol_path) as f:
                 for line in f:
-                    if f.startswith('SOLU SET '):
-                        return line[9:]
+                    if line.startswith('SOLU SET '):
+                        return line[9:].strip()
         except IOError:
             return
 
