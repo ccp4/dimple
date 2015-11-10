@@ -433,7 +433,8 @@ def parse_dimple_commands(args):
     parser.add_argument('--libin', metavar='CIF',
                         help='ligand descriptions for refmac (LIBIN)')
     parser.add_argument('-R', '--free-r-flags', metavar='MTZ_FILE',
-                    help='reference file with all reflections and freeR flags')
+                    help='reference file with all reflections and freeR flags'
+                         ' or "-" to use flags from the input file')
     parser.add_argument('-M', '--mr-when-r', type=float, default=0.4,
                         metavar='NUM',
                         help='threshold for Molecular Replacement'+dstr)
@@ -513,6 +514,8 @@ def parse_dimple_commands(args):
     if len(opt.pdbs) == 0:
         put_error("At least one pdb file should be given.")
         sys.exit(1)
+    if opt.free_r_flags == '-':
+        opt.free_r_flags = opt.mtz
 
     # extra checks
     for filename in opt.pdbs + [opt.mtz, opt.free_r_flags, opt.libin]:
