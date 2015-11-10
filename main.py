@@ -79,9 +79,10 @@ def dimple(wf, opt):
                 comment("\n    %-10s CC: %-8.3f cell diff: %.1fA" % (
                         ar['op'], ar['cc'], ar['cell_deviat']))
         else:
-            # until recently (2015) pointless did't print CC for non-ambiguous
-            # spacegroups (e.g. C2), but now it always prints (?)
+            # until recently (2015) pointless didn't print CC for non-ambiguous
+            # spacegroups (e.g. C2), but now it always prints
             comment("\n    no good indexing")
+            reindexed_mtz = opt.mtz
     else:
         reindexed_mtz = opt.mtz
     reindexed_mtz_meta = wf.read_mtz_metadata(reindexed_mtz)
@@ -216,7 +217,7 @@ def dimple(wf, opt):
             wf.freerflag(hklin="unique.mtz", hklout=free_mtz).run()
 
     if free_mtz == opt.mtz and opt.reso is None:
-       prepared_mtz = f_mtz
+        prepared_mtz = f_mtz
     else:
         prepared_mtz = "prepared.mtz"
         wf.temporary_files.add(prepared_mtz)
