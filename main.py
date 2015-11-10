@@ -17,7 +17,7 @@ from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
 from dimple import coots
 
-__version__ = '2.3.7'
+__version__ = '2.3.8'
 
 
 def dimple(wf, opt):
@@ -578,7 +578,10 @@ def main(args):
         exit_status = 0
     except workflow.JobError as e:
         put_error(e.msg, comment=e.note)
-        utils.report_disk_space([wf.output_dir, os.getenv("CCP4_SCR")])
+        try:
+            utils.report_disk_space([wf.output_dir, os.getenv("CCP4_SCR")])
+        except KeyboardInterrupt:
+            comment("\nok, exiting...")
         exit_status = 1
     except RuntimeError as e:
         put_error(e)
