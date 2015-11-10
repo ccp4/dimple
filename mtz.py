@@ -2,7 +2,7 @@
 from collections import OrderedDict
 import sys
 from dimple.utils import put_error, comment, silently_run
-from dimple.cell import Cell
+from dimple.cell import Cell, match_symmetry
 
 class MtzMeta(Cell):
     d_eps = 0.00051 # dmax precision (so low b/c it is read from mtzdump)
@@ -75,9 +75,9 @@ def read_metadata(hklin):
 def check_freerflags_column(free_mtz, expected_symmetry):
     names = ['FreeR_flag', 'FREE']
     rfree_meta = read_metadata(free_mtz)
-    if rfree_meta.symmetry != expected_symmetry:
-        comment("WARNING: R-free flag reference file is %s not %s.\n" %
-                (rfree_meta.symmetry, expected_symmetry))
+    if not match_symmetry(rfree_meta, expected_symmetry):
+        comment("\nWARNING: R-free flag reference file is %s not %s." %
+                (rfree_meta.symmetry, expected_symmetry.symmetry))
     for name in names:
         if name in rfree_meta.columns:
             rfree_meta.check_col_type(name, 'I')

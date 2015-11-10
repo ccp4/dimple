@@ -171,7 +171,7 @@ def dimple(wf, opt):
             if phaser_data['status'].endswith('...'):
                 solu_set = wf.get_phaser_solu_set(root='phaser')
                 if solu_set:
-                    comment("\n... " + solu_set[len(phaser_data['status'])-3:])
+                    comment("\n..." + solu_set[len(phaser_data['status'])-3:])
                     phaser_data['status'] = solu_set
             if phaser_data.get('partial_solution'):
                 comment("\nOnly partial solution found")
@@ -191,8 +191,9 @@ def dimple(wf, opt):
     if opt.free_r_flags:
         free_mtz = opt.free_r_flags
         free_col = check_freerflags_column(wf.path(free_mtz),
-                                           expected_symmetry=pdb_meta.symmetry)
-        comment("\nFree-R flags from the reference file, column %s." % free_col)
+                                           expected_symmetry=pdb_meta)
+        comment("\nFree-R flags from the %s file, column %s." %
+                (("reference" if free_mtz != opt.mtz else 'input'), free_col))
     else:
         free_col = 'FreeR_flag'
         if free_col in f_mtz_cols:
@@ -214,13 +215,16 @@ def dimple(wf, opt):
             wf.unique(hklout="unique.mtz", ref=pdb_meta, resolution=1.0).run()
             wf.freerflag(hklin="unique.mtz", hklout=free_mtz).run()
 
-    prepared_mtz = "prepared.mtz"
-    wf.temporary_files.add(prepared_mtz)
-    wf.cad(data_in=[(f_mtz, [c for c in f_mtz_cols if c != free_col]),
-                    (free_mtz, [free_col])],
-           hklout=prepared_mtz,
-           keys=["sysab_keep",  # does it matter?
-                 "reso overall 1000.0 %g" % cad_reso]).run()
+    if free_mtz == opt.mtz and opt.reso is None:
+       prepared_mtz = f_mtz
+    else:
+        prepared_mtz = "prepared.mtz"
+        wf.temporary_files.add(prepared_mtz)
+        wf.cad(data_in=[(f_mtz, [c for c in f_mtz_cols if c != free_col]),
+                        (free_mtz, [free_col])],
+               hklout=prepared_mtz,
+               keys=["sysab_keep",  # does it matter?
+                     "reso overall 1000.0 %g" % cad_reso]).run()
     freerflag_missing = wf.count_mtz_missing(prepared_mtz, free_col)
     if freerflag_missing:
         wf.freerflag(hklin=prepared_mtz, hklout="prepared2.mtz",
@@ -513,6 +517,10 @@ def parse_dimple_commands(args):
             sys.exit(1)
     if len(opt.pdbs) == 0:
         put_error("At least one pdb file should be given.")
+        sys.exit(1)
+    if opt.seed_freerflag and opt.free_r_flags:
+        put_error("Option --seed-freerflag and --free-r-flags"
+                  " don't make sense together")
         sys.exit(1)
     if opt.free_r_flags == '-':
         opt.free_r_flags = opt.mtz
