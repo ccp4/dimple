@@ -186,6 +186,7 @@ def dimple(wf, opt):
         refmac_xyzin = "prepared_wat.pdb"
 
     ####### adding free-R flags #######
+    f_mtz_cols = wf.read_mtz_metadata(f_mtz).columns.keys()
     cad_reso = opt.reso or (reindexed_mtz_meta.dmax - MtzMeta.d_eps)
     if opt.free_r_flags:
         free_mtz = opt.free_r_flags
@@ -193,26 +194,28 @@ def dimple(wf, opt):
                                            expected_symmetry=pdb_meta.symmetry)
         comment("\nFree-R flags from the reference file, column %s." % free_col)
     else:
+        free_col = 'FreeR_flag'
+        if free_col in f_mtz_cols:
+            comment("\nReplace free-R flags")
+        else:
+            comment("\nGenerate free-R flags")
         free_mtz = "free.mtz"
         wf.temporary_files |= {"unique.mtz", free_mtz}
         # CCP4 freerflag uses always the same pseudo-random sequence by default
         if opt.seed_freerflag:
-            comment("\nGenerate free-R flags")
             wf.unique(hklout="unique.mtz", ref=reindexed_mtz_meta,
                       resolution=cad_reso).run()
             wf.freerflag(hklin="unique.mtz", hklout=free_mtz, keys="SEED").run()
         else:
-            comment("\nGenerate free-R flags (repeatably)")
+            comment(" (repeatably)")
             # here we'd like to have always the same set of free-r flags
             # for given PDB file. That's why it's using cell parameters
             # from pdb not mtz and why always the same resolution is set.
             wf.unique(hklout="unique.mtz", ref=pdb_meta, resolution=1.0).run()
             wf.freerflag(hklin="unique.mtz", hklout=free_mtz).run()
-        free_col = 'FreeR_flag'
 
     prepared_mtz = "prepared.mtz"
     wf.temporary_files.add(prepared_mtz)
-    f_mtz_cols = wf.read_mtz_metadata(f_mtz).columns.keys()
     wf.cad(data_in=[(f_mtz, [c for c in f_mtz_cols if c != free_col]),
                     (free_mtz, [free_col])],
            hklout=prepared_mtz,
