@@ -24,7 +24,7 @@ def dimple(wf, opt):
     comment("%8s### Dimple v%s. Problems and suggestions:"
             " ccp4@ccp4.ac.uk ###" % ('', __version__))
     mtz_meta = wf.read_mtz_metadata(opt.mtz)
-    mtz_meta.check_col_type(opt.icolumn, 'J')
+    mtz_meta.check_col_type(opt.icolumn or 'IMEAN', 'J')
     mtz_meta.check_col_type(opt.sigicolumn, 'Q')
     _comment_summary_line("MTZ (%.1fA)" % mtz_meta.dmax, mtz_meta)
     if opt.dls_naming:
@@ -89,15 +89,20 @@ def dimple(wf, opt):
         _comment_summary_line('reindexed MTZ', reindexed_mtz_meta)
 
     ####### (c)truncate - calculate amplitudes #######
-    f_mtz = "amplit.mtz"
-    wf.temporary_files.add(f_mtz)
-    if opt.ItoF_prog == 'truncate':
-        wf.truncate(hklin=reindexed_mtz, hklout=f_mtz,
-                  labin="IMEAN=%s SIGIMEAN=%s" % (opt.icolumn, opt.sigicolumn),
-                  labout="F=F SIGF=SIGF").run()
+    if (opt.ItoF_prog or opt.icolumn or 'F' not in mtz_meta.columns
+                                  or 'SIGF' not in mtz_meta.columns):
+        f_mtz = "amplit.mtz"
+        wf.temporary_files.add(f_mtz)
+        i_sigi_cols = (opt.icolumn or 'IMEAN', opt.sigicolumn)
+        if opt.ItoF_prog == 'ctruncate' or (opt.ItoF_prog is None and opt.slow):
+            wf.ctruncate(hklin=reindexed_mtz, hklout=f_mtz,
+                         colin="/*/*/[%s,%s]" % i_sigi_cols).run()
+        else:
+            wf.truncate(hklin=reindexed_mtz, hklout=f_mtz,
+                        labin="IMEAN=%s SIGIMEAN=%s" % i_sigi_cols,
+                        labout="F=F SIGF=SIGF").run()
     else:
-        wf.ctruncate(hklin=reindexed_mtz, hklout=f_mtz,
-                     colin="/*/*/[%s,%s]" % (opt.icolumn, opt.sigicolumn)).run()
+        f_mtz = reindexed_mtz
 
     ####### rigid body - check if model is good for refinement? #######
     refmac_labin_nofree = "FP=F SIGFP=SIGF"
@@ -207,10 +212,11 @@ def dimple(wf, opt):
 
     prepared_mtz = "prepared.mtz"
     wf.temporary_files.add(prepared_mtz)
-    wf.cad(hklin=[f_mtz, free_mtz], hklout=prepared_mtz,
-           keys=["labin file 1 ALL",
-                 "labin file 2 E1=%s" % free_col,
-                 "sysab_keep",  # does it matter?
+    f_mtz_cols = wf.read_mtz_metadata(f_mtz).columns.keys()
+    wf.cad(data_in=[(f_mtz, [c for c in f_mtz_cols if c != free_col]),
+                    (free_mtz, [free_col])],
+           hklout=prepared_mtz,
+           keys=["sysab_keep",  # does it matter?
                  "reso overall 1000.0 %g" % cad_reso]).run()
     freerflag_missing = wf.count_mtz_missing(prepared_mtz, free_col)
     if freerflag_missing:
@@ -431,7 +437,7 @@ def parse_dimple_commands(args):
     parser.add_argument('--MR-prog', choices=['phaser', 'molrep'],
                         help='Molecular Replacement program')
     parser.add_argument('-I', '--icolumn', metavar='ICOL',
-                        default='IMEAN', help='I column label'+dstr)
+                        help='I column label (default: IMEAN)')
     parser.add_argument('--sigicolumn', metavar='SIGICOL',
                         default='SIG<ICOL>', help='SIGI column label'+dstr)
     parser.add_argument('--ItoF-prog', choices=['truncate', 'ctruncate'],
@@ -523,12 +529,10 @@ def parse_dimple_commands(args):
         opt.libin = utils.adjust_path(opt.libin, opt.output_dir)
 
     # the default value of sigicolumn ('SIG<ICOL>') needs substitution
-    opt.sigicolumn = opt.sigicolumn.replace('<ICOL>', opt.icolumn)
+    opt.sigicolumn = opt.sigicolumn.replace('<ICOL>', opt.icolumn or 'IMEAN')
 
     if opt.restr_cycles is None:
         opt.restr_cycles = (12 if opt.slow else 8)
-    if opt.ItoF_prog is None:
-        opt.ItoF_prog = ('ctruncate' if opt.slow else 'truncate')
     if opt.jelly is None and opt.slow:
         pass # opt.jelly = 50  # isn't it too slow?
 

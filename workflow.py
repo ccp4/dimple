@@ -347,6 +347,9 @@ def ccp4_job(workflow, prog, logical=None, ki="", parser=None, add_end=True):
     logical - dictionary with where keys are so-called logical names.
     ki (string or list of lines) - Keyworded Input to be passed through stdin.
     add_end - adds "end" as the last line of stdin
+
+    Note: "colin" and "labin" mean the same (column label),
+    but different programs use different keywords.
     """
     job = Job(workflow, utils.cbin(prog))
     if logical:
@@ -663,14 +666,19 @@ class Workflow:
         job.parser = "_ctruncate_parser"
         return job
 
-    def cad(self, hklin, hklout, keys):
-        assert isinstance(hklin, list)
-        job = ccp4_job(self, "cad", logical={}, ki=keys,
+    def cad(self, data_in, hklout, keys):
+        assert isinstance(data_in, list)
+        hklin_args = []
+        labin = []
+        for n, (hklin, labels) in enumerate(data_in):
+            labels = [a for a in labels if a not in ('H', 'K', 'L')]
+            hklin_args += ["HKLIN%d" % (n+1), hklin]
+            labin.append("labin file %d " % (n+1) +
+                         " ".join("E%d=%s" % (k+1, label)
+                                  for k, label in enumerate(labels)))
+        job = ccp4_job(self, "cad", logical={}, ki=(labin + keys),
                        parser="_cad_parser")
-        # is hklinX only for cad?
-        for n, name in enumerate(hklin):
-            job.args += ["HKLIN%d" % (n+1), name]
-        job.args += ["HKLOUT", hklout]
+        job.args += hklin_args + ["HKLOUT", hklout]
         return job
 
     def pdbset(self, xyzin, xyzout, cell):
