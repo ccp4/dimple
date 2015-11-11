@@ -637,6 +637,8 @@ class Workflow:
                  'SEARCH METHOD FAST',
                  'SEARCH DEEP OFF',
                  'ENSEMBLE p PDBFILE "%(pdb)s" IDENTITY %(identity)g' % model,
+                 # if --no-hetatm was used HETATM records are already removed
+                 'ENSEMBLE p HETATOM ON',
                  'SEARCH ENSEMBLE p NUM %(num)d' % model,
                  'COMPOSITION BY SOLVENT',
                  'COMPOSITION PERCENTAGE %f' % solvent_percent,
