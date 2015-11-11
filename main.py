@@ -427,52 +427,61 @@ def parse_dimple_commands(args):
     parser.add_argument('pos_arg2')
     parser.add_argument('pos_arg3')
     parser.add_argument('more_args', nargs='*')
-    parser.add_argument('--slow', action='store_true',
-                        help='more refinement cycles, etc')
-    parser.add_argument('--hklout', metavar='out.mtz', default='final.mtz',
-                        help='output mtz file'+dstr)
-    parser.add_argument('--xyzout', metavar='out.pdb', default='final.pdb',
-                        help='output pdb file'+dstr)
-    parser.add_argument('-f', choices=['png', 'jpeg', 'tiff', 'none'],
-                        default='png', dest='img_format',
-                        help='format of generated images'+dstr)
-    parser.add_argument('--jelly', metavar='N_ITER', type=int,
-                    help='run refmac jelly-body before the final refinement')
-    parser.add_argument('--reso', type=float, help='limit the resolution [A]')
-    parser.add_argument('--weight', metavar='VALUE', type=float,
-                        help='refmac matrix weight (default: auto-weight)')
-    parser.add_argument('--restr-cycles', metavar='N', type=int,
-                        help='cycles of refmac final refinement (default: 8)')
-    parser.add_argument('--libin', metavar='CIF',
-                        help='ligand descriptions for refmac (LIBIN)')
-    parser.add_argument('-R', '--free-r-flags', metavar='MTZ_FILE',
-                    help='reference file with all reflections and freeR flags'
-                         ' or "-" to use flags from the input file')
-    parser.add_argument('-M', '--mr-when-r', type=float, default=0.4,
+    group1 = parser.add_argument_group('most commonly used options')
+    group1.add_argument('-s', '--slow', action='count',
+                        help='more refinement, etc. (can be used 2x)')
+    group1.add_argument('-M', '--mr-when-r', type=float, default=0.4,
                         metavar='NUM',
                         help='threshold for Molecular Replacement'+dstr)
-    parser.add_argument('--MR-prog', choices=['phaser', 'molrep'],
-                        help='Molecular Replacement program')
-    parser.add_argument('-I', '--icolumn', metavar='ICOL',
+    group2 = parser.add_argument_group('options contolling input/output')
+    group2.add_argument('-I', '--icolumn', metavar='ICOL',
                         help='I column label (default: IMEAN)')
-    parser.add_argument('--sigicolumn', metavar='SIGICOL',
+    group2.add_argument('--sigicolumn', metavar='SIGICOL',
                         default='SIG<ICOL>', help='SIGI column label'+dstr)
-    parser.add_argument('--ItoF-prog', choices=['truncate', 'ctruncate'],
-            help='program to calculate amplitudes (default: truncate)')
-    parser.add_argument('--no-cleanup', dest='cleanup', action='store_false',
+    group2.add_argument('--libin', metavar='CIF',
+                        help='ligand descriptions for refmac (LIBIN)')
+    group2.add_argument('-R', '--free-r-flags', metavar='MTZ_FILE',
+                        help='file with freeR flags '
+                             '("-" = use flags from data mtz)')
+    group2.add_argument('--hklout', metavar='out.mtz', default='final.mtz',
+                        help='output mtz file'+dstr)
+    group2.add_argument('--xyzout', metavar='out.pdb', default='final.pdb',
+                        help='output pdb file'+dstr)
+    group2.add_argument('-f', choices=['png', 'jpeg', 'tiff', 'none'],
+                        default='png', dest='img_format',
+                        help='format of generated images'+dstr)
+    group2.add_argument('--no-cleanup', dest='cleanup', action='store_false',
                         help='leave intermediate files')
-    parser.add_argument('--cleanup', action='store_true',
+    group2.add_argument('--cleanup', action='store_true',
                         help=argparse.SUPPRESS)  # obsolete
-    parser.add_argument('--seed-freerflag', action='store_true',
+
+    group3 = parser.add_argument_group('options customizing the run')
+    group3.add_argument('--jelly', metavar='N_ITER', type=int,
+                    help='run refmac jelly-body before the final refinement')
+    group3.add_argument('--reso', type=float, help='limit the resolution [A]')
+    group3.add_argument('--restr-cycles', metavar='N', type=int,
+                        help='cycles of refmac final refinement (default: 8)')
+    group3.add_argument('--weight', metavar='VALUE', type=float,
+                        help='refmac matrix weight (default: auto-weight)')
+
+    group3.add_argument('--MR-prog', choices=['phaser', 'molrep'],
+                        help='Molecular Replacement program')
+    group3.add_argument('--ItoF-prog', choices=['truncate', 'ctruncate'],
+                        help='program to calculate amplitudes')
+    group3.add_argument('--seed-freerflag', action='store_true',
                         help=argparse.SUPPRESS)
-    parser.add_argument('--dls-naming', action='store_true',
+    group3.add_argument('--dls-naming', action='store_true',
                         help=argparse.SUPPRESS)
-    parser.add_argument('--from-step', metavar='N', type=int, default=0,
+    group3.add_argument('--from-step', metavar='N', type=int, default=0,
                         help=argparse.SUPPRESS)
     parser.add_argument('--version', action='version',
                         version='%(prog)s '+__version__)
-    # get rid of 'positional arguments' in the usage method
-    parser._action_groups[:1] = []  # pylint: disable=protected-access
+    # customize usage message: get rid of 'positional arguments',
+    # rename default 'optional arguments' and shift it to the end.
+    # pylint: disable=protected-access
+    default_group = parser._action_groups[1]
+    default_group.title = 'other options'
+    parser._action_groups = parser._action_groups[2:] + [default_group]
 
     # special mode for compatibility with ccp4i
     legacy_args = {"HKLIN": "", "XYZIN": "",
