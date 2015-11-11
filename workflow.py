@@ -136,7 +136,8 @@ class Job:
     def run(self, show_progress=True, new_line=True, may_fail=False):
         self.workflow.run_job(job=self,
                               show_progress=show_progress, new_line=new_line)
-        if not may_fail and self.exit_status != 0:
+        # exit_status may be None if --from-step is used
+        if not may_fail and self.exit_status:
             notes = [self.args_as_str(), ""]
             if self.out.saved_to:
                 notes += ["stdout -> %s/%s" % (self.workflow.output_dir,
