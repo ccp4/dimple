@@ -648,7 +648,7 @@ class Workflow:
                  'HKLIN "%s"' % hklin,
                  'LABIN %s' % labin,
                  'SGALTERNATIVE SELECT %s' % sg_alt,
-                 'KILL TIME 180',  # 3h is much more than we want
+                 'KILL TIME 120',  # 2h is much more than we want
                  'ROOT %s' % root,
                  ]
         # tNCS: we go with what phaser does by default -- tNCS of order 2
