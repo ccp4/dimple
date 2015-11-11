@@ -645,6 +645,10 @@ class Workflow:
                  # getting a solution one cell away, so we set template here.
                  'SOLUTION TEMPLATE original_model',
                  'SOLUTION 6DIM ENSE p EULER 0 0 0 FRAC 0 0 0',
+                 #'PURGE ROT NUM 20',
+                 #'PURGE TRA NUM 20',
+                 'RESOLUTION HIGH 3.0',
+                 #'MACANO PROTOCOL OFF',
                  'HKLIN "%s"' % hklin,
                  'LABIN %s' % labin,
                  'SGALTERNATIVE SELECT %s' % sg_alt,
