@@ -60,8 +60,8 @@ def dimple(wf, opt):
     pdb_num_mol = wf.jobs[-1].data.get('num_mol')
     if solvent_pct is None:
         raise RuntimeError("rwcontents could not interpret %s." % rb_xyzin)
-    if solvent_pct > 70:
-        comment("\nHmm... %.1f%% of solvent looks suspicious" % solvent_pct)
+    if solvent_pct > 75:
+        comment("\nHmm... %.1f%% of solvent or incomplete model" % solvent_pct)
     if abs(wf.jobs[-1].data.get('volume', 0) - pdb_meta.get_volume()) > 10:
         comment("\ndebug: problem when calculating volume?")
 
