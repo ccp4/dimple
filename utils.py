@@ -82,7 +82,6 @@ def read_section_from_log(logfile, section):
     conf = ConfigParser.RawConfigParser()
     conf.read(logfile)
     if conf.has_section(section):
-        items = conf.items(section)
         d = {}
         for k, v in conf.items(section):
             if v[:1] == '[':

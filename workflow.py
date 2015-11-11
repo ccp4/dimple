@@ -265,10 +265,8 @@ def _refmac_parser(job):
     if "cycle" not in job.data:
         # ini_free_r, free_r and iter_free_r are set optionally
         job.data["cycle"] = 0
-        job.data["selected_lines"] = []
         # iter_*_r values were added in dimple 1.5
         job.data["iter_overall_r"] = []
-    selected = job.data["selected_lines"]
     sink = None
     for line in job.out.read_line():
         if sink:
@@ -295,9 +293,6 @@ def _refmac_parser(job):
             job.data['cycle'] = int(line.split('=')[-1])
         elif line.startswith("$TABLE: Rfactor analysis, stats vs cycle"):
             sink = Ccp4LogTable(line)
-        elif line.startswith(" $TEXT:Result: $$ Final results $$") or (
-                selected and not selected[-1].startswith(" $$")):
-            selected.append(line)
     cycle_str = "%2d/%d" % (job.data["cycle"], job.data.get("ncyc", -1))
     if 'ini_overall_r' in job.data:
         if 'ini_free_r' in job.data:
@@ -598,8 +593,6 @@ class Workflow:
                 utils.log_value("info", parse_output)
             self._write_logs(job)
             for k, v in job.data.iteritems():
-                if k == "selected_lines":
-                    v = "\n" + "".join(v) # selected_lines have newlines
                 utils.log_value(k, v)
         if job.exit_status != 0:
             utils.log_value("exit_status", job.exit_status)

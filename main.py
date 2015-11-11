@@ -263,8 +263,6 @@ def dimple(wf, opt):
                  labin=refmac_labin, labout=refmac_labout, libin=opt.libin,
                  keys=restr_ref_keys+("ncycle %d" % opt.restr_cycles)).run()
     comment(_refmac_rms_line(restr_job.data))
-    if opt.summary:
-        comment("\n" + "".join(restr_job.data["selected_lines"]))
     # if that run is repeated with --from-step it's useful to compare Rfree
     if wf.from_job > 0 and wf.from_job <= len(wf.jobs): # from_job is 1-based
         prev = [j for j in wf.repl_jobs if j.name == restr_job.name]
@@ -435,8 +433,6 @@ def parse_dimple_commands(args):
                         help='output mtz file'+dstr)
     parser.add_argument('--xyzout', metavar='out.pdb', default='final.pdb',
                         help='output pdb file'+dstr)
-    parser.add_argument('-s', '--summary', action='store_true',
-                        help='show refmac summary')
     parser.add_argument('-f', choices=['png', 'jpeg', 'tiff', 'none'],
                         default='png', dest='img_format',
                         help='format of generated images'+dstr)
