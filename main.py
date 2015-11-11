@@ -17,7 +17,7 @@ from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
 from dimple import coots
 
-__version__ = '2.3.8'
+__version__ = '2.3.9'
 
 
 def dimple(wf, opt):
@@ -255,14 +255,16 @@ def dimple(wf, opt):
                    keys=restr_ref_keys+"ridge distance sigma 0.01\n"
                                        "make hydrogen no\n"
                                        "ncycle %d" % opt.jelly).run()
+        comment(_refmac_rms_line(wf.jobs[-1].data))
         refmac_xyzin = "jelly.pdb"
     comment("\nFinal restrained refinement, %d cycles." % opt.restr_cycles)
     restr_job = wf.refmac5(hklin=prepared_mtz, xyzin=refmac_xyzin,
                  hklout=opt.hklout, xyzout=opt.xyzout,
                  labin=refmac_labin, labout=refmac_labout, libin=opt.libin,
                  keys=restr_ref_keys+("ncycle %d" % opt.restr_cycles)).run()
+    comment(_refmac_rms_line(restr_job.data))
     if opt.summary:
-        comment("".join(restr_job.data["selected_lines"]))
+        comment("\n" + "".join(restr_job.data["selected_lines"]))
     # if that run is repeated with --from-step it's useful to compare Rfree
     if wf.from_job > 0 and wf.from_job <= len(wf.jobs): # from_job is 1-based
         prev = [j for j in wf.repl_jobs if j.name == restr_job.name]
@@ -274,6 +276,16 @@ def dimple(wf, opt):
     ####### check blobs and finish #######
     fb_job = wf.find_blobs(opt.hklout, opt.xyzout, sigma=0.8).run()
     _generate_scripts_and_pictures(wf, opt, fb_job)
+
+
+def _refmac_rms_line(data):
+    items = []
+    for name, col in [('bond', 'rmsBOND'), ('angle', 'rmsANGL'),
+                      ('chiral', 'rmsCHIRAL')]:
+        d = data.get(col)
+        if d:
+            items.append('   %s %.2f -> %.2f' % (name, d[0], d[-1]))
+    return '\n  RMS:' + ''.join(items)
 
 
 def _comment_summary_line(name, meta):
@@ -601,7 +613,8 @@ def main(args):
     except RuntimeError as e:
         put_error(e)
         exit_status = 1
-    comment("\n")
+    finally:
+        comment("\n")
     if options.cleanup:
         wf.delete_files(wf.temporary_files)
     wf.options = options

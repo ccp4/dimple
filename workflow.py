@@ -10,6 +10,9 @@ import Queue
 import time
 import cPickle as pickle
 import shutil
+if __name__ == "__main__" and __package__ is None:
+    sys.path.insert(1,
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dimple import utils
 from dimple import mtz
 from dimple import pdb
@@ -227,6 +230,37 @@ def _cad_parser(job):
             job.data["refl_out"] = int(line.split('=')[1])
     return "#refl -> %s" % job.data.get("refl_out", "")
 
+
+class Ccp4LogTable(object):
+    def __init__(self, title_line):
+        assert '$TABLE:' in title_line
+        self.title = title_line.split(':')[1]
+        self.columns = []
+        self.data = []
+        self.section = 0  # 0=header, 1=columns, 2=data, 3=end
+
+    def send_line(self, line):
+        line = line.strip()
+        if line.startswith('$$'):
+            self.section += 1
+            if len(line) > 2:
+                self.send_line(line[2:])
+            return self.section != 3
+
+        if self.section == 1:
+            self.columns += line.rstrip('$').split()
+        elif self.section == 2:
+            self.data.append(line.split())
+        return True
+
+    def column(self, name):
+        try:
+            idx = self.columns.index(name)
+            return [float(a[idx]) for a in self.data]
+        except (ValueError, IndexError):
+            return
+
+
 def _refmac_parser(job):
     if "cycle" not in job.data:
         # ini_free_r, free_r and iter_free_r are set optionally
@@ -235,8 +269,17 @@ def _refmac_parser(job):
         # iter_*_r values were added in dimple 1.5
         job.data["iter_overall_r"] = []
     selected = job.data["selected_lines"]
+    sink = None
     for line in job.out.read_line():
-        if line.startswith("Free R factor"):
+        if sink:
+            more = sink.send_line(line)
+            if not more:
+                for name in ['rmsBOND', 'rmsANGL', 'rmsCHIRAL']:
+                    col_data = sink.column(name)
+                    if col_data and any(x != 0 for x in col_data):
+                        job.data[name] = col_data
+                sink = None
+        elif line.startswith("Free R factor"):
             job.data['free_r'] = float(line.split('=')[-1])
             if 'ini_free_r' not in job.data:
                 job.data['ini_free_r'] = job.data['free_r']
@@ -250,10 +293,12 @@ def _refmac_parser(job):
         elif (line.startswith("     Rigid body cycle =") or
               line.startswith("     CGMAT cycle number =")):
             job.data['cycle'] = int(line.split('=')[-1])
+        elif line.startswith("$TABLE: Rfactor analysis, stats vs cycle"):
+            sink = Ccp4LogTable(line)
         elif line.startswith(" $TEXT:Result: $$ Final results $$") or (
                 selected and not selected[-1].startswith(" $$")):
             selected.append(line)
-    cycle_str = "%2d/%d" % (job.data["cycle"], job.data["ncyc"])
+    cycle_str = "%2d/%d" % (job.data["cycle"], job.data.get("ncyc", -1))
     if 'ini_overall_r' in job.data:
         if 'ini_free_r' in job.data:
             return "%s   R/Rfree  %.4f/%.4f  ->  %.4f/%.4f" % (
