@@ -45,14 +45,13 @@ def dimple(wf, opt):
     if pdb_meta is None:
         put_error("Failed to read CRYST1 record from the pdb file")
         return
-    remove_hetatm = False
-    if remove_hetatm or check_hetatm_x(wf.path(ini_pdb), pdb_meta):
-        if not remove_hetatm:
+    if opt.no_hetatm or check_hetatm_x(wf.path(ini_pdb), pdb_meta):
+        if not opt.no_hetatm:
             comment("\nHETATM marked as element X would choke many programs.")
         rb_xyzin = "prepared.pdb"
         wf.temporary_files.add(rb_xyzin)
         n_het = wf.remove_hetatm(xyzin=ini_pdb, xyzout=rb_xyzin,
-                                 remove_all=remove_hetatm)
+                                 remove_all=opt.no_hetatm)
         comment("\nRemoved %d HETATM atoms" % n_het)
     else:
         rb_xyzin = ini_pdb
@@ -456,6 +455,8 @@ def parse_dimple_commands(args):
                         help=argparse.SUPPRESS)  # obsolete
 
     group3 = parser.add_argument_group('options customizing the run')
+    group3.add_argument('--no-hetatm', action='store_true',
+                        help='remove HETATM atoms from the given model')
     group3.add_argument('--jelly', metavar='N_ITER', type=int,
                     help='run refmac jelly-body before the final refinement')
     group3.add_argument('--reso', type=float, help='limit the resolution [A]')
