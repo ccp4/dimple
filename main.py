@@ -166,7 +166,7 @@ def dimple(wf, opt):
                            labin="F = F SIGF = SIGF",
                            model=dict(pdb=rb_xyzin, identity=100, num=num),
                            solvent_percent=solvent_pct,
-                           sg_alt="ALL",
+                           sg_alt="ALL", hi_reso=opt.mr_reso,
                            root='phaser').run(may_fail=True)
             phaser_data = wf.jobs[-1].data
             if (wf.jobs[-1].exit_status != 0 or
@@ -472,6 +472,8 @@ def parse_dimple_commands(args):
 
     group3.add_argument('--MR-prog', choices=['phaser', 'molrep'],
                         help='Molecular Replacement program')
+    group3.add_argument('--mr-reso', type=float,
+                        help='high resolution for MR (default: auto)')
     group3.add_argument('--ItoF-prog', choices=['truncate', 'ctruncate'],
                         help='program to calculate amplitudes')
     group3.add_argument('--seed-freerflag', action='store_true',

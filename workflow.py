@@ -633,31 +633,33 @@ class Workflow:
         return job
 
     def phaser_auto(self, hklin, labin, model, root, solvent_percent,
-                    sg_alt="NONE"):
-        lines = ['MODE MR_AUTO',
-                 'SEARCH METHOD FAST',
-                 'SEARCH DEEP OFF',
-                 'ENSEMBLE p PDBFILE "%(pdb)s" IDENTITY %(identity)g' % model,
-                 # if --no-hetatm was used HETATM records are already removed
-                 'ENSEMBLE p HETATOM ON',
-                 'SEARCH ENSEMBLE p NUM %(num)d' % model,
-                 'COMPOSITION BY SOLVENT',
-                 'COMPOSITION PERCENTAGE %f' % (solvent_percent or 50),
-                 # Since Phaser 2.5.6 template matched solutions are moved
-                 # to the template solution origin. Which is better than
-                 # getting a solution one cell away, so we set template here.
-                 'SOLUTION TEMPLATE original_model',
-                 'SOLUTION 6DIM ENSE p EULER 0 0 0 FRAC 0 0 0',
-                 #'PURGE ROT NUM 20',
-                 #'PURGE TRA NUM 20',
-                 'RESOLUTION HIGH 3.0',
-                 #'MACANO PROTOCOL OFF',
-                 'HKLIN "%s"' % hklin,
-                 'LABIN %s' % labin,
-                 'SGALTERNATIVE SELECT %s' % sg_alt,
-                 'KILL TIME 120',  # 2h is much more than we want
-                 'ROOT %s' % root,
-                 ]
+                    sg_alt, hi_reso):
+        lines = [
+          'MODE MR_AUTO',
+          'SEARCH METHOD FAST',
+          'SEARCH DEEP OFF',
+          'ENSEMBLE p PDBFILE "%(pdb)s" IDENTITY %(identity)g' % model,
+          # if --no-hetatm was used HETATM records are already removed
+          'ENSEMBLE p HETATOM ON',
+          'SEARCH ENSEMBLE p NUM %(num)d' % model,
+          'COMPOSITION BY SOLVENT',
+          'COMPOSITION PERCENTAGE %f' % (solvent_percent or 50),
+          # Since Phaser 2.5.6 template matched solutions are moved
+          # to the template solution origin. Which is better than
+          # getting a solution one cell away, so we set template here.
+          'SOLUTION TEMPLATE original_model',
+          'SOLUTION 6DIM ENSE p EULER 0 0 0 FRAC 0 0 0',
+          #'PURGE ROT NUM 20',
+          #'PURGE TRA NUM 20',
+          ('RESOLUTION HIGH %g' % hi_reso) if hi_reso is not None else '',
+          #'RESOLUTION AUTO HIGH 2.5',
+          #'MACANO PROTOCOL OFF',
+          'HKLIN "%s"' % hklin,
+          'LABIN %s' % labin,
+          'SGALTERNATIVE SELECT %s' % sg_alt,
+          'KILL TIME 120',  # 2h is much more than we want
+          'ROOT %s' % root,
+          ]
         # tNCS: we go with what phaser does by default -- tNCS of order 2
         # are handled automatically. While we could specify tNCS for
         # pseudo-tripling/quadrupling of the cell (TNCS NMOL 3) I don't know
