@@ -207,8 +207,7 @@ def dimple(wf, opt):
             comment("\nGenerate free-R flags")
         free_mtz = "free.mtz"
         wf.temporary_files |= {"unique.mtz", free_mtz}
-        # CCP4 freerflag uses always the same pseudo-random sequence by default
-        if opt.seed_freerflag or pdb_meta is None:
+        if opt.seed_freerflag or cell_diff > 1e3: # i.e. different SG
             wf.unique(hklout="unique.mtz", ref=reindexed_mtz_meta,
                       resolution=cad_reso).run()
         else:
@@ -217,6 +216,7 @@ def dimple(wf, opt):
             # for given PDB file. That's why we don't use information
             # from the data file (mtz).
             wf.unique(hklout="unique.mtz", ref=pdb_meta, resolution=1.0).run()
+        # CCP4 freerflag uses always the same pseudo-random sequence by default
         wf.freerflag(hklin="unique.mtz", hklout=free_mtz,
                      keys=("SEED" if opt.seed_freerflag else "")).run()
 
