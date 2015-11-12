@@ -213,13 +213,14 @@ def _rwcontents_parser(job):
             d["weight"] = float(line.split(':')[-1])
         if line.startswith(' The Matthews Coefficient is :'):
             Vm = float(line.split(':')[-1])
-            d["Vm"] = Vm
-            # 1.23 is used in phaser/src/Composition.cc
-            d["solvent_percent"] = (1 - 1.23/Vm) * 100
+            if Vm != 0:
+                d["Vm"] = Vm
+                # 1.23 is used in phaser/src/Composition.cc
+                d["solvent_percent"] = (1 - 1.23/Vm) * 100
     if 'volume' in d and 'weight' in d and 'Vm' in d and 'num_mol' not in d:
         d['num_mol'] = int(round(d['volume'] / d['weight'] / d['Vm']))
-    return u"%d x %.0fkDa in %.fnm3  Vm=%.2f (%.0f%% of solvent)" % (
-            d.get('num_mol', 0),
+    return u"%s x %.0fkDa in %.fnm3  Vm=%.2f (%.0f%% of solvent)" % (
+            d.get('num_mol', '??'),
             d.get('weight', 0) / 1000, # Da -> kDa
             d.get('volume', 0) / 1000, # A^2 -> nm^3
             d.get('Vm', 0),
@@ -641,7 +642,7 @@ class Workflow:
                  'ENSEMBLE p HETATOM ON',
                  'SEARCH ENSEMBLE p NUM %(num)d' % model,
                  'COMPOSITION BY SOLVENT',
-                 'COMPOSITION PERCENTAGE %f' % solvent_percent,
+                 'COMPOSITION PERCENTAGE %f' % (solvent_percent or 50),
                  # Since Phaser 2.5.6 template matched solutions are moved
                  # to the template solution origin. Which is better than
                  # getting a solution one cell away, so we set template here.

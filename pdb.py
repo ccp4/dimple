@@ -50,11 +50,14 @@ def read_metadata(pdb):
 
 
 def check_hetatm_x(filename, meta):
-    if meta.has_hetatm_x is None:
-        with open(filename) as f:
-            meta.has_hetatm_x = any(line[:6] == "HETATM" and line[76:78] == " X"
-                                    for line in f)
-    return meta.has_hetatm_x
+    if meta and meta.has_hetatm_x is not None:
+        return meta.has_hetatm_x
+    with open(filename) as f:
+        has_hetatm_x = any(line[:6] == "HETATM" and line[76:78] == " X"
+                           for line in f)
+    if meta:
+        meta.has_hetatm_x = has_hetatm_x
+    return has_hetatm_x
 
 
 def remove_hetatm(filename_in, file_out, remove_all):

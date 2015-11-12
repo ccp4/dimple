@@ -17,8 +17,10 @@ from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
 from dimple import coots
 
-__version__ = '2.3.9'
+__version__ = '2.4.0'
 
+# sometimes people have incomplete models in their pdb files
+HIGH_SOLVENT_PCT = 75
 
 def dimple(wf, opt):
     comment("%8s### Dimple v%s. Problems and suggestions:"
@@ -43,8 +45,7 @@ def dimple(wf, opt):
     wf.copy_uncompressed(opt.pdbs[0], ini_pdb)
     pdb_meta = wf.file_info[opt.pdbs[0]]
     if pdb_meta is None:
-        put_error("Failed to read CRYST1 record from the pdb file")
-        return
+        put_error("PDB file missing CRYST1 record, starting from MR")
     if opt.no_hetatm or check_hetatm_x(wf.path(ini_pdb), pdb_meta):
         if not opt.no_hetatm:
             comment("\nHETATM marked as element X would choke many programs.")
@@ -59,11 +60,12 @@ def dimple(wf, opt):
     solvent_pct = wf.jobs[-1].data.get('solvent_percent')
     pdb_num_mol = wf.jobs[-1].data.get('num_mol')
     if solvent_pct is None:
-        raise RuntimeError("rwcontents could not interpret %s." % rb_xyzin)
-    if solvent_pct > 75:
-        comment("\nHmm... %.1f%% of solvent or incomplete model" % solvent_pct)
-    if abs(wf.jobs[-1].data.get('volume', 0) - pdb_meta.get_volume()) > 10:
-        comment("\ndebug: problem when calculating volume?")
+        put_error("rwcontents could not interpret %s" % rb_xyzin)
+    elif solvent_pct > HIGH_SOLVENT_PCT:
+        comment("\nHmm... %.1f%% of solvent or incomplete model" %
+                solvent_pct)
+        if abs(wf.jobs[-1].data.get('volume', 0) - pdb_meta.get_volume()) > 10:
+            comment("\ndebug: problem when calculating volume?")
 
     ####### pointless - reindexing #######
     if match_symmetry(mtz_meta, pdb_meta):
@@ -140,19 +142,22 @@ def dimple(wf, opt):
     ####### phaser/molrep - molecular replacement #######
     if refmac_xyzin is None:
         # pdb_num_mol accounts for strict NCS (MTRIX without iGiven)
-        vol_ratio = mtz_meta.asu_volume() / pdb_meta.asu_volume(pdb_num_mol)
-        if vol_ratio < 0.66:
-            comment("\nasu %.0f%% smaller than in the model"
-                    % ((1 - vol_ratio) * 100))
+        if pdb_meta:
+            vol_ratio = mtz_meta.asu_volume() / pdb_meta.asu_volume(pdb_num_mol)
+            if vol_ratio < 0.66:
+                comment("\nasu %.0f%% smaller than in the model"
+                        % ((1 - vol_ratio) * 100))
+        # phaser is used by default if number of searched molecules is known
         if opt.MR_prog == 'molrep' or (opt.MR_prog is None and
-                                       solvent_pct > 70):
+                                       (solvent_pct is None or
+                                        solvent_pct > HIGH_SOLVENT_PCT)):
             wf.temporary_files |= {"molrep.pdb", "molrep_dimer.pdb",
                                    "molrep.crd"}
             wf.molrep(f=f_mtz, m=rb_xyzin).run()
             refmac_xyzin = "molrep.pdb"
         else:
             num = 1
-            if vol_ratio > 1.5:
+            if pdb_meta and vol_ratio > 1.5:
                 num = int(round(vol_ratio))
                 comment("\nSearching %d molecules, asu is %.1f x larger "
                         "than in the model" % (num, vol_ratio))
@@ -203,17 +208,17 @@ def dimple(wf, opt):
         free_mtz = "free.mtz"
         wf.temporary_files |= {"unique.mtz", free_mtz}
         # CCP4 freerflag uses always the same pseudo-random sequence by default
-        if opt.seed_freerflag:
+        if opt.seed_freerflag or pdb_meta is None:
             wf.unique(hklout="unique.mtz", ref=reindexed_mtz_meta,
                       resolution=cad_reso).run()
-            wf.freerflag(hklin="unique.mtz", hklout=free_mtz, keys="SEED").run()
         else:
             comment(" (repeatably)")
-            # here we'd like to have always the same set of free-r flags
-            # for given PDB file. That's why it's using cell parameters
-            # from pdb not mtz and why always the same resolution is set.
+            # Here we'd like to have always the same set of free-r flags
+            # for given PDB file. That's why we don't use information
+            # from the data file (mtz).
             wf.unique(hklout="unique.mtz", ref=pdb_meta, resolution=1.0).run()
-            wf.freerflag(hklin="unique.mtz", hklout=free_mtz).run()
+        wf.freerflag(hklin="unique.mtz", hklout=free_mtz,
+                     keys=("SEED" if opt.seed_freerflag else "")).run()
 
     if free_mtz == opt.mtz and opt.reso is None:
         prepared_mtz = f_mtz
@@ -523,7 +528,7 @@ def parse_dimple_commands(args):
 
     mtz_args = [a for a in all_args if a.lower().endswith('.mtz')]
     if len(mtz_args) != 1:
-        put_error("One mtz file should be given.")
+        put_error("One mtz file should be given")
         sys.exit(1)
     opt.mtz = mtz_args[0]
     all_args.remove(opt.mtz)
@@ -535,7 +540,7 @@ def parse_dimple_commands(args):
             put_error("unexpected arg (neither mtz nor pdb): %s" % a)
             sys.exit(1)
     if len(opt.pdbs) == 0:
-        put_error("At least one pdb file should be given.")
+        put_error("At least one pdb file should be given")
         sys.exit(1)
     if opt.seed_freerflag and opt.free_r_flags:
         put_error("Option --seed-freerflag and --free-r-flags"
