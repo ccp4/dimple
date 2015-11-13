@@ -397,7 +397,7 @@ def _generate_scripts_and_pictures(wf, opt, fb_job):
     except (IOError, OSError) as e:
         put_error(e)
 
-    if opt.img_format == 'none':
+    if opt.img_format == 'none' or not blobs:
         return
 
     script = ''
