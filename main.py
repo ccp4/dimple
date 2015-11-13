@@ -589,8 +589,8 @@ def parse_dimple_commands(args):
 
     if opt.restr_cycles is None:
         opt.restr_cycles = (12 if opt.slow else 8)
-    if opt.jelly is None and opt.slow:
-        pass # opt.jelly = 50  # isn't it too slow?
+    if opt.jelly is None and opt.slow >= 2:
+        opt.jelly = 100
 
     return opt
 
