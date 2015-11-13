@@ -170,14 +170,14 @@ def dimple(wf, opt):
                            root='phaser').run(may_fail=True)
             phaser_data = wf.jobs[-1].data
             if (wf.jobs[-1].exit_status != 0 or
-                    phaser_data['status'] == 'Sorry - No solution'):
+                    phaser_data['info'] == 'Sorry - No solution'):
                 comment("\nGiving up.")
                 return
-            if phaser_data['status'].endswith('...'):
+            if phaser_data['info'].endswith('...'):
                 solu_set = wf.get_phaser_solu_set(root='phaser')
                 if solu_set:
-                    comment("\n..." + solu_set[len(phaser_data['status'])-3:])
-                    phaser_data['status'] = solu_set
+                    comment("\n..." + solu_set[len(phaser_data['info'])-3:])
+                    utils.log_value('status', solu_set)
             if phaser_data.get('partial_solution'):
                 comment("\nOnly partial solution found")
             if phaser_data['SG'] != reindexed_mtz_meta.symmetry:

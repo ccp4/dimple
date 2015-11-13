@@ -595,7 +595,8 @@ class Workflow:
                 utils.log_value("info", parse_output)
             self._write_logs(job)
             for k, v in job.data.iteritems():
-                utils.log_value(k, v)
+                if k != "info":
+                    utils.log_value(k, v)
         if job.exit_status != 0:
             utils.log_value("exit_status", job.exit_status)
 
