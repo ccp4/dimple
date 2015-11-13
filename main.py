@@ -274,13 +274,10 @@ def dimple(wf, opt):
 
 
 def _refmac_rms_line(data):
-    items = []
-    for name, col in [('bond', 'rmsBOND'), ('angle', 'rmsANGL'),
-                      ('chiral', 'rmsCHIRAL')]:
-        d = data.get(col)
-        if d:
-            items.append('   %s %.2f -> %.2f' % (name, d[0], d[-1]))
-    return '\n  RMS:' + ''.join(items)
+    rb, ra, rc = [data.get(k, (-1)) for k in 'rmsBOND', 'rmsANGL', 'rmsCHIRAL']
+    return ('\n  RMS:   bond %.3f -> %.3f' % (rb[0], rb[-1]) +
+            '   angle %.2f -> %.2f' % (ra[0], ra[-1]) +
+            '   chiral %.2f -> %.2f' % (rc[0], rc[-1]))
 
 def _after_phaser_comments(phaser_job, wf, sg_in):
     phaser_data = phaser_job.data
