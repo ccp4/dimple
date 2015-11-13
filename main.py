@@ -17,7 +17,7 @@ from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
 from dimple import coots
 
-__version__ = '2.4.0'
+__version__ = '2.4.1'
 
 # sometimes people have incomplete models in their pdb files
 HIGH_SOLVENT_PCT = 75

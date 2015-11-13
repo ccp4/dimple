@@ -65,6 +65,9 @@ class Cell(object):
                             symmetry=' '.join((sym_splitted[0],) + new_symm))
         return self
 
+    # returns symmetry with screw axes removed (changed to rotation axes)
+    def unscrew_symmetry(self):
+        return ' '.join(a[0] for a in self.symmetry.split())
 
 class Mat3(object):
     "Matrix 3x3"

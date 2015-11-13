@@ -13,10 +13,10 @@ import shutil
 if __name__ == "__main__" and __package__ is None:
     sys.path.insert(1,
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from dimple import utils
+from dimple import coots
 from dimple import mtz
 from dimple import pdb
-from dimple import coots
+from dimple import utils
 
 
 _jobindex_fmt = "%3d "
@@ -688,9 +688,12 @@ class Workflow:
 
     def unique(self, hklout, ref, resolution,
                labout="F=F_UNIQUE SIGF=SIGF_UNIQUE"):
+        # Include also reflections that may be present in other spacegroups
+        # belonging to the same pointgroup and with the same reflections.
+        # (ignore systematic absences from screw axes by removing screw axes.)
         return ccp4_job(self, "unique", logical=locals(),
                         ki=["cell %g %g %g %g %g %g" % tuple(ref.cell),
-                            "symmetry '%s'" % ref.symmetry,
+                            "symmetry '%s'" % ref.unscrewed_symmetry(),
                             "resolution %.3f" % resolution,
                             "labout %s" % labout],
                         parser="")
