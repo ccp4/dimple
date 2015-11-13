@@ -21,6 +21,7 @@ __version__ = '2.4.1'
 
 # sometimes people have incomplete models in their pdb files
 HIGH_SOLVENT_PCT = 75
+BAD_FINAL_RFREE = 0.5
 
 def dimple(wf, opt):
     comment("%8s### Dimple v%s. Problems and suggestions:"
@@ -266,8 +267,12 @@ def dimple(wf, opt):
                     restr_job.data["free_r"] - prev[0].data["free_r"]))
 
     ####### check blobs and finish #######
-    fb_job = wf.find_blobs(opt.hklout, opt.xyzout, sigma=0.8).run()
-    _generate_scripts_and_pictures(wf, opt, fb_job)
+    if restr_job.data["free_r"] <= BAD_FINAL_RFREE:
+        fb_job = wf.find_blobs(opt.hklout, opt.xyzout, sigma=0.8).run()
+        _generate_scripts_and_pictures(wf, opt, fb_job.data)
+    else:
+        comment("\nGiving up (Rfree > %g). No blob search." % BAD_FINAL_RFREE)
+        _generate_scripts_and_pictures(wf, opt, None)
 
 
 def _refmac_rms_line(data):
@@ -352,8 +357,8 @@ def _make_executable(path):
     mode = os.stat(path).st_mode
     os.chmod(path, mode | ((mode & 0444) >> 2))
 
-def _generate_scripts_and_pictures(wf, opt, fb_job):
-    blobs = fb_job.data["blobs"]
+def _generate_scripts_and_pictures(wf, opt, data):
+    blobs = data["blobs"] if data else []
     if not blobs:
         comment("\nUnmodelled blobs not found.")
     elif opt.img_format != 'none' and _check_picture_tools():
@@ -363,7 +368,7 @@ def _generate_scripts_and_pictures(wf, opt, fb_job):
         else:
             comment("\nRendering 2 largest blobs: at (%.1f, %.1f, %.1f) "
                     "and at (%.1f, %.1f, %.1f)" % (blobs[0]+blobs[1]))
-    com = fb_job.data["center"]
+    com = data and data["center"]
 
     # run-coot.py centers on the biggest blob. It uses relative paths -
     # it can be run only from the output directory, but is not affected
