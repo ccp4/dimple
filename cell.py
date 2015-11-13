@@ -66,7 +66,7 @@ class Cell(object):
         return self
 
     # returns symmetry with screw axes removed (changed to rotation axes)
-    def unscrew_symmetry(self):
+    def unscrewed_symmetry(self):
         return ' '.join(a[0] for a in self.symmetry.split())
 
 class Mat3(object):
