@@ -109,8 +109,6 @@ def dimple(wf, opt):
 
     ####### rigid body - check if model is good for refinement? #######
     refmac_labin_nofree = "FP=F SIGFP=SIGF"
-    refmac_labout = ("FC=FC PHIC=PHIC FWT=2FOFCWT PHWT=PH2FOFCWT "
-                     "DELFWT=FOFCWT PHDELWT=PHFOFCWT")
     refmac_xyzin = None
     cell_diff = calculate_difference_metric(pdb_meta, reindexed_mtz_meta)
     if cell_diff > 0.1 and opt.mr_when_r < 1:
@@ -121,7 +119,7 @@ def dimple(wf, opt):
         # it may fail because of "Disagreement between mtz and pdb"
         wf.refmac5(hklin=f_mtz, xyzin=rb_xyzin,
                    hklout="refmacRB.mtz", xyzout="refmacRB.pdb",
-                   labin=refmac_labin_nofree, labout=refmac_labout,
+                   labin=refmac_labin_nofree,
                    libin=None,
                    keys="""refinement type rigidbody resolution 15 3.5
                            rigidbody ncycle 10""").run(may_fail=True)
@@ -246,7 +244,7 @@ def dimple(wf, opt):
         wf.temporary_files |= {"jelly.pdb", "jelly.mtz"}
         wf.refmac5(hklin=prepared_mtz, xyzin=refmac_xyzin,
                    hklout="jelly.mtz", xyzout="jelly.pdb",
-                   labin=refmac_labin, labout=refmac_labout, libin=opt.libin,
+                   labin=refmac_labin, libin=opt.libin,
                    keys=restr_ref_keys+"ridge distance sigma 0.01\n"
                                        "make hydrogen no\n"
                                        "ncycle %d" % opt.jelly).run()
@@ -255,7 +253,7 @@ def dimple(wf, opt):
     comment("\nFinal restrained refinement, %d cycles." % opt.restr_cycles)
     restr_job = wf.refmac5(hklin=prepared_mtz, xyzin=refmac_xyzin,
                  hklout=opt.hklout, xyzout=opt.xyzout,
-                 labin=refmac_labin, labout=refmac_labout, libin=opt.libin,
+                 labin=refmac_labin, libin=opt.libin,
                  keys=restr_ref_keys+("ncycle %d" % opt.restr_cycles)).run()
     comment(_refmac_rms_line(restr_job.data))
     # if that run is repeated with --from-step it's useful to compare Rfree

@@ -325,9 +325,8 @@ vector<Cluster> find_clusters(const string& pdb_filename,
                               const string& mtz_filename,
                               const Config& config)
 {
-    //determine_columns(mtz);
-  string f_col = "2FOFCWT";
-  string phi_col = "PH2FOFCWT";
+  string f_col = "FWT";
+  string phi_col = "PHWT";
 
   DensityMap density_map;
   density_map.read_from_mtz(mtz_filename, f_col, phi_col);
@@ -499,7 +498,7 @@ int main(int argc, char **argv)
     clusters = find_clusters(pdb_filename, mtz_filename, config);
     if (config.write_1_1_map_to_file) {
       DensityMap density_map;
-      density_map.read_from_mtz(mtz_filename, "FOFCWT", "PHFOFCWT");
+      density_map.read_from_mtz(mtz_filename, "DELFWT", "PHDELWT");
       density_map.write_ccp4(config.write_1_1_map_to_file);
     }
   }

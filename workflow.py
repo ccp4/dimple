@@ -738,8 +738,8 @@ class Workflow:
         return ccp4_job(self, "pdbset", logical=locals(),
                         ki=["cell %g %g %g %g %g %g" % cell])
 
-    def refmac5(self, hklin, xyzin, hklout, xyzout, labin, labout, libin, keys):
-        inp = ["labin %s" % labin, "labout %s" % labout] + keys.splitlines()
+    def refmac5(self, hklin, xyzin, hklout, xyzout, labin, libin, keys):
+        inp = ["labin %s" % labin] + keys.splitlines()
         #inp += ['free 6']  # for testing
         job = ccp4_job(self, "refmac5", logical=locals(), ki=inp,
                        parser="_refmac_parser")

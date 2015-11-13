@@ -56,8 +56,8 @@ def basic_script(pdb, mtz, center, toward):
         else:
             lines += ['mtz = "%s"' % mtz]
         lines += [
-            'map21 = make_and_draw_map(mtz, "2FOFCWT", "PH2FOFCWT", "", 0, 0)',
-            'map11 = make_and_draw_map(mtz, "FOFCWT", "PHFOFCWT", "", 0, 1)']
+            'map21 = make_and_draw_map(mtz, "FWT", "PHWT", "", 0, 0)',
+            'map11 = make_and_draw_map(mtz, "DELFWT", "PHDELWT", "", 0, 1)']
     return '\n'.join(lines) + '\n'
 
 
