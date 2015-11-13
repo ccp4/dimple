@@ -168,21 +168,9 @@ def dimple(wf, opt):
                            solvent_percent=solvent_pct,
                            sg_alt="ALL", hi_reso=opt.mr_reso,
                            root='phaser').run(may_fail=True)
-            phaser_data = wf.jobs[-1].data
-            if (wf.jobs[-1].exit_status != 0 or
-                    phaser_data['info'] == 'Sorry - No solution'):
-                comment("\nGiving up.")
+            if not _after_phaser_comments(wf.jobs[-1], wf,
+                                          sg_in=reindexed_mtz_meta.symmetry):
                 return
-            if phaser_data['info'].endswith('...'):
-                solu_set = wf.get_phaser_solu_set(root='phaser')
-                if solu_set:
-                    comment("\n..." + solu_set[len(phaser_data['info'])-3:])
-                    utils.log_value('status', solu_set)
-            if phaser_data.get('partial_solution'):
-                comment("\nOnly partial solution found (%d components)" %
-                        (solu_set.count('TF') + solu_set.count('+TNCS')))
-            if phaser_data['SG'] != reindexed_mtz_meta.symmetry:
-                comment("\nSpacegroup changed to %s" % phaser_data['SG'])
             refmac_xyzin = "phaser.1.pdb"
             f_mtz = "phaser.1.mtz"
 
@@ -291,6 +279,27 @@ def _refmac_rms_line(data):
             items.append('   %s %.2f -> %.2f' % (name, d[0], d[-1]))
     return '\n  RMS:' + ''.join(items)
 
+def _after_phaser_comments(phaser_job, wf, sg_in):
+    phaser_data = phaser_job.data
+    if (phaser_job.exit_status != 0 or
+            phaser_data['info'] == 'Sorry - No solution'):
+        comment("\nGiving up.")
+        return False
+    if phaser_data['info'].endswith('...'):
+        solu_set = wf.get_phaser_solu_set(root='phaser')
+        if solu_set.startswith('?'):
+            comment("\n " + solu_set)
+        else:
+            comment("\n..." + solu_set[len(phaser_data['info'])-3:])
+        utils.log_value('status', solu_set)
+    else:
+        solu_set = phaser_data['info']
+    if phaser_data.get('partial_solution'):
+        n_comp = solu_set.count('TF') + solu_set.count('+TNCS')
+        comment("\nOnly partial solution found (%d components)" % n_comp)
+    if phaser_data['SG'] != sg_in:
+        comment("\nSpacegroup changed to %s" % phaser_data['SG'])
+    return True
 
 def _comment_summary_line(name, meta):
     def angle(x):

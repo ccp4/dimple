@@ -675,8 +675,9 @@ class Workflow:
                 for line in f:
                     if line.startswith('SOLU SET '):
                         return line[9:].strip()
+            return "?? (SOLU SET not found in %s.so)" % root
         except IOError:
-            return
+            return "?? (%s.sol file could not be open)" % root
 
     # functions below use logical=locals()
     # pylint: disable=unused-argument
