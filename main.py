@@ -191,7 +191,7 @@ def dimple(wf, opt):
         refmac_xyzin = "prepared_wat.pdb"
 
     ####### adding free-R flags #######
-    f_mtz_cols = wf.read_mtz_metadata(f_mtz).columns.keys()
+    f_mtz_meta = wf.read_mtz_metadata(f_mtz)
     cad_reso = opt.reso or (reindexed_mtz_meta.dmax - MtzMeta.d_eps)
     if opt.free_r_flags:
         free_mtz = opt.free_r_flags
@@ -201,14 +201,14 @@ def dimple(wf, opt):
                 (("reference" if free_mtz != opt.mtz else 'input'), free_col))
     else:
         free_col = 'FreeR_flag'
-        if free_col in f_mtz_cols:
+        if free_col in f_mtz_meta.columns:
             comment("\nReplace free-R flags")
         else:
             comment("\nGenerate free-R flags")
         free_mtz = "free.mtz"
         wf.temporary_files |= {"unique.mtz", free_mtz}
         if opt.seed_freerflag or cell_diff > 1e3: # i.e. different SG
-            wf.unique(hklout="unique.mtz", ref=reindexed_mtz_meta,
+            wf.unique(hklout="unique.mtz", ref=f_mtz_meta,
                       resolution=cad_reso).run()
         else:
             comment(" (repeatably)")
@@ -225,7 +225,8 @@ def dimple(wf, opt):
     else:
         prepared_mtz = "prepared.mtz"
         wf.temporary_files.add(prepared_mtz)
-        wf.cad(data_in=[(f_mtz, [c for c in f_mtz_cols if c != free_col]),
+        wf.cad(data_in=[(f_mtz,
+                         [c for c in f_mtz_meta.columns if c != free_col]),
                         (free_mtz, [free_col])],
                hklout=prepared_mtz,
                keys=["sysab_keep",  # does it matter?
