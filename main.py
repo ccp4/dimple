@@ -179,7 +179,8 @@ def dimple(wf, opt):
                     comment("\n..." + solu_set[len(phaser_data['info'])-3:])
                     utils.log_value('status', solu_set)
             if phaser_data.get('partial_solution'):
-                comment("\nOnly partial solution found")
+                comment("\nOnly partial solution found (%d components)" %
+                        (solu_set.count('TF') + solu_set.count('+TNCS')))
             if phaser_data['SG'] != reindexed_mtz_meta.symmetry:
                 comment("\nSpacegroup changed to %s" % phaser_data['SG'])
             refmac_xyzin = "phaser.1.pdb"
@@ -192,7 +193,7 @@ def dimple(wf, opt):
 
     ####### adding free-R flags #######
     f_mtz_meta = wf.read_mtz_metadata(f_mtz)
-    cad_reso = opt.reso or (reindexed_mtz_meta.dmax - MtzMeta.d_eps)
+    cad_reso = opt.reso or (f_mtz_meta.dmax - MtzMeta.d_eps)
     if opt.free_r_flags:
         free_mtz = opt.free_r_flags
         free_col = check_freerflags_column(wf.path(free_mtz),
