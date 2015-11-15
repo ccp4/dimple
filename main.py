@@ -69,7 +69,7 @@ def dimple(wf, opt):
             comment("\ndebug: problem when calculating volume?")
 
     ####### pointless - reindexing #######
-    if match_symmetry(mtz_meta, pdb_meta):
+    if match_symmetry(mtz_meta, pdb_meta) and opt.mr_when_r > 0:
         reindexed_mtz = "pointless.mtz"
         wf.temporary_files.add(reindexed_mtz)
         wf.pointless(hklin=opt.mtz, xyzin=rb_xyzin, hklout=reindexed_mtz,
@@ -113,6 +113,8 @@ def dimple(wf, opt):
     cell_diff = calculate_difference_metric(pdb_meta, reindexed_mtz_meta)
     if cell_diff > 0.1 and opt.mr_when_r < 1:
         comment("\nQuite different unit cells, start from MR.")
+    elif opt.mr_when_r <= 0:
+        comment("\nMR requested unconditionally.")
     else:
         comment("\nRigid-body refinement with resolution 3.5 A, 10 cycles.")
         wf.temporary_files |= {"refmacRB.pdb", "refmacRB.mtz"}
