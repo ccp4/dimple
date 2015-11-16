@@ -60,6 +60,9 @@ def dimple(wf, opt):
     wf.rwcontents(xyzin=rb_xyzin).run()
     solvent_pct = wf.jobs[-1].data.get('solvent_percent')
     pdb_num_mol = wf.jobs[-1].data.get('num_mol')
+    if pdb_meta:
+        # pdb_num_mol accounts for strict NCS (MTRIX without iGiven)
+        vol_ratio = mtz_meta.asu_volume() / pdb_meta.asu_volume(pdb_num_mol)
     if solvent_pct is None:
         put_error("rwcontents could not interpret %s" % rb_xyzin)
     elif solvent_pct > HIGH_SOLVENT_PCT:
@@ -69,7 +72,8 @@ def dimple(wf, opt):
             comment("\ndebug: problem when calculating volume?")
 
     ####### pointless - reindexing #######
-    if match_symmetry(mtz_meta, pdb_meta) and opt.mr_when_r > 0:
+    if match_symmetry(mtz_meta, pdb_meta) and opt.mr_when_r > 0 and (
+            0.7 < vol_ratio < 1.4):
         reindexed_mtz = "pointless.mtz"
         wf.temporary_files.add(reindexed_mtz)
         wf.pointless(hklin=opt.mtz, xyzin=rb_xyzin, hklout=reindexed_mtz,
@@ -142,12 +146,9 @@ def dimple(wf, opt):
 
     ####### phaser/molrep - molecular replacement #######
     if refmac_xyzin is None:
-        # pdb_num_mol accounts for strict NCS (MTRIX without iGiven)
-        if pdb_meta:
-            vol_ratio = mtz_meta.asu_volume() / pdb_meta.asu_volume(pdb_num_mol)
-            if vol_ratio < 0.66:
-                comment("\nasu %.0f%% smaller than in the model"
-                        % ((1 - vol_ratio) * 100))
+        if pdb_meta and vol_ratio < 0.66:
+            comment("\nasu %.0f%% smaller than in the model"
+                    % ((1 - vol_ratio) * 100))
         # phaser is used by default if number of searched molecules is known
         if opt.MR_prog == 'molrep' or (opt.MR_prog is None and
                                        (solvent_pct is None or
