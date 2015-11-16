@@ -532,6 +532,11 @@ def parse_dimple_commands(args):
         try:
             old_dir = os.path.join(old_wf['cwd'], old_wf['output_dir'])
             old_pdb = os.path.join(old_dir, 'ini.pdb')
+            if not os.path.exists(old_pdb):
+                if not old_wf.get('pdb_files'):
+                    put_error('No pdb files in the original run?')
+                    sys.exit(1)
+                old_pdb = os.path.join(old_dir, old_wf['pdb_files'][0])
             if 'data_file' not in old_wf:  # temporary, to be removed soon
                 old_mtz_arg = [a for a in old_wf['args'].split()
                                if a.endswith('.mtz')][0]
