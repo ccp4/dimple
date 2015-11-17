@@ -652,8 +652,6 @@ class Workflow:
           'SOLUTION 6DIM ENSE p EULER 0 0 0 FRAC 0 0 0',
           #'PURGE ROT NUM 20',
           #'PURGE TRA NUM 20',
-          ('RESOLUTION HIGH %g' % hi_reso) if hi_reso is not None else '',
-          #'RESOLUTION AUTO HIGH 2.5',
           #'MACANO PROTOCOL OFF',
           'HKLIN "%s"' % hklin,
           'LABIN %s' % labin,
@@ -661,6 +659,9 @@ class Workflow:
           'KILL TIME 120',  # 2h is much more than we want
           'ROOT %s' % root,
           ]
+        if hi_reso != 0:
+            lines += ['RESOLUTION HIGH %g' % hi_reso]
+            #'RESOLUTION AUTO HIGH 2.5',
         # tNCS: we go with what phaser does by default -- tNCS of order 2
         # are handled automatically. While we could specify tNCS for
         # pseudo-tripling/quadrupling of the cell (TNCS NMOL 3) I don't know

@@ -17,7 +17,7 @@ from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
 from dimple import coots
 
-__version__ = '2.4.1'
+__version__ = '2.4.2'
 
 # sometimes people have incomplete models in their pdb files
 HIGH_SOLVENT_PCT = 75
@@ -486,8 +486,8 @@ def parse_dimple_commands(args):
 
     group3.add_argument('--MR-prog', choices=['phaser', 'molrep'],
                         help='Molecular Replacement program')
-    group3.add_argument('--mr-reso', type=float,
-                        help='high resolution for MR (default: auto)')
+    group3.add_argument('--mr-reso', type=float, default=3.25,
+                        help='high resolution for MR (0=auto, default: 3.25)')
     group3.add_argument('--ItoF-prog', choices=['truncate', 'ctruncate'],
                         help='program to calculate amplitudes')
     group3.add_argument('--seed-freerflag', action='store_true',
