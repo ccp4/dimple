@@ -32,6 +32,9 @@ def dimple(wf, opt):
     _comment_summary_line("MTZ (%.1fA)" % mtz_meta.dmax, mtz_meta)
     if opt.dls_naming:
         opt.pdbs = dls_name_filter(opt.pdbs)
+        if not opt.pdbs:
+            return
+    opt.pdbs = utils.filter_out_duplicate_files(opt.pdbs)
     for p in opt.pdbs:
         wf.read_pdb_metadata(p)
     if len(opt.pdbs) > 1:
