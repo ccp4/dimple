@@ -490,7 +490,8 @@ def parse_dimple_commands(args):
     group3.add_argument('--MR-prog', choices=['phaser', 'molrep'],
                         help='Molecular Replacement program')
     group3.add_argument('--mr-reso', type=float, default=3.25,
-                        help='high resolution for MR (0=auto, default: 3.25)')
+                        help='high resolution (if >10 interpreted as eLLG)'
+                             ' for MR' + dstr)
     group3.add_argument('--ItoF-prog', choices=['truncate', 'ctruncate'],
                         help='program to calculate amplitudes')
     group3.add_argument('--seed-freerflag', action='store_true',

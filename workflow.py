@@ -659,7 +659,9 @@ class Workflow:
           'KILL TIME 120',  # 2h is much more than we want
           'ROOT %s' % root,
           ]
-        if hi_reso != 0:
+        if hi_reso > 10:  # in this case hi_reso is not a reso
+            lines += ['ELLG TARGET %g' % hi_reso]
+        else:
             lines += ['RESOLUTION HIGH %g' % hi_reso]
             #'RESOLUTION AUTO HIGH 2.5',
         # tNCS: we go with what phaser does by default -- tNCS of order 2
