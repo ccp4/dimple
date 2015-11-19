@@ -159,8 +159,6 @@ def dimple(wf, opt):
             wf.molrep(f=f_mtz, m=rb_xyzin).run()
             refmac_xyzin = "molrep.pdb"
         else:
-            if num != 1:
-                comment("\nSearching %d molecules" % num)
             wf.temporary_files |= {"phaser.1.pdb", "phaser.1.mtz"}
             wf.phaser_auto(hklin=f_mtz,
                            labin="F = F SIGF = SIGF",
@@ -297,7 +295,7 @@ def _after_phaser_comments(phaser_job, wf, sg_in):
         solu_set = phaser_data['info']
     if phaser_data.get('partial_solution'):
         n_comp = solu_set.count('TF') + solu_set.count('+TNCS')
-        comment("\nOnly partial solution found (%d components)" % n_comp)
+        comment("\nSolution found with %d components." % n_comp)
     if phaser_data['SG'] != sg_in:
         comment("\nSpacegroup changed to %s" % phaser_data['SG'])
     return True
@@ -365,10 +363,9 @@ def guess_number_of_molecules(mtz_meta, rw_data, pdb_asu_vol):
         n -= 1
 
     # 1-1.23/Vm=50% => Vm=2.46
-    n50 = max(int(round(Va / (2.46 * m))), 1)
-    if n50 != n:
-        text += "Vs=%.0f%% for %d mol, " % (calc_Vs(n50), n50)
-    comment(text + "Vs=%.0f%% for %d mol" % (calc_Vs(n), n))
+    other_n = max(int(round(Va / (2.46 * m))), n-1)
+    comment(text + "%.0f%% solvent for %d, %.0f%% for %d components."
+            % (calc_Vs(other_n), other_n, calc_Vs(n), n))
     return n
 
 
