@@ -241,7 +241,7 @@ def filter_out_duplicate_files(filenames):
     import hashlib
     def _get_sum(name):
         algo = hashlib.md5()
-        with open(filename, 'rb') as f:
+        with open(name, 'rb') as f:
             buf = f.read(65536)
             while len(buf) > 0:
                 algo.update(buf)
