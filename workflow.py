@@ -834,7 +834,12 @@ def open_pickled_workflow(file_or_dir):
                         "No such file or directory: %s" % pkl)
         sys.exit(1)
     f = open(pkl, "rb")
-    return pickle.load(f)
+    try:
+        return pickle.load(f)
+    except pickle.UnpicklingError:
+        utils.put_error('"Unpickling" failed',
+                        'Maybe this is not a pickle file: %s' % pkl)
+        sys.exit(1)
 
 def _write_workflow_steps(wf, output):
     for n, job in enumerate(wf.jobs):
@@ -847,7 +852,7 @@ def _write_workflow_steps(wf, output):
 
 def show_workflow_info(wf, mesg_dict):
     sys.stdout.write("%s\n" % wf)
-    sys.stdout.write("Command: " + " ".join(pipes.quote(a) for a in wf.argv))
+    sys.stdout.write("Command:\n" + " ".join(pipes.quote(a) for a in wf.argv))
     _write_workflow_steps(wf, sys.stdout)
     sys.stderr.write("""
 To see details, specify step(s):
@@ -894,40 +899,34 @@ def parse_steps(args, wf):
 def parse_workflow_commands():
     prog = os.path.basename(sys.argv[0])
     args = sys.argv[1:]
-    if not args:
+    if not args or args[0] not in ('info', 'repeat'):
         return False
-    if args[0] == 'info':
-        if len(args) == 1:
-            sys.stderr.write("Specify output_dir.\n")
-            return True
-        wf = open_pickled_workflow(args[1])
-        if len(args) == 2:
-            show_workflow_info(wf, dict(prog=prog, output_dir=args[1]))
-        else:
-            for job in parse_steps(args[2:], wf):
-                show_job_info(job)
+    if len(args) == 1:
+        sys.stderr.write("Specify output_dir.\n")
         return True
 
-    if args[0] == 'repeat':
-        if len(args) == 1:
-            sys.stderr.write("Specify output_dir.\n")
-        elif len(args) <= 2:
-            wf = open_pickled_workflow(args[1])
-            sys.stderr.write("Specify steps from the list "
-                             "(you can use ranges, e.g: 1,2 4-6 8-):")
-            _write_workflow_steps(wf, sys.stderr)
-            sys.stderr.write("For complete re-run:\n%s\n"
-                             % " ".join(pipes.quote(a) for a in wf.argv))
-        else:
-            wf = open_pickled_workflow(args[1])
-            for job in parse_steps(args[2:], wf):
-                try:
-                    job.data = {}  # reset data from parsing
-                    job.run()
-                except JobError as e:
-                    utils.put_error(e.msg, comment=e.note)
-                    sys.exit(1)
+    # it's handy to treat "/my/path/05-cad.log" as "/my/path" "5"
+    ext = os.path.splitext(args[1])[1]
+    if os.path.isfile(args[1]) and ext in ('.log', '.err'):
+        dirname, basename = os.path.split(args[1])
+        args[1:2] = [dirname, basename.split('-')[0]]
+
+    wf = open_pickled_workflow(args[1])
+    steps = args[2:]
+    if not steps:
+        show_workflow_info(wf, dict(prog=prog, output_dir=args[1]))
         return True
+    for job in parse_steps(steps, wf):
+        if args[0] == 'info':
+            show_job_info(job)
+        elif args[0] == 'repeat':
+            try:
+                job.data = {}  # reset data from parsing
+                job.run()
+            except JobError as e:
+                utils.put_error(e.msg, comment=e.note)
+                sys.exit(1)
+    return True
 
 commands_help = """\
 All files are stored in the specified output directory.
