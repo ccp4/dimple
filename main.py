@@ -62,10 +62,7 @@ def dimple(wf, opt):
         rb_xyzin = ini_pdb
     wf.rwcontents(xyzin=rb_xyzin).run()
     solvent_pct = wf.jobs[-1].data.get('solvent_percent')
-    pdb_num_mol = wf.jobs[-1].data.get('num_mol')
-    if pdb_meta:
-        # pdb_num_mol accounts for strict NCS (MTRIX without iGiven)
-        vol_ratio = mtz_meta.asu_volume() / pdb_meta.asu_volume(pdb_num_mol)
+    rw_data = wf.jobs[-1].data
     if solvent_pct is None:
         put_error("rwcontents could not interpret %s" % rb_xyzin)
     elif solvent_pct > HIGH_SOLVENT_PCT:
@@ -76,7 +73,7 @@ def dimple(wf, opt):
 
     ####### pointless - reindexing #######
     if match_symmetry(mtz_meta, pdb_meta) and opt.mr_when_r > 0 and (
-            0.7 < vol_ratio < 1.4):
+            0.7 < mtz_meta.get_volume() / pdb_meta.get_volume() < 1.4):
         reindexed_mtz = "pointless.mtz"
         wf.temporary_files.add(reindexed_mtz)
         wf.pointless(hklin=opt.mtz, xyzin=rb_xyzin, hklout=reindexed_mtz,
@@ -149,9 +146,10 @@ def dimple(wf, opt):
 
     ####### phaser/molrep - molecular replacement #######
     if refmac_xyzin is None:
-        if pdb_meta and vol_ratio < 0.66:
-            comment("\nasu %.0f%% smaller than in the model"
-                    % ((1 - vol_ratio) * 100))
+        # num_mol accounts for strict NCS (MTRIX without iGiven)
+        pdb_asu_vol = pdb_meta and pdb_meta.asu_volume(rw_data['num_mol'])
+        num = guess_number_of_molecules(mtz_meta, rw_data, pdb_asu_vol)
+
         # phaser is used by default if number of searched molecules is known
         if opt.MR_prog == 'molrep' or (opt.MR_prog is None and
                                        (solvent_pct is None or
@@ -161,11 +159,8 @@ def dimple(wf, opt):
             wf.molrep(f=f_mtz, m=rb_xyzin).run()
             refmac_xyzin = "molrep.pdb"
         else:
-            num = 1
-            if pdb_meta and vol_ratio > 1.5:
-                num = int(round(vol_ratio))
-                comment("\nSearching %d molecules, asu is %.1f x larger "
-                        "than in the model" % (num, vol_ratio))
+            if num != 1:
+                comment("\nSearching %d molecules" % num)
             wf.temporary_files |= {"phaser.1.pdb", "phaser.1.mtz"}
             wf.phaser_auto(hklin=f_mtz,
                            labin="F = F SIGF = SIGF",
@@ -329,6 +324,52 @@ def calculate_difference_metric(meta1, meta2):
         return sys.float_info.max / 2
     #return sum(abs(a-b) for a,b in zip(meta1.cell, meta2.cell))
     return meta1.to_standard().max_shift_in_mapping(meta2.to_standard())
+
+
+def guess_number_of_molecules(mtz_meta, rw_data, pdb_asu_vol):
+    text = "\n"
+    Va = mtz_meta.asu_volume()
+    m = rw_data['weight']
+
+    # if the number of molecules seems to be 1 or 2, don't go into Matthews
+    if pdb_asu_vol:
+        vol_ratio = Va / pdb_asu_vol
+        if vol_ratio < 0.7:
+            comment("\nasu %.0f%% smaller than in the model"
+                    % ((1 - vol_ratio) * 100))
+            return 1
+        if vol_ratio < 1.33:
+            return 1
+        if 1.8 < vol_ratio < 2.2:
+            comment("\nasu %.1fx larger than in the model." % vol_ratio)
+            return 2
+        text += "asu %.1fx larger than in the model, " % vol_ratio
+
+    # Vm = Va/(n*M)
+    # Vs = 1 - 1.23/Vm  => Vs = 1 - n * 1.23*M/Va
+    def calc_Vs(nmol):
+        return 100 * (1 - nmol * 1.23 * m / Va)
+
+    # For our purpose, it's better to overestimate the number of molecules,
+    # because we can use "partial solution" from Phaser.
+    # OTOH the search with overestimated n is slower and more likely to fail.
+    # We also have preference for even numbers because they are more frequent
+    # and Phaser can make use of tNCS if it's present.
+    # Let's pick the largest n that gives solvent content (Vs) at least 30%.
+    # If n is odd, try n-1 if Vs is still above 45%.
+
+    # Vm = Va/(n*M)  =>  n = Va/(Vm*M)
+    # 1-1.23/Vm=30% => Vm=1.76
+    n = max(int(Va / (1.76 * m)), 1)
+    if n % 2 == 1 and calc_Vs(n-1) < 45:
+        n -= 1
+
+    # 1-1.23/Vm=50% => Vm=2.46
+    n50 = max(int(round(Va / (2.46 * m))), 1)
+    if n50 != n:
+        text += "Vs=%g%% for %d mol, " % (calc_Vs(n50), n50)
+    comment(text + "Vs=%g%% for %d mol" % (calc_Vs(n), n))
+    return n
 
 
 def _check_picture_tools():

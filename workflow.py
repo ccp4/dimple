@@ -215,7 +215,7 @@ def _rwcontents_parser(job):
             Vm = float(line.split(':')[-1])
             if Vm != 0:
                 d["Vm"] = Vm
-                # 1.23 is used in phaser/src/Composition.cc
+                # 1.23 is used in Rupp's papers and in Phaser
                 d["solvent_percent"] = (1 - 1.23/Vm) * 100
     if 'volume' in d and 'weight' in d and 'Vm' in d and 'num_mol' not in d:
         d['num_mol'] = int(round(d['volume'] / d['weight'] / d['Vm']))
