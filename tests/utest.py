@@ -43,7 +43,7 @@ class TestMat3(unittest.TestCase):
 
 class TestCell(unittest.TestCase):
     def setUp(self):
-        self.cell = Cell((22.84, 32.84, 42.84, 80.84, 90.84, 100.84))
+        self.cell = Cell((22.84, 32.84, 42.84, 80.84, 90.84, 100.84), None)
     def test_orth(self):
         orth = self.cell.get_orth_matrix()
         expected = np.array([[22.84, -6.17612, -0.628045],
