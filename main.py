@@ -367,8 +367,8 @@ def guess_number_of_molecules(mtz_meta, rw_data, pdb_asu_vol):
     # 1-1.23/Vm=50% => Vm=2.46
     n50 = max(int(round(Va / (2.46 * m))), 1)
     if n50 != n:
-        text += "Vs=%g%% for %d mol, " % (calc_Vs(n50), n50)
-    comment(text + "Vs=%g%% for %d mol" % (calc_Vs(n), n))
+        text += "Vs=%.0f%% for %d mol, " % (calc_Vs(n50), n50)
+    comment(text + "Vs=%.0f%% for %d mol" % (calc_Vs(n), n))
     return n
 
 
