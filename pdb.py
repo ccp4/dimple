@@ -18,10 +18,6 @@ class PdbMeta(Cell):
         gamma = float(cryst1_line[47:54])
         symmetry = cryst1_line[55:66].strip()
         Cell.__init__(self, (a, b, c, alpha, beta, gamma), symmetry)
-        try:
-            self.z = int(cryst1_line[66:70])
-        except ValueError:
-            self.z = None
         self.has_hetatm_x = None
 
     def __str__(self):
