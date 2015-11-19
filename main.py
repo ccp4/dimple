@@ -363,7 +363,7 @@ def guess_number_of_molecules(mtz_meta, rw_data, pdb_asu_vol):
         n -= 1
 
     # 1-1.23/Vm=50% => Vm=2.46
-    other_n = max(int(round(Va / (2.46 * m))), n-1)
+    other_n = min(int(round(Va / (2.46 * m))), n-1)
     comment(text + "%.0f%% solvent for %d, %.0f%% for %d components."
             % (calc_Vs(other_n), other_n, calc_Vs(n), n))
     return n
