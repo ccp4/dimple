@@ -34,7 +34,7 @@ def dimple(wf, opt):
         opt.pdbs = dls_name_filter(opt.pdbs)
         if not opt.pdbs:
             return
-    opt.pdbs = utils.filter_out_duplicate_files(opt.pdbs)
+    opt.pdbs = utils.filter_out_duplicate_files(opt.pdbs, relto=opt.output_dir)
     for p in opt.pdbs:
         wf.read_pdb_metadata(p)
     if len(opt.pdbs) > 1:

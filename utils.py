@@ -1,5 +1,6 @@
 import ConfigParser
 import errno
+import hashlib
 import json
 import os
 import sys
@@ -237,21 +238,21 @@ def report_disk_space(paths):
                 _report_quota(quota, mount)
                 break
 
-def filter_out_duplicate_files(filenames):
-    import hashlib
-    def _get_sum(name):
-        algo = hashlib.md5()
-        with open(name, 'rb') as f:
+def _get_sum(filename):
+    algo = hashlib.md5()
+    with open(filename, 'rb') as f:
+        buf = f.read(65536)
+        while len(buf) > 0:
+            algo.update(buf)
             buf = f.read(65536)
-            while len(buf) > 0:
-                algo.update(buf)
-                buf = f.read(65536)
-            return algo.hexdigest()
+        return algo.hexdigest()
+
+def filter_out_duplicate_files(filenames, relto=""):
     unique = []
     hashes = set()
     for filename in filenames:
         try:
-            h = _get_sum(filename)
+            h = _get_sum(os.path.join(relto, filename))
             _log_comment("%s %s" % (h, filename))
             if h not in hashes:
                 hashes.add(h)
