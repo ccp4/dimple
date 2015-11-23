@@ -344,7 +344,7 @@ vector<Cluster> find_clusters(const string& pdb_filename,
   const clipper::Xmap<float>* xmap = density_map.xmap();
 
   float cut_off = config.sigma_level * map_stddev;
-  printf("Density std.dev: %g, cut-off: %g (%g sigma)\n",
+  printf("Density std.dev: %.3f, cut-off: %.3f e/A^3 (%g sigma)\n",
          map_stddev, cut_off, config.sigma_level);
   vector<Cluster> all_clusters = find_clusters_by_flood_fill(*xmap,
                                                    config.min_volume, cut_off);

@@ -17,10 +17,11 @@ from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
 from dimple import coots
 
-__version__ = '2.4.2'
+__version__ = '2.4.3'
 
-# sometimes people have incomplete models in their pdb files
+# sometimes provided models are incomplete, be suspicious above this solvent%
 HIGH_SOLVENT_PCT = 75
+# do not search blobs if the model is too bad
 BAD_FINAL_RFREE = 0.5
 
 def dimple(wf, opt):
@@ -280,6 +281,8 @@ def _refmac_rms_line(data):
 
 def _after_phaser_comments(phaser_job, wf, sg_in):
     phaser_data = phaser_job.data
+    if 'error' in phaser_data:
+        comment("\n" + phaser_data['error'])
     if (phaser_job.exit_status != 0 or
             phaser_data['info'] == 'Sorry - No solution'):
         comment("\nGiving up.")

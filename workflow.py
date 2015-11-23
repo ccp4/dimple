@@ -350,16 +350,18 @@ def _phaser_parser(job):
     for line in job.out.read_line():
         if line.startswith('*** Phaser Module:'):
             d['info'] = '[%s]' % line[19:70].strip().lower()
-        if line.startswith('   SOLU SET ') and 'LLG=' in line:
+        elif line.startswith('   SOLU SET ') and 'LLG=' in line:
             d['info'] = line[12:].strip()
             if len(d['info']) > 52:
                 d['info'] = d['info'][:50].rsplit(' ', 1)[0] + '...'
-        if line.startswith('   Sorry - No solution'):
+        elif line.startswith('   Sorry - No solution'):
             d['info'] = line.strip()
             if 'No solution with all components' in line:
                 d['partial_solution'] = 'yes'
-        if line.startswith('   SOLU SPAC '):
+        elif line.startswith('   SOLU SPAC '):
             d['SG'] = line[13:].strip()
+        elif ' ERROR:' in line:
+            d['error'] = line.strip()
     return "%-48s" % d.get('info', '')
 
 def _truncate_parser(job):
