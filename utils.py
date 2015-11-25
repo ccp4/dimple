@@ -84,7 +84,10 @@ def log_time(key, timestamp):
 
 def read_section_from_log(logfile, section):
     conf = ConfigParser.RawConfigParser()
-    conf.read(logfile)
+    try:
+        conf.read(logfile)
+    except ConfigParser.MissingSectionHeaderError:
+        return
     if conf.has_section(section):
         d = {}
         for k, v in conf.items(section):

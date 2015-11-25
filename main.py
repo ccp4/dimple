@@ -591,7 +591,7 @@ def parse_dimple_commands(args):
                 old_wf['data_file'] = os.path.join(old_wf['cwd'], old_mtz_arg)
             old_mtz = os.path.join(old_dir, old_wf['data_file'])
         except (TypeError, KeyError):
-            put_error('Reading logfile failed')
+            put_error('Reading logfile failed', comment='is it dimple.log?')
             sys.exit(1)
         all_args[0:2] = [old_pdb, old_mtz]
 
