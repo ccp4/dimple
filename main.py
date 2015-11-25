@@ -62,13 +62,12 @@ def dimple(wf, opt):
     else:
         rb_xyzin = ini_pdb
     wf.rwcontents(xyzin=rb_xyzin).run()
-    solvent_pct = wf.jobs[-1].data.get('solvent_percent')
     rw_data = wf.jobs[-1].data
-    if solvent_pct is None:
+    if rw_data.get('solvent_percent') is None:
         put_error("rwcontents could not interpret %s" % rb_xyzin)
-    elif solvent_pct > HIGH_SOLVENT_PCT:
+    elif rw_data['solvent_percent'] > HIGH_SOLVENT_PCT:
         comment("\nHmm... %.1f%% of solvent or incomplete model" %
-                solvent_pct)
+                rw_data['solvent_percent'])
         if abs(wf.jobs[-1].data.get('volume', 0) - pdb_meta.get_volume()) > 10:
             comment("\ndebug: problem when calculating volume?")
 
@@ -154,9 +153,7 @@ def dimple(wf, opt):
             pdb_asu_vol = pdb_meta and pdb_meta.asu_volume(rw_data['num_mol'])
             mr_num = guess_number_of_molecules(mtz_meta, rw_data, pdb_asu_vol)
         # phaser is used by default if number of searched molecules is known
-        if opt.mr_prog == 'molrep' or (opt.mr_prog is None and
-                                       (solvent_pct is None or
-                                        solvent_pct > HIGH_SOLVENT_PCT)):
+        if opt.mr_prog == 'molrep':
             wf.temporary_files |= {"molrep.pdb", "molrep_dimer.pdb",
                                    "molrep.crd"}
             wf.molrep(f=f_mtz, m=rb_xyzin).run()
@@ -166,7 +163,7 @@ def dimple(wf, opt):
             wf.phaser_auto(hklin=f_mtz,
                            labin="F = F SIGF = SIGF",
                            model=dict(pdb=rb_xyzin, identity=100, num=mr_num),
-                           solvent_percent=solvent_pct,
+                           solvent_percent=rw_data.get('solvent_percent'),
                            sg_alt="ALL", hi_reso=opt.mr_reso,
                            root='phaser').run(may_fail=True)
             if not _after_phaser_comments(wf.jobs[-1], wf,
@@ -295,9 +292,9 @@ def _after_phaser_comments(phaser_job, wf, sg_in):
             comment("\n " + solu_set)
         else:
             comment("\n..." + solu_set[len(phaser_data['info'])-3:])
-        utils.log_value('status', solu_set)
     else:
         solu_set = phaser_data['info']
+    utils.log_value('status', solu_set)
     if phaser_data.get('partial_solution'):
         n_comp = solu_set.count('TF') + solu_set.count('+TNCS')
         comment("\nSolution found with %d components." % n_comp)
@@ -335,7 +332,7 @@ def guess_number_of_molecules(mtz_meta, rw_data, pdb_asu_vol):
     m = rw_data['weight']
 
     # if the number of molecules seems to be 1 or 2, don't go into Matthews
-    if pdb_asu_vol:
+    if pdb_asu_vol and rw_data.get('solvent_percent', 100) < HIGH_SOLVENT_PCT:
         vol_ratio = Va / pdb_asu_vol
         if vol_ratio < 0.7:
             comment("\nasu %.0f%% smaller than in the model"
