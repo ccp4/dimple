@@ -147,10 +147,12 @@ def dimple(wf, opt):
 
     ####### phaser/molrep - molecular replacement #######
     if refmac_xyzin is None:
-        # num_mol accounts for strict NCS (MTRIX without iGiven)
-        pdb_asu_vol = pdb_meta and pdb_meta.asu_volume(rw_data['num_mol'])
-        num = guess_number_of_molecules(mtz_meta, rw_data, pdb_asu_vol)
-
+        if opt.mr_num:
+            mr_num = opt.mr_num
+        else:
+            # num_mol accounts for strict NCS (MTRIX without iGiven)
+            pdb_asu_vol = pdb_meta and pdb_meta.asu_volume(rw_data['num_mol'])
+            mr_num = guess_number_of_molecules(mtz_meta, rw_data, pdb_asu_vol)
         # phaser is used by default if number of searched molecules is known
         if opt.mr_prog == 'molrep' or (opt.mr_prog is None and
                                        (solvent_pct is None or
@@ -163,7 +165,7 @@ def dimple(wf, opt):
             wf.temporary_files |= {"phaser.1.pdb", "phaser.1.mtz"}
             wf.phaser_auto(hklin=f_mtz,
                            labin="F = F SIGF = SIGF",
-                           model=dict(pdb=rb_xyzin, identity=100, num=num),
+                           model=dict(pdb=rb_xyzin, identity=100, num=mr_num),
                            solvent_percent=solvent_pct,
                            sg_alt="ALL", hi_reso=opt.mr_reso,
                            root='phaser').run(may_fail=True)
@@ -529,10 +531,13 @@ def parse_dimple_commands(args):
                         help='refmac matrix weight (default: auto-weight)')
 
     group3.add_argument('--mr-prog', choices=['phaser', 'molrep'],
-                        help='Molecular Replacement program')
+                        default='phaser',
+                        help='Molecular Replacement program' + dstr)
+    group3.add_argument('--mr-num', type=int,
+                        help='number of molecules for MR (default: auto)')
     group3.add_argument('--mr-reso', type=float, default=3.25,
-                        help='high resolution (if >10 interpreted as eLLG)'
-                             ' for MR' + dstr)
+                        help='high resolution for MR '
+                             '(if >10 interpreted as eLLG)' + dstr)
     group3.add_argument('--ItoF-prog', choices=['truncate', 'ctruncate'],
                         help='program to calculate amplitudes')
     group3.add_argument('--seed-freerflag', action='store_true',
