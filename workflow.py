@@ -636,7 +636,7 @@ class Workflow:
         return job
 
     def phaser_auto(self, hklin, labin, model, root, solvent_percent,
-                    sg_alt, hi_reso):
+                    sg_alt, opt):
         lines = [
           'MODE MR_AUTO',
           'SEARCH METHOD FAST',
@@ -647,25 +647,28 @@ class Workflow:
           'SEARCH ENSEMBLE p NUM %(num)d' % model,
           'COMPOSITION BY SOLVENT',
           'COMPOSITION PERCENTAGE %f' % (solvent_percent or 50),
+          'HKLIN "%s"' % hklin,
+          'LABIN %s' % labin,
+          'SGALTERNATIVE SELECT %s' % sg_alt,
+          'ROOT %s' % root,
           # Since Phaser 2.5.6 template matched solutions are moved
           # to the template solution origin. Which is better than
           # getting a solution one cell away, so we set template here.
           'SOLUTION TEMPLATE original_model',
           'SOLUTION 6DIM ENSE p EULER 0 0 0 FRAC 0 0 0',
-          #'PURGE ROT NUM 20',
-          #'PURGE TRA NUM 20',
-          #'MACANO PROTOCOL OFF',
-          'HKLIN "%s"' % hklin,
-          'LABIN %s' % labin,
-          'SGALTERNATIVE SELECT %s' % sg_alt,
-          'KILL TIME 120',  # 2h is much more than we want
-          'ROOT %s' % root,
           ]
-        if hi_reso > 10:  # in this case hi_reso is not a reso
-            lines += ['ELLG TARGET %g' % hi_reso]
+        if opt.slow < 2:
+            lines += [
+              'KILL TIME 120', # 2h is much more than we want
+              #'MACANO PROTOCOL OFF',
+              #'RESOLUTION AUTO HIGH 2.5',  # ignored by Phaser if > RESO HIGH
+              'PURGE ROT NUM 7',
+              'PURGE TRA NUM 20',
+              'PURGE RNP NUM 10']
+        if opt.mr_reso > 10:  # in this case it's not a reso
+            lines += ['ELLG TARGET %g' % opt.mr_reso]
         else:
-            lines += ['RESOLUTION HIGH %g' % hi_reso]
-            #'RESOLUTION AUTO HIGH 2.5',
+            lines += ['RESOLUTION HIGH %g' % opt.mr_reso]
         # tNCS: we go with what phaser does by default -- tNCS of order 2
         # are handled automatically. While we could specify tNCS for
         # pseudo-tripling/quadrupling of the cell (TNCS NMOL 3) I don't know

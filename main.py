@@ -164,7 +164,7 @@ def dimple(wf, opt):
                            labin="F = F SIGF = SIGF",
                            model=dict(pdb=rb_xyzin, identity=100, num=mr_num),
                            solvent_percent=rw_data.get('solvent_percent'),
-                           sg_alt="ALL", hi_reso=opt.mr_reso,
+                           sg_alt="ALL", opt=opt,
                            root='phaser').run(may_fail=True)
             if not _after_phaser_comments(wf.jobs[-1], wf,
                                           sg_in=reindexed_mtz_meta.symmetry):
