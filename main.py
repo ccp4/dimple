@@ -393,10 +393,15 @@ def _check_picture_tools():
         ok = False
     return ok
 
-# chmod +x
-def _make_executable(path):
-    mode = os.stat(path).st_mode
-    os.chmod(path, mode | ((mode & 0444) >> 2))
+def _write_script(path, content, executable=False):
+    try:
+        with open(path, 'w') as f:
+            f.write(content)
+        if executable:  # chmod +x
+            mode = os.stat(path).st_mode
+            os.chmod(path, mode | ((mode & 0444) >> 2))
+    except (IOError, OSError) as e:
+        put_error(e)
 
 def _generate_scripts_and_pictures(wf, opt, data):
     blobs = data["blobs"] if data else []
@@ -419,29 +424,25 @@ def _generate_scripts_and_pictures(wf, opt, data):
     script_path = os.path.join(wf.output_dir, "run-coot.py")
     script = coots.basic_script(pdb=opt.xyzout, mtz=opt.hklout,
                                center=(blobs and blobs[0]), toward=com)
-    open(script_path, "w").write(script)
+    _write_script(script_path, script, executable=True)
 
     # blob images, for now for not more than two blobs
+    d = os.path.abspath(wf.output_dir)
     for n, b in enumerate(blobs[:2]):
         py_path = os.path.join(wf.output_dir, "blob%d-coot.py" % (n+1))
-        with open(py_path, "w") as blob_py:
-            d = os.path.abspath(wf.output_dir)
-            blob_py.write(coots.basic_script(pdb=os.path.join(d, opt.xyzout),
-                                             mtz=os.path.join(d, opt.hklout),
-                                             center=blobs[n], toward=com))
+        content = coots.basic_script(pdb=os.path.join(d, opt.xyzout),
+                                     mtz=os.path.join(d, opt.hklout),
+                                     center=blobs[n], toward=com)
+        _write_script(py_path, content)
     # coot.sh - one-line script for convenience
     if blobs:
         coot_sh_text = '{coot} --no-guano {out}/blob1-coot.py\n'
     else:
         coot_sh_text = '{coot} --no-guano {out}/final.mtz {out}/final.pdb\n'
     coot_sh_path = os.path.join(wf.output_dir, "coot.sh")
-    try:
-        with open(coot_sh_path, 'w') as f:
-            f.write(coot_sh_text.format(coot=coots.find_path(),
-                                        out=wf.output_dir))
-        _make_executable(coot_sh_path)
-    except (IOError, OSError) as e:
-        put_error(e)
+    _write_script(coot_sh_path, coot_sh_text.format(coot=coots.find_path(),
+                                                    out=wf.output_dir),
+                  executable=True)
 
     if opt.img_format == 'none' or not blobs:
         return
