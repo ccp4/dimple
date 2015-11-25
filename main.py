@@ -152,7 +152,7 @@ def dimple(wf, opt):
         num = guess_number_of_molecules(mtz_meta, rw_data, pdb_asu_vol)
 
         # phaser is used by default if number of searched molecules is known
-        if opt.MR_prog == 'molrep' or (opt.MR_prog is None and
+        if opt.mr_prog == 'molrep' or (opt.mr_prog is None and
                                        (solvent_pct is None or
                                         solvent_pct > HIGH_SOLVENT_PCT)):
             wf.temporary_files |= {"molrep.pdb", "molrep_dimer.pdb",
@@ -528,7 +528,7 @@ def parse_dimple_commands(args):
     group3.add_argument('--weight', metavar='VALUE', type=float,
                         help='refmac matrix weight (default: auto-weight)')
 
-    group3.add_argument('--MR-prog', choices=['phaser', 'molrep'],
+    group3.add_argument('--mr-prog', choices=['phaser', 'molrep'],
                         help='Molecular Replacement program')
     group3.add_argument('--mr-reso', type=float, default=3.25,
                         help='high resolution (if >10 interpreted as eLLG)'
