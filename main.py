@@ -239,8 +239,9 @@ def dimple(wf, opt):
      weight %s
      """ % refmac_weight
     refmac_labin = "%s FREE=%s" % (refmac_labin_nofree, free_col)
+    comment("\nRestrained refinement, %d+%d cycles." % (opt.jelly,
+                                                        opt.restr_cycles))
     if opt.jelly:
-        comment("\nJelly-body refinement, %d cycles." % opt.jelly)
         wf.temporary_files |= {"jelly.pdb", "jelly.mtz"}
         wf.refmac5(hklin=prepared_mtz, xyzin=refmac_xyzin,
                    hklout="jelly.mtz", xyzout="jelly.pdb",
@@ -250,7 +251,6 @@ def dimple(wf, opt):
                                        "ncycle %d" % opt.jelly).run()
         comment(_refmac_rms_line(wf.jobs[-1].data))
         refmac_xyzin = "jelly.pdb"
-    comment("\nFinal restrained refinement, %d cycles." % opt.restr_cycles)
     restr_job = wf.refmac5(hklin=prepared_mtz, xyzin=refmac_xyzin,
                  hklout=opt.hklout, xyzout=opt.xyzout,
                  labin=refmac_labin, libin=opt.libin,
@@ -275,7 +275,7 @@ def dimple(wf, opt):
 
 def _refmac_rms_line(data):
     rb, ra, rc = [data.get(k, (-1)) for k in 'rmsBOND', 'rmsANGL', 'rmsCHIRAL']
-    return ('\n  RMS:   bond %.3f -> %.3f' % (rb[0], rb[-1]) +
+    return ('\n    RMS:   bond %.3f -> %.3f' % (rb[0], rb[-1]) +
             '   angle %.2f -> %.2f' % (ra[0], ra[-1]) +
             '   chiral %.2f -> %.2f' % (rc[0], rc[-1]))
 
@@ -635,10 +635,15 @@ def parse_dimple_commands(args):
     # the default value of sigicolumn ('SIG<ICOL>') needs substitution
     opt.sigicolumn = opt.sigicolumn.replace('<ICOL>', opt.icolumn or 'IMEAN')
 
+    # set defaults that depend on the 'slow' level
+    if opt.slow is None:
+        opt.slow = 0
+    elif opt.slow > 2:
+        opt.slow = 2
     if opt.restr_cycles is None:
-        opt.restr_cycles = (12 if opt.slow else 8)
-    if opt.jelly is None and opt.slow >= 2:
-        opt.jelly = 100
+        opt.restr_cycles = [8, 10, 12][opt.slow]
+    if opt.jelly is None:
+        opt.jelly = [4, 10, 100][opt.slow]
 
     return opt
 
