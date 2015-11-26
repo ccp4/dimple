@@ -17,7 +17,7 @@ from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
 from dimple import coots
 
-__version__ = '2.4.3'
+__version__ = '2.4.4'
 
 # sometimes provided models are incomplete, be suspicious above this solvent%
 HIGH_SOLVENT_PCT = 75
@@ -162,8 +162,8 @@ def dimple(wf, opt):
             wf.temporary_files |= {"phaser.1.pdb", "phaser.1.mtz"}
             wf.phaser_auto(hklin=f_mtz,
                            labin="F = F SIGF = SIGF",
-                           model=dict(pdb=rb_xyzin, identity=100, num=mr_num),
-                           solvent_percent=rw_data.get('solvent_percent'),
+                           model=dict(pdb=rb_xyzin, identity=100, num=mr_num,
+                                      mw=rw_data.get('weight')),
                            sg_alt="ALL", opt=opt,
                            root='phaser').run(may_fail=True)
             if not _after_phaser_comments(wf.jobs[-1], wf,

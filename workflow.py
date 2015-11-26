@@ -361,7 +361,9 @@ def _phaser_parser(job):
         elif line.startswith('   SOLU SPAC '):
             d['SG'] = line[13:].strip()
         elif ' ERROR:' in line:
-            d['error'] = line.strip()
+            # the error about impossible content has two lines, let's reword it
+            d['error'] = line.strip().replace('a protein/nucleic acid',
+                                              'impossible content')
     return "%-48s" % d.get('info', '')
 
 def _truncate_parser(job):
@@ -635,8 +637,7 @@ class Workflow:
             job.std_input = keys.strip() + "\nend"
         return job
 
-    def phaser_auto(self, hklin, labin, model, root, solvent_percent,
-                    sg_alt, opt):
+    def phaser_auto(self, hklin, labin, model, root, sg_alt, opt):
         lines = [
           'MODE MR_AUTO',
           'SEARCH METHOD FAST',
@@ -645,8 +646,6 @@ class Workflow:
           # if --no-hetatm was used HETATM records are already removed
           'ENSEMBLE p HETATOM ON',
           'SEARCH ENSEMBLE p NUM %(num)d' % model,
-          'COMPOSITION BY SOLVENT',
-          'COMPOSITION PERCENTAGE %f' % (solvent_percent or 50),
           'HKLIN "%s"' % hklin,
           'LABIN %s' % labin,
           'SGALTERNATIVE SELECT %s' % sg_alt,
@@ -657,6 +656,10 @@ class Workflow:
           'SOLUTION TEMPLATE original_model',
           'SOLUTION 6DIM ENSE p EULER 0 0 0 FRAC 0 0 0',
           ]
+        if model['mw']:
+            lines += ['COMPOSITION PROTEIN MW %(mw)f NUMBER %(num)d' % model]
+        else:
+            lines += ['COMPOSITION BY AVERAGE']
         if opt.slow < 2:
             lines += [
               'KILL TIME 120', # 2h is much more than we want
