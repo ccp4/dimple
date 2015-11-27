@@ -921,7 +921,7 @@ def parse_workflow_commands():
         sys.stderr.write("Specify output_dir.\n")
         return True
 
-    # it's handy to treat "/my/path/05-cad.log" as "/my/path" "5"
+    # it's handy to use "/my/path/05-cad.log" as "/my/path" "5"
     ext = os.path.splitext(args[1])[1]
     if os.path.isfile(args[1]) and ext in ('.log', '.err'):
         dirname, basename = os.path.split(args[1])

@@ -253,6 +253,8 @@ def _get_sum(filename):
 def filter_out_duplicate_files(filenames, relto=""):
     unique = []
     hashes = set()
+    # exclude empty files, here is md5 of nothing
+    hashes.add("d41d8cd98f00b204e9800998ecf8427e")
     for filename in filenames:
         try:
             h = _get_sum(os.path.join(relto, filename))
