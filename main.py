@@ -299,7 +299,9 @@ def _after_phaser_comments(phaser_job, wf, sg_in):
         solu_set = phaser_data['info']
     utils.log_value('status', solu_set)
     if phaser_data.get('partial_solution'):
-        n_comp = solu_set.count('TF') + solu_set.count('+TNCS')
+        # counting TF*0 or TFZ=number, but not TFZ==number
+        n_comp = (solu_set.count('TF') - solu_set.count('TFZ==') +
+                  solu_set.count('+TNCS'))
         comment("\nSolution found with %d components." % n_comp)
     if phaser_data['SG'] != sg_in:
         comment("\nSpacegroup changed to %s" % phaser_data['SG'])
