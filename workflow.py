@@ -211,7 +211,13 @@ def _rwcontents_parser(job):
             d["volume"] = float(line.split(':')[-1])
         elif line.startswith(' Molecular Weight of protein:'):
             d["weight"] = float(line.split(':')[-1])
-        if line.startswith(' The Matthews Coefficient is :'):
+        elif line.startswith(' Molecular Weight of all atoms:'):
+            d["total_weight"] = float(line.split(':')[-1])
+        elif line.startswith(' Number of amino-acids residues ='):
+            d["aa_count"] = int(line.split('=')[-1])
+        elif line.startswith('                      - number of waters'):
+            d["water_count"] = float(line.split()[-1])
+        elif line.startswith(' The Matthews Coefficient is :'):
             Vm = float(line.split(':')[-1])
             if Vm != 0:
                 d["Vm"] = Vm
@@ -219,11 +225,13 @@ def _rwcontents_parser(job):
                 d["solvent_percent"] = (1 - 1.23/Vm) * 100
     if 'volume' in d and 'weight' in d and 'Vm' in d and 'num_mol' not in d:
         d['num_mol'] = int(round(d['volume'] / d['weight'] / d['Vm']))
-    return u"%s x %.0fkDa in %.fnm3  Vm=%.2f (%.0f%% of solvent)" % (
+    protein_kDa = d.get('weight', 0) / 1000.  # Da -> kDa
+    total_kDa = d.get('total_weight', 0) / 1000.
+    return u"%s x %.0fkDa (+ %.0fkDa of het) in %.fnm3, %.0f%% solvent" % (
             d.get('num_mol', '??'),
-            d.get('weight', 0) / 1000, # Da -> kDa
+            protein_kDa,
+            total_kDa - protein_kDa,
             d.get('volume', 0) / 1000, # A^2 -> nm^3
-            d.get('Vm', 0),
             d.get('solvent_percent', 0))
 
 def _cad_parser(job):
