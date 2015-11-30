@@ -362,7 +362,7 @@ def _phaser_parser(job):
             d['info'] = line[12:].strip()
             if len(d['info']) > 52:
                 d['info'] = d['info'][:50].rsplit(' ', 1)[0] + '...'
-        elif line.startswith('   Sorry - No solution'):
+        elif 'Sorry - No solution' in line:
             d['info'] = line.strip()
             if 'No solution with all components' in line:
                 d['partial_solution'] = 'yes'
