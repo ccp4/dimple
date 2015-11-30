@@ -17,7 +17,7 @@ from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
 from dimple import coots
 
-__version__ = '2.4.4'
+__version__ = '2.4.5'
 
 # sometimes provided models are incomplete, be suspicious above this solvent%
 HIGH_SOLVENT_PCT = 75
@@ -170,7 +170,7 @@ def dimple(wf, opt):
                                       mw=rw_data.get('weight')),
                            sg_alt="ALL", opt=opt,
                            root='phaser').run(may_fail=True)
-            if not _after_phaser_comments(wf.jobs[-1], wf,
+            if not _after_phaser_comments(wf.jobs[-1],
                                           sg_in=reindexed_mtz_meta.symmetry):
                 return
             refmac_xyzin = "phaser.1.pdb"
@@ -282,7 +282,7 @@ def _refmac_rms_line(data):
             '   angle %.2f -> %.2f' % (ra[0], ra[-1]) +
             '   chiral %.2f -> %.2f' % (rc[0], rc[-1]))
 
-def _after_phaser_comments(phaser_job, wf, sg_in):
+def _after_phaser_comments(phaser_job, sg_in):
     phaser_data = phaser_job.data
     if 'error' in phaser_data:
         comment("\n" + phaser_data['error'])
@@ -290,15 +290,9 @@ def _after_phaser_comments(phaser_job, wf, sg_in):
             phaser_data['info'] == 'Sorry - No solution'):
         comment("\nGiving up.")
         return False
+    solu_set = phaser_data.get('status', '')
     if phaser_data['info'].endswith('...'):
-        solu_set = wf.get_phaser_solu_set(root='phaser')
-        if solu_set.startswith('?'):
-            comment("\n " + solu_set)
-        else:
-            comment("\n..." + solu_set[len(phaser_data['info'])-3:])
-    else:
-        solu_set = phaser_data['info']
-    utils.log_value('status', solu_set)
+        comment("\n..." + solu_set[len(phaser_data['info'])-3:])
     if phaser_data.get('partial_solution'):
         # counting TF*0 or TFZ=number, but not TFZ==number
         n_comp = (solu_set.count('TF') - solu_set.count('TFZ==') +

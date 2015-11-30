@@ -227,7 +227,7 @@ def _rwcontents_parser(job):
         d['num_mol'] = int(round(d['volume'] / d['weight'] / d['Vm']))
     protein_kDa = d.get('weight', 0) / 1000.  # Da -> kDa
     total_kDa = d.get('total_weight', 0) / 1000.
-    return u"%s x %.0fkDa (+ %.0fkDa of het) in %.fnm3, %.0f%% solvent" % (
+    return u"%s x %.0fkDa (+ %.0fkDa het) in %.fnm3, %.0f%% solvent" % (
             d.get('num_mol', '??'),
             protein_kDa,
             total_kDa - protein_kDa,
@@ -352,22 +352,29 @@ def _pointless_parser(job):
     #refl_ref = job.data.get("refl_ref", "")
     return "resol. %4s A   #refl: %5s" % (resol_txt, refl_out)
 
-
 def _phaser_parser(job):
     d = job.data
     for line in job.out.read_line():
         if line.startswith('*** Phaser Module:'):
             d['info'] = '[%s]' % line[19:70].strip().lower()
-        elif line.startswith('   SOLU SET ') and 'LLG=' in line:
-            d['info'] = line[12:].strip()
-            if len(d['info']) > 52:
-                d['info'] = d['info'][:50].rsplit(' ', 1)[0] + '...'
+        elif 'Solution written to PDB file:' in line:
+            d['expect_solu'] = 1
+        elif 'expect_solu' in d:
+            if line.startswith('   SOLU SET '):
+                d['status'] = line[12:].strip()
+                if len(d['status']) > 52:
+                    d['info'] = d['status'][:50].rsplit(' ', 1)[0] + '...'
+                else:
+                    d['info'] = d['status']
+            elif 'status' in d and ' SOLU ' not in line:  # continuation
+                d['status'] += ' ' + line.strip()
+            elif line.startswith('   SOLU SPAC '):
+                d['SG'] = line[13:].strip()
+                del d['expect_solu']
         elif 'Sorry - No solution' in line:
             d['info'] = line.strip('* \t\r\n')
             if 'No solution with all components' in line:
                 d['partial_solution'] = 'yes'
-        elif line.startswith('   SOLU SPAC '):
-            d['SG'] = line[13:].strip()
         elif ' ERROR:' in line:
             # the error about impossible content has two lines, let's reword it
             d['error'] = line.strip().replace('a protein/nucleic acid',
@@ -686,17 +693,6 @@ class Workflow:
         # if it'd do more good or bad.
         job = ccp4_job(self, "phaser", ki=lines, parser="_phaser_parser")
         return job
-
-    def get_phaser_solu_set(self, root='phaser'):
-        sol_path = self.path(root + '.sol')
-        try:
-            with open(sol_path) as f:
-                for line in f:
-                    if line.startswith('SOLU SET '):
-                        return line[9:].strip()
-            return "?? (SOLU SET not found in %s.so)" % root
-        except IOError:
-            return "?? (%s.sol file could not be open)" % root
 
     # functions below use logical=locals()
     # pylint: disable=unused-argument
