@@ -78,10 +78,9 @@ def dimple(wf, opt):
         reindexed_mtz = "pointless.mtz"
         wf.temporary_files.add(reindexed_mtz)
         wf.pointless(hklin=opt.mtz, xyzin=rb_xyzin, hklout=reindexed_mtz,
-                     keys="TOLERANCE 5").run()
-        pointless_data = wf.jobs[-1].data
-        alt_reindex = pointless_data.get('alt_reindex')
-        if alt_reindex:
+                     keys="TOLERANCE 5").run(may_fail=True)
+        alt_reindex = wf.jobs[-1].data.get('alt_reindex')
+        if wf.jobs[-1].exit_status == 0 and alt_reindex:
             for ar in alt_reindex:
                 comment("\n    %-10s CC: %-8.3f cell diff: %.1fA" % (
                         ar['op'], ar['cc'], ar['cell_deviat']))
@@ -116,7 +115,9 @@ def dimple(wf, opt):
     refmac_labin_nofree = "FP=F SIGFP=SIGF"
     refmac_xyzin = None
     cell_diff = calculate_difference_metric(pdb_meta, reindexed_mtz_meta)
-    if cell_diff > 0.1 and opt.mr_when_r < 1:
+    if pdb_meta.symmetry != reindexed_mtz_meta.symmetry:
+        comment("\nDifferent space groups, start from MR.")
+    elif cell_diff > 0.1 and opt.mr_when_r < 1:
         comment("\nQuite different unit cells, start from MR.")
     elif opt.mr_when_r <= 0:
         comment("\nMR requested unconditionally.")
