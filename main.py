@@ -271,7 +271,9 @@ def dimple(wf, opt):
     ####### check blobs and finish #######
     if restr_job.data["free_r"] <= BAD_FINAL_RFREE:
         fb_job = wf.find_blobs(opt.hklout, opt.xyzout, sigma=0.8).run()
-        _generate_scripts_and_pictures(wf, opt, fb_job.data)
+        coot_script = _generate_scripts_and_pictures(wf, opt, fb_job.data)
+        if coot_script:
+            comment("\nTo see it in Coot run %s" % coot_script)
     else:
         comment("\nGiving up (Rfree > %g). No blob search." % BAD_FINAL_RFREE)
         _generate_scripts_and_pictures(wf, opt, None)
@@ -445,37 +447,36 @@ def _generate_scripts_and_pictures(wf, opt, data):
                                                     out=wf.output_dir),
                   executable=True)
 
-    if opt.img_format == 'none' or not blobs:
-        return
-
-    script = ''
-    basenames = []
-    # as a workaround for buggy coot the maps are reloaded for each blob
-    for n, b in enumerate(blobs[:2]):
-        script += coots.basic_script(pdb=opt.xyzout, mtz=opt.hklout,
-                                     center=b, toward=com)
-        rs, names = coots.r3d_script(b, com, blobname="blob%s"%(n+1))
-        script += rs
-        basenames += names
-    coot_job = wf.coot_py(script)
-    try:
-        coot_job.run()
-    except workflow.JobError:
-        # check for a possible cause to hint the user
-        # (possible workaround: change $HOME to non-existing directory)
-        if utils.silently_run(coot_job.args, cwd=wf.output_dir)[0] != 0:
-            put_error("coot fails with options: --no-graphics --python",
-                      comment="It happens when scripts in .coot or "
-                              ".coot-preferences are not compatible\n"
-                              "with the --no-graphics mode.")
-        raise
-    for n, basename in enumerate(basenames):
-        job = wf.render_r3d(basename, img_format=opt.img_format)
-        if n % 3 == 0:
-            job.run()
-        else: # minimal output
-            job.run(show_progress=False, new_line=False)
-    wf.delete_files([name+".r3d" for name in basenames])
+    if opt.img_format != 'none' and blobs:
+        script = ''
+        basenames = []
+        # as a workaround for buggy coot the maps are reloaded for each blob
+        for n, b in enumerate(blobs[:2]):
+            script += coots.basic_script(pdb=opt.xyzout, mtz=opt.hklout,
+                                         center=b, toward=com)
+            rs, names = coots.r3d_script(b, com, blobname="blob%s"%(n+1))
+            script += rs
+            basenames += names
+        coot_job = wf.coot_py(script)
+        try:
+            coot_job.run()
+        except workflow.JobError:
+            # check for a possible cause to hint the user
+            # (possible workaround: change $HOME to non-existing directory)
+            if utils.silently_run(coot_job.args, cwd=wf.output_dir)[0] != 0:
+                put_error("coot fails with options: --no-graphics --python",
+                          comment="It happens when scripts in .coot or "
+                                  ".coot-preferences are not compatible\n"
+                                  "with the --no-graphics mode.")
+            raise
+        for n, basename in enumerate(basenames):
+            job = wf.render_r3d(basename, img_format=opt.img_format)
+            if n % 3 == 0:
+                job.run()
+            else: # minimal output
+                job.run(show_progress=False, new_line=False)
+        wf.delete_files([name+".r3d" for name in basenames])
+    return coot_sh_path
 
 
 def parse_dimple_commands(args):
