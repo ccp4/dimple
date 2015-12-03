@@ -357,7 +357,7 @@ def _phaser_parser(job):
     for line in job.out.read_line():
         if line.startswith('*** Phaser Module:'):
             d['info'] = '[%s]' % line[19:70].strip().lower()
-        elif 'Solution written to PDB file:' in line:
+        elif 'written to PDB file:' in line:
             d['expect_solu'] = 1
         elif 'expect_solu' in d:
             if line.startswith('   SOLU SET '):
