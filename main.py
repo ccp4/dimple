@@ -115,10 +115,10 @@ def dimple(wf, opt):
     refmac_labin_nofree = "FP=F SIGFP=SIGF"
     refmac_xyzin = None
     cell_diff = calculate_difference_metric(pdb_meta, reindexed_mtz_meta)
-    if pdb_meta.symmetry != reindexed_mtz_meta.symmetry:
-        comment("\nDifferent space groups, start from MR.")
-    elif cell_diff > 0.1 and opt.mr_when_r < 1:
+    if cell_diff > 0.1 and opt.mr_when_r < 1:
         comment("\nQuite different unit cells, start from MR.")
+    elif pdb_meta.symmetry != reindexed_mtz_meta.symmetry:
+        comment("\nDifferent space groups, start from MR.")
     elif opt.mr_when_r <= 0:
         comment("\nMR requested unconditionally.")
     else:
