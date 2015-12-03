@@ -29,7 +29,7 @@ cell: %(cell)s
 symmetry: "%(symmetry)s"''' % self.__dict__
 
 
-def read_metadata(pdb):
+def read_metadata(pdb, print_errors):
     if pdb.endswith('.gz'):
         f = gzip.open(pdb, 'rb')
     else:
@@ -39,7 +39,7 @@ def read_metadata(pdb):
         if line.startswith("CRYST1"):
             meta = PdbMeta(line)
             break
-    if meta is None:
+    if meta is None and print_errors:
         if f.tell() == 0:
             put_error("empty file: %s" % pdb)
         else:
@@ -119,7 +119,7 @@ def main():
     if sys.argv[1] == "nohet":
         remove_hetatm(sys.argv[2], sys.stdout, remove_all=True)
     elif sys.argv[1] == "vol":
-        print read_metadata(sys.argv[2]).get_volume()
+        print read_metadata(sys.argv[2], print_errors=True).get_volume()
     elif sys.argv[1] == "get":
         for arg in sys.argv[2:]:
             if is_pdb_id(arg):
@@ -131,7 +131,7 @@ def main():
     else:
         for arg in sys.argv[1:]:
             print "File: %s" % arg
-            print read_metadata(arg)
+            print read_metadata(arg, print_errors=True)
 
 if __name__ == '__main__':
     main()

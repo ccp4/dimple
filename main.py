@@ -38,7 +38,7 @@ def dimple(wf, opt):
         comment("\nNo non-empty pdb files given. Nothing to do.")
         return
     for p in opt.pdbs:
-        wf.read_pdb_metadata(p)
+        wf.read_pdb_metadata(p, print_errors=(len(opt.pdbs) > 1))
     if len(opt.pdbs) > 1:
         comment("\nPDBs in order of similarity (using the first one):")
         opt.pdbs.sort(key=lambda x: calculate_difference_metric(wf.file_info[x],

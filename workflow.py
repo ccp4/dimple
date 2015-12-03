@@ -628,9 +628,10 @@ class Workflow:
         with open(self.path(xyzout), "wb") as out:
             return pdb.remove_hetatm(self.path(xyzin), out, remove_all)
 
-    def read_pdb_metadata(self, xyzin):
+    def read_pdb_metadata(self, xyzin, print_errors):
         if xyzin not in self.file_info:
-            self.file_info[xyzin] = pdb.read_metadata(self.path(xyzin))
+            self.file_info[xyzin] = pdb.read_metadata(self.path(xyzin),
+                                                      print_errors)
         return self.file_info[xyzin]
 
     def read_mtz_metadata(self, hklin):
