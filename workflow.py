@@ -385,6 +385,13 @@ def _phaser_parser(job):
                                               'impossible content')
     return "%-48s" % d.get('info', '')
 
+def _ensembler_parser(job):
+    job.data.setdefault('models', [])
+    for line in job.out.read_line():
+        if 'Model ' in line:
+            job.data['models'].append(line.split()[-1].strip("')"))
+    return "chains/models: " + " ".join(job.data['models'])
+
 def _truncate_parser(job):
     for line in job.out.read_line():
         if line.startswith(' Least squares straight line gives:'):
@@ -697,6 +704,13 @@ class Workflow:
         # pseudo-tripling/quadrupling of the cell (TNCS NMOL 3) I don't know
         # if it'd do more good or bad.
         job = ccp4_job(self, "phaser", ki=lines, parser="_phaser_parser")
+        return job
+
+    def ensembler(self, pdbin, root):
+        job = Job(self, 'phaser.ensembler')
+        job.name = 'ensembler'
+        job.args += ['root=%s' % root, pdbin]
+        job.parser = '_ensembler_parser'
         return job
 
     # functions below use logical=locals()

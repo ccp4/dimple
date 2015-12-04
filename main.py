@@ -17,7 +17,7 @@ from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
 from dimple import coots
 
-__version__ = '2.4.5'
+__version__ = '2.5.0'
 
 # sometimes provided models are incomplete, be suspicious above this solvent%
 HIGH_SOLVENT_PCT = 75
@@ -159,6 +159,12 @@ def dimple(wf, opt):
             # num_mol accounts for strict NCS (MTRIX without iGiven)
             pdb_asu_vol = pdb_meta and pdb_meta.asu_volume(rw_data['num_mol'])
             mr_num = guess_number_of_molecules(mtz_meta, rw_data, pdb_asu_vol)
+        if isinstance(mr_num, float):
+            wf.ensembler(pdbin=rb_xyzin, root='ens').run()
+            n_models = len(wf.jobs[-1].data['models'])
+            del rw_data['weight']
+            rb_xyzin = "ens_merged.pdb"
+            mr_num = max(int(round(mr_num * n_models)), 1)
         # phaser is used by default if number of searched molecules is known
         if opt.mr_prog == 'molrep':
             wf.temporary_files |= {"molrep.pdb", "molrep_dimer.pdb",
@@ -332,23 +338,23 @@ def calculate_difference_metric(meta1, meta2):
 
 
 def guess_number_of_molecules(mtz_meta, rw_data, pdb_asu_vol):
-    text = "\n"
+    text = '\n'
     Va = mtz_meta.asu_volume()
     m = rw_data['weight']
 
     # if the number of molecules seems to be 1 or 2, don't go into Matthews
     if pdb_asu_vol and rw_data.get('solvent_percent', 100) < HIGH_SOLVENT_PCT:
         vol_ratio = Va / pdb_asu_vol
-        if vol_ratio < 0.7:
-            comment("\nasu %.0f%% smaller than in the model"
-                    % ((1 - vol_ratio) * 100))
-            return 1
-        if vol_ratio < 1.33:
+        if 0.7 < vol_ratio < 1.33:
             return 1
         if 1.8 < vol_ratio < 2.2:
             comment("\nasu %.1fx larger than in the model." % vol_ratio)
             return 2
-        text += "asu %.1fx larger than in the model, " % vol_ratio
+        if vol_ratio < 1:
+            vol_info = '%.0f%% smaller' % ((1 - vol_ratio) * 100)
+        else:
+            vol_info = '%.1fx larger'
+        text += 'asu %s than in the model, ' % vol_info
 
     # Vm = Va/(n*M)
     # Vs = 1 - 1.23/Vm  => Vs = 1 - n * 1.23*M/Va
@@ -369,13 +375,17 @@ def guess_number_of_molecules(mtz_meta, rw_data, pdb_asu_vol):
     if n % 2 == 1 and calc_Vs(n-1) < 45:
         n -= 1
 
-    # 1-1.23/Vm=50% => Vm=2.46
+    Vsn = calc_Vs(n)
+    if Vsn < 10:  # model too big, won't fit
+        comment(text + 'try ensemble of chains as a model')
+        return float(Va / pdb_asu_vol if pdb_asu_vol else Va / (2.4 * m))
     if n > 1:
+        # 1-1.23/Vm=50% => Vm=2.46
         other_n = min(int(round(Va / (2.46 * m))), n-1)
         comment(text + "%.0f%% solvent for %d, %.0f%% for %d components."
-                % (calc_Vs(other_n), other_n, calc_Vs(n), n))
+                % (calc_Vs(other_n), other_n, Vsn, n))
     else:
-        comment(text + "%.0f%% solvent for single component." % calc_Vs(n))
+        comment(text + "%.0f%% solvent for single component." % Vsn)
     return n
 
 
