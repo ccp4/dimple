@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import sys
 from subprocess import Popen, PIPE
@@ -208,7 +209,9 @@ def _rwcontents_parser(job):
     d = job.data
     for line in job.out.read_line():
         if line.startswith(' Cell volume:'):
-            d["volume"] = float(line.split(':')[-1])
+            vol = float(line.split(':')[-1])
+            if vol != 0:
+                d["volume"]
         elif line.startswith(' Molecular Weight of protein:'):
             d["weight"] = float(line.split(':')[-1])
         elif line.startswith(' Molecular Weight of all atoms:'):
@@ -227,12 +230,13 @@ def _rwcontents_parser(job):
         d['num_mol'] = int(round(d['volume'] / d['weight'] / d['Vm']))
     protein_kDa = d.get('weight', 0) / 1000.  # Da -> kDa
     total_kDa = d.get('total_weight', 0) / 1000.
-    return u"%s x %.0fkDa (+ %.0fkDa het) in %.fnm3, %.0f%% solvent" % (
-            d.get('num_mol', '??'),
-            protein_kDa,
-            total_kDa - protein_kDa,
-            d.get('volume', 0) / 1000, # A^2 -> nm^3
-            d.get('solvent_percent', 0))
+    msg = "%s x %.0fkDa (+ %.0fkDa het)" % (d.get('num_mol', '??'),
+                                            protein_kDa,
+                                            total_kDa - protein_kDa)
+    if 'volume' in d:
+        msg +=  u" in %.fnm³, %.0f%% solvent" % (d['volume'] / 1000,
+                                                 d.get('solvent_percent', 0))
+    return msg
 
 def _cad_parser(job):
     for line in job.out.read_line():

@@ -115,7 +115,9 @@ def dimple(wf, opt):
     refmac_labin_nofree = "FP=F SIGFP=SIGF"
     refmac_xyzin = None
     cell_diff = calculate_difference_metric(pdb_meta, reindexed_mtz_meta)
-    if cell_diff > 0.1 and opt.mr_when_r < 1:
+    if pdb_meta is None:
+        pass # the error message was already printed
+    elif cell_diff > 0.1 and opt.mr_when_r < 1:
         comment("\nQuite different unit cells, start from MR.")
     elif pdb_meta.symmetry != reindexed_mtz_meta.symmetry:
         comment("\nDifferent space groups, start from MR.")
@@ -368,9 +370,12 @@ def guess_number_of_molecules(mtz_meta, rw_data, pdb_asu_vol):
         n -= 1
 
     # 1-1.23/Vm=50% => Vm=2.46
-    other_n = min(int(round(Va / (2.46 * m))), n-1)
-    comment(text + "%.0f%% solvent for %d, %.0f%% for %d components."
-            % (calc_Vs(other_n), other_n, calc_Vs(n), n))
+    if n > 1:
+        other_n = min(int(round(Va / (2.46 * m))), n-1)
+        comment(text + "%.0f%% solvent for %d, %.0f%% for %d components."
+                % (calc_Vs(other_n), other_n, calc_Vs(n), n))
+    else:
+        comment(text + "%.0f%% solvent for single component." % calc_Vs(n))
     return n
 
 
