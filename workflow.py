@@ -234,7 +234,7 @@ def _rwcontents_parser(job):
                                             protein_kDa,
                                             total_kDa - protein_kDa)
     if 'volume' in d:
-        msg +=  u" in %.fnm³, %.0f%% solvent" % (d['volume'] / 1000,
+        msg +=  u" in %.fnm3, %.0f%% solvent" % (d['volume'] / 1000,
                                                  d.get('solvent_percent', 0))
     return msg
 
