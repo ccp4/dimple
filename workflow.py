@@ -211,7 +211,7 @@ def _rwcontents_parser(job):
         if line.startswith(' Cell volume:'):
             vol = float(line.split(':')[-1])
             if vol != 0:
-                d["volume"]
+                d["volume"] = vol
         elif line.startswith(' Molecular Weight of protein:'):
             d["weight"] = float(line.split(':')[-1])
         elif line.startswith(' Molecular Weight of all atoms:'):
