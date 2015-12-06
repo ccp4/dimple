@@ -689,7 +689,7 @@ class Workflow:
             lines += ['COMPOSITION BY AVERAGE']
         if opt.slow < 2:
             lines += [
-              'KILL TIME 120', # 2h is much more than we want
+              'KILL TIME 180', # 3h is much more than we want
               #'MACANO PROTOCOL OFF',
               #'RESOLUTION AUTO HIGH 2.5',  # ignored by Phaser if > RESO HIGH
               'PURGE ROT NUM 7',
