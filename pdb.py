@@ -106,9 +106,16 @@ def download_pdb(pdb_id, output_dir):
             put_error(str(e))
             sys.exit(1)
         content = u.read()
-        with open(path, 'wb') as f:
-            f.write(content)
-        comment('done.\n')
+        try:
+            if not os.path.isdir(output_dir):
+                os.makedirs(output_dir)
+            with open(path, 'wb') as f:
+                f.write(content)
+            comment('done.\n')
+        except IOError as e:
+            put_error('Failed to save downloaded file on disk',
+                      comment=str(e))
+            sys.exit(1)
     return path
 
 
