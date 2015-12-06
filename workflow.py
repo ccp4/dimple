@@ -563,6 +563,7 @@ class Workflow:
             if self.repl_jobs and len(self.repl_jobs) > job_idx:
                 old_job = self.repl_jobs[job_idx]
                 if old_job.name == job.name:
+                    job.data = old_job.data
                     job = old_job
                     utils.put("unpickled")
                     utils.log_value("not_run", "unpickled")

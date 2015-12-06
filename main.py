@@ -163,10 +163,11 @@ def dimple(wf, opt):
             mr_num = opt.mr_num
         else:
             mr_num = guess_number_of_molecules(mtz_meta, rw_data, vol_ratio)
+        mw = rw_data.get('weight')
         if isinstance(mr_num, float):
             wf.ensembler(pdbin=rb_xyzin, root='ens').run()
             n_models = len(wf.jobs[-1].data['models'])
-            del rw_data['weight']
+            mw = None
             rb_xyzin = "ens_merged.pdb"
             mr_num = max(int(round(mr_num * n_models)), 1)
         # phaser is used by default if number of searched molecules is known
@@ -180,7 +181,7 @@ def dimple(wf, opt):
             wf.phaser_auto(hklin=f_mtz,
                            labin="F = F SIGF = SIGF",
                            model=dict(pdb=rb_xyzin, identity=100, num=mr_num,
-                                      mw=rw_data.get('weight')),
+                                      mw=mw),
                            sg_alt="ALL", opt=opt,
                            root='phaser').run(may_fail=True)
             if not _after_phaser_comments(wf.jobs[-1],
@@ -292,7 +293,7 @@ def dimple(wf, opt):
 
 
 def _refmac_rms_line(data):
-    rb, ra, rc = [data.get(k, (-1)) for k in 'rmsBOND', 'rmsANGL', 'rmsCHIRAL']
+    rb, ra, rc = [data.get(k, (-1,)) for k in 'rmsBOND', 'rmsANGL', 'rmsCHIRAL']
     return ('\n    RMS:   bond %.3f -> %.3f' % (rb[0], rb[-1]) +
             '   angle %.2f -> %.2f' % (ra[0], ra[-1]) +
             '   chiral %.2f -> %.2f' % (rc[0], rc[-1]))
