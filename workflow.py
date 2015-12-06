@@ -682,6 +682,9 @@ class Workflow:
           # getting a solution one cell away, so we set template here.
           'SOLUTION TEMPLATE original_model',
           'SOLUTION 6DIM ENSE p EULER 0 0 0 FRAC 0 0 0',
+          # Final refinement with too high resolution crashes
+          # with std::bad_alloc, even with 8GB of memory.
+          'RESOLUTION AUTO HIGH 2.0',  # ignored by Phaser if > RESO HIGH
           ]
         if model['mw']:
             lines += ['COMPOSITION PROTEIN MW %(mw)f NUMBER %(num)d' % model]
@@ -691,7 +694,6 @@ class Workflow:
             lines += [
               'KILL TIME 180', # 3h is much more than we want
               #'MACANO PROTOCOL OFF',
-              #'RESOLUTION AUTO HIGH 2.5',  # ignored by Phaser if > RESO HIGH
               'PURGE ROT NUM 7',
               'PURGE TRA NUM 20',
               'PURGE RNP NUM 10']
