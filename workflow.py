@@ -199,7 +199,7 @@ def _find_blobs_parser(job):
             job.data["density_info"] = line.strip()
     scores = job.data["scores"]
     if scores:
-        return "Blob scores: " + " ".join("%.0f" % sc for sc in scores)
+        return "Blob scores: " + " ".join("%.0f" % sc for sc in scores[:8])
     elif "density_info" in job.data:
         return 'searching with' + job.data["density_info"].split(',')[1]
     else:
@@ -239,10 +239,14 @@ def _rwcontents_parser(job):
     return msg
 
 def _cad_parser(job):
+    d = job.data
     for line in job.out.read_line():
-        if line.startswith(' Final Total of Unique records to HKLOUT ='):
-            job.data["refl_out"] = int(line.split('=')[1])
-    return "#refl -> %s" % job.data.get("refl_out", "")
+        # for now we're only interested in number of reflections from HKLIN1
+        if '* Number of Reflections =' in line and 'refl_in1' not in d:
+            d['refl_in1'] = int(line.split('=')[1])
+        elif ' Final Total of Unique records to HKLOUT =' in line:
+            d['refl_out'] = int(line.split('=')[1])
+    return '#refl  %s -> %s' % (d.get('refl_in1', ''), d.get('refl_out', ''))
 
 
 class Ccp4LogTable(object):
@@ -390,7 +394,7 @@ def _ensembler_parser(job):
     for line in job.out.read_line():
         if 'Model ' in line:
             job.data['models'].append(line.split()[-1].strip("')"))
-    return "chains/models: " + " ".join(job.data['models'])
+    return "ensembled chains: " + " ".join(job.data['models'])
 
 def _truncate_parser(job):
     for line in job.out.read_line():

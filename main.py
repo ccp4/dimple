@@ -373,7 +373,6 @@ def guess_number_of_molecules(mtz_meta, rw_data, vol_ratio):
 
     Vsn = calc_Vs(n)
     if Vsn < 10:  # model too big, won't fit
-        comment('\nTry ensemble of chains as a model.')
         return float(vol_ratio or Va / (2.4 * m))
     if n > 1:
         # 1-1.23/Vm=50% => Vm=2.46
