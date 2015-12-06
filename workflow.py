@@ -157,8 +157,7 @@ class Job:
             for line in self.out.read_line():
                 pass
             if line:
-                # we only remove \e[1m (bold), it can be generalized if needed
-                trimmed = line.strip().replace('\033[1m', '')
+                trimmed = _PREVIEW_DISCARD_RE.sub('', line.strip())
                 ret = "[%d] %-44.44s" % (len(self.out.lines), trimmed)
             else:
                 ret = "stdout:%11s" % self.out.size_as_str()
@@ -326,6 +325,8 @@ def _refmac_parser(job):
 #     Alternative reindexing        Lklhd      CC     R(E^2)    Number Cell_deviation
 #    [-k,-l,h+k+l]           0.079    0.029    0.506     61253      2.99
 _POINTLESS_ALTREINDEX_MATCH = re.compile(r"^\s+\[[hkl+, -]+\][ \t0-9+.eE-]+$")
+
+_PREVIEW_DISCARD_RE = re.compile(r'[^\w!"#$%&\'()*+,./:;<=>?@[\\]^_`{|}~ -]')
 
 def _float_or_nan(s):
     try:
@@ -960,6 +961,7 @@ def parse_workflow_commands():
             try:
                 job.data = {}  # reset data from parsing
                 job.run()
+                utils.comment("\n")
             except JobError as e:
                 utils.put_error(e.msg, comment=e.note)
                 sys.exit(1)
