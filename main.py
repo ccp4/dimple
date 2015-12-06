@@ -17,7 +17,7 @@ from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
 from dimple import coots
 
-__version__ = '2.5.0'
+__version__ = '2.5.1'
 
 # sometimes provided models are incomplete, be suspicious above this solvent%
 HIGH_SOLVENT_PCT = 75
@@ -117,12 +117,12 @@ def dimple(wf, opt):
     cell_diff = calculate_difference_metric(pdb_meta, reindexed_mtz_meta)
     if pdb_meta is None:
         pass # the error message was already printed
-    elif cell_diff > 0.1 and opt.mr_when_r < 1:
-        comment("\nQuite different unit cells, start from MR.")
-    elif pdb_meta.symmetry != reindexed_mtz_meta.symmetry:
-        comment("\nDifferent space groups, start from MR.")
     elif opt.mr_when_r <= 0:
         comment("\nMR requested unconditionally.")
+    elif cell_diff > 0.1 and opt.mr_when_r < 1:
+        comment("\nDifferent unit cells.")
+    elif pdb_meta.symmetry != reindexed_mtz_meta.symmetry:
+        comment("\nDifferent space groups.")
     else:
         comment("\nRigid-body refinement with resolution 3.5 A, 10 cycles.")
         if 'aa_count' in rw_data and 'water_count' in rw_data:
@@ -138,27 +138,31 @@ def dimple(wf, opt):
                            rigidbody ncycle 10""").run(may_fail=True)
         # if the error is caused by mtz/pdb disagreement, continue with MR
         if wf.jobs[-1].exit_status != 0:
-            if opt.mr_when_r >= 1:
-                comment("\nFailed. Would try MR, but it is disabled.")
-                return
             comment("\nTry MR.")
         elif not wf.jobs[-1].data.get("overall_r"):
-            comment("\nWARNING: unknown R factor, something went wrong.")
+            comment("\nWARNING: unknown R factor, something went wrong.\n")
             refmac_xyzin = "refmacRB.pdb"
         elif wf.jobs[-1].data["overall_r"] > opt.mr_when_r:
-            comment("\nRun MR for R > %g" % opt.mr_when_r)
+            comment("\nRun MR for R > %g." % opt.mr_when_r)
         else:
-            comment("\nNo MR for R < %g" % opt.mr_when_r)
+            comment("\nNo MR for R < %g." % opt.mr_when_r)
             refmac_xyzin = "refmacRB.pdb"
 
     ####### phaser/molrep - molecular replacement #######
     if refmac_xyzin is None:
+        vol_ratio = None
+        if pdb_meta:
+            # num_mol accounts for strict NCS (MTRIX without iGiven)
+            vol_ratio = (mtz_meta.asu_volume() /
+                         pdb_meta.asu_volume(rw_data['num_mol']))
+            comment(" Volume of asu: %.1f%% of model asu." % (100 * vol_ratio))
+        if opt.mr_when_r >= 1:
+            comment("\nWould try MR, but it is disabled.")
+            return
         if opt.mr_num:
             mr_num = opt.mr_num
         else:
-            # num_mol accounts for strict NCS (MTRIX without iGiven)
-            pdb_asu_vol = pdb_meta and pdb_meta.asu_volume(rw_data['num_mol'])
-            mr_num = guess_number_of_molecules(mtz_meta, rw_data, pdb_asu_vol)
+            mr_num = guess_number_of_molecules(mtz_meta, rw_data, vol_ratio)
         if isinstance(mr_num, float):
             wf.ensembler(pdbin=rb_xyzin, root='ens').run()
             n_models = len(wf.jobs[-1].data['models'])
@@ -337,24 +341,16 @@ def calculate_difference_metric(meta1, meta2):
     return meta1.to_standard().max_shift_in_mapping(meta2.to_standard())
 
 
-def guess_number_of_molecules(mtz_meta, rw_data, pdb_asu_vol):
-    text = '\n'
+def guess_number_of_molecules(mtz_meta, rw_data, vol_ratio):
     Va = mtz_meta.asu_volume()
     m = rw_data['weight']
 
     # if the number of molecules seems to be 1 or 2, don't go into Matthews
-    if pdb_asu_vol and rw_data.get('solvent_percent', 100) < HIGH_SOLVENT_PCT:
-        vol_ratio = Va / pdb_asu_vol
+    if vol_ratio and rw_data.get('solvent_percent', 100) < HIGH_SOLVENT_PCT:
         if 0.7 < vol_ratio < 1.33:
             return 1
         if 1.8 < vol_ratio < 2.2:
-            comment("\nasu %.1fx larger than in the model." % vol_ratio)
             return 2
-        if vol_ratio < 1:
-            vol_info = '%.0f%% smaller' % ((1 - vol_ratio) * 100)
-        else:
-            vol_info = '%.1fx larger'
-        text += 'asu %s than in the model, ' % vol_info
 
     # Vm = Va/(n*M)
     # Vs = 1 - 1.23/Vm  => Vs = 1 - n * 1.23*M/Va
@@ -377,15 +373,15 @@ def guess_number_of_molecules(mtz_meta, rw_data, pdb_asu_vol):
 
     Vsn = calc_Vs(n)
     if Vsn < 10:  # model too big, won't fit
-        comment(text + 'try ensemble of chains as a model')
-        return float(Va / pdb_asu_vol if pdb_asu_vol else Va / (2.4 * m))
+        comment('\nTry ensemble of chains as a model.')
+        return float(vol_ratio or Va / (2.4 * m))
     if n > 1:
         # 1-1.23/Vm=50% => Vm=2.46
         other_n = min(int(round(Va / (2.46 * m))), n-1)
-        comment(text + "%.0f%% solvent for %d, %.0f%% for %d components."
+        comment("\n%.0f%% solvent for %d, %.0f%% for %d components."
                 % (calc_Vs(other_n), other_n, Vsn, n))
     else:
-        comment(text + "%.0f%% solvent for single component." % Vsn)
+        comment("\n%.0f%% solvent for single component." % Vsn)
     return n
 
 
