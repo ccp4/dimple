@@ -482,7 +482,7 @@ def _run_and_parse(process, job):
             process.stdin.write(job_input)
         except IOError as e:
             utils.put("\nWarning: passing input to %s failed.\n" % job.name)
-            if e.errno not in (errno.EPIPE, e.errno != errno.EINVAL):
+            if e.errno not in (errno.EPIPE, errno.EINVAL):
                 raise
         process.stdin.close()
         out_t.join()
