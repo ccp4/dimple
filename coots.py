@@ -21,12 +21,14 @@ def find_path_and_version():
     coot_path = find_path()
     if not coot_path:
         return None, None
-    # On Windows reading output from runwincoot.bat is not reliable,
-    # and coot-real.exe --version works fine
-    coot_for_ver = coot_path.replace('runwincoot.bat', 'bin/coot-real.exe')
+    # On Windows reading output from runwincoot.bat is not reliable.
+    # "C:/Windows/bin/coot-real.exe --version" used to work, but in 8.1
+    # exe was moved to libexec/coot-bin.exe and DLLs are in different dir
+    if os.name == 'nt':
+        return coot_path, 'WinCoot, with python'
     try:
-        version_str = subprocess.check_output([coot_for_ver, "--version"])
-    except subprocess.CalledProcessError:
+        version_str = subprocess.check_output([coot_path, "--version"])
+    except (subprocess.CalledProcessError, OSError):
         version_str = None
     return coot_path, version_str
 
