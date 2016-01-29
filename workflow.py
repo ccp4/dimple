@@ -284,16 +284,15 @@ def _refmac_parser(job):
         job.data["cycle"] = 0
         # iter_*_r values were added in dimple 1.5
         job.data["iter_overall_r"] = []
-    sink = None
     for line in job.out.read_line():
-        if sink:
-            more = sink.send_line(line)
+        if 'sink' in job.data:
+            more = job.data['sink'].send_line(line)
             if not more:
                 for name in ['rmsBOND', 'rmsANGL', 'rmsCHIRAL']:
-                    col_data = sink.column(name)
+                    col_data = job.data['sink'].column(name)
                     if col_data and any(x != 0 for x in col_data):
                         job.data[name] = col_data
-                sink = None
+                del job.data['sink']
         elif line.startswith("Free R factor"):
             job.data['free_r'] = float(line.split('=')[-1])
             if 'ini_free_r' not in job.data:
@@ -309,7 +308,7 @@ def _refmac_parser(job):
               line.startswith("     CGMAT cycle number =")):
             job.data['cycle'] = int(line.split('=')[-1])
         elif line.startswith("$TABLE: Rfactor analysis, stats vs cycle"):
-            sink = Ccp4LogTable(line)
+            job.data['sink'] = Ccp4LogTable(line)
     cycle_str = "%2d/%d" % (job.data["cycle"], job.data.get("ncyc", -1))
     if 'ini_overall_r' in job.data:
         if 'ini_free_r' in job.data:
