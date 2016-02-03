@@ -1,8 +1,14 @@
 #!/bin/sh
 
-local_file="$(cd "$(dirname "$0")" && pwd)"/main.py
-if [ -e "$local_file" ] && [ "$(dirname "$local_file")" != "$CBIN" ]; then
-  $CCP4/bin/ccp4-python "$local_file" "$@"  # development (source tree) version
+this_dir="$(cd "$(dirname "$0")" && pwd)"
+if [ -e "$this_dir/main.py" ] && [ "$this_dir" != "$CCP4/bin" ]; then
+  # development (source tree) version
+  if [ -e "$CCP4/bin/ccp4-python" ]; then
+    exec "$CCP4/bin/ccp4-python" "$this_dir/main.py" "$@"
+  else
+    exec python2.7 "$this_dir/main.py" "$@"
+  fi
 else
-  $CCP4/bin/ccp4-python -m dimple "$@"  # installed module
+  # installed module
+  exec "$CCP4/bin/ccp4-python" -m dimple "$@"
 fi

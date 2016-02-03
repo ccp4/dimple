@@ -586,7 +586,7 @@ def parse_dimple_commands(args):
     if len(args) == 8 and args[0] in legacy_args:
         args = [legacy_args.get(a) or a
                 for a in args if legacy_args.get(a) != ""]
-        output_dir = os.path.join(os.environ["CCP4_SCR"], "dimple_out")
+        output_dir = os.path.join(os.environ.get("CCP4_SCR", ''), "dimple_out")
         args.append(output_dir)
 
     opt = parser.parse_args(args)
@@ -698,14 +698,14 @@ def main(args):
     if workflow.parse_workflow_commands():
         return
 
+    options = parse_dimple_commands(args)
+
     for necessary_var in ("CCP4", "CCP4_SCR"):
         if necessary_var not in os.environ:
             put_error('$%s not found, giving up' % necessary_var)
             sys.exit(1)
     if not os.path.isdir(os.environ["CCP4_SCR"]):
         put_error('No such directory: $CCP4_SCR, refmac shall not work!')
-
-    options = parse_dimple_commands(args)
 
     wf = workflow.Workflow(options.output_dir, from_job=options.from_step)
     utils.start_log(os.path.join(options.output_dir, "dimple.log"),
