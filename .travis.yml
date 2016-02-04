@@ -10,7 +10,7 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda install -c mw clipper
 script:
-  - cmake . -D CMAKE_PREFIX_PATH=$HOME/miniconda
+  - cmake -D CMAKE_PREFIX_PATH=$HOME/miniconda .
   - make
 branches:
   only:
