@@ -831,7 +831,8 @@ class Workflow:
             job.std_input = script_text
         return job
 
-    def render_r3d(self, name, img_format="png"):
+    def render_r3d(self, name, img_format):
+        assert img_format is not None
         job = Job(self, utils.syspath("render"))
         # render writes normal output to stderr (and nothing to stdout)
         job.out.file_extension = "out"

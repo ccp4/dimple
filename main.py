@@ -435,7 +435,7 @@ def _generate_scripts_and_pictures(wf, opt, data):
     blobs = data["blobs"] if data else []
     if not blobs:
         comment("\nUnmodelled blobs not found.")
-    elif opt.img_format != 'none' and _check_picture_tools():
+    elif opt.img_format and _check_picture_tools():
         if len(blobs) == 1:
             comment("\nRendering density blob at (%.1f, %.1f, %.1f)" %
                     blobs[0])
@@ -472,7 +472,7 @@ def _generate_scripts_and_pictures(wf, opt, data):
                                                     out=wf.output_dir),
                   executable=True)
 
-    if opt.img_format != 'none' and blobs:
+    if opt.img_format and blobs:
         script = ''
         basenames = []
         # as a workaround for buggy coot the maps are reloaded for each blob
@@ -536,8 +536,8 @@ def parse_dimple_commands(args):
                         help='output mtz file'+dstr)
     group2.add_argument('--xyzout', metavar='out.pdb', default='final.pdb',
                         help='output pdb file'+dstr)
-    group2.add_argument('-f', choices=['png', 'jpeg', 'tiff', 'none'],
-                        default='png', dest='img_format',
+    group2.add_argument('-f', choices=['png', 'jpeg', 'tiff'],
+                        dest='img_format',
                         help='format of generated images'+dstr)
     group2.add_argument('--no-cleanup', dest='cleanup', action='store_false',
                         help='leave intermediate files')
