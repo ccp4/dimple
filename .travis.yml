@@ -12,6 +12,7 @@ install:
 script:
   - cmake -D CMAKE_PREFIX_PATH=$HOME/miniconda .
   - make
+  - ./dimple --version
 branches:
   only:
     - master
