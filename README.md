@@ -1,4 +1,6 @@
 # dimple
+
+[![Join the chat at https://gitter.im/ccp4/dimple](https://badges.gitter.im/ccp4/dimple.svg)](https://gitter.im/ccp4/dimple?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 Macromolecular crystallography pipeline for refinement and ligand screening.
 
 Requires several programs from the CCP4 suite.
