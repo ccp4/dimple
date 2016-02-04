@@ -89,7 +89,7 @@ Dimple comes with a little `find-blobs` utility.
 If you don't compile it, the version from the CCP4 suite will be used.
 Compilation requires clipper library which in turn requires mmdb2 and libccp4.
 You may either build everything from source or use conda to download binaries
-(with g++4 ABI). The latter can be done by
+compiled with GCC 4.8. The latter can be done by
 [installing miniconda](http://conda.pydata.org/miniconda.html)
 and doing:
 
@@ -97,6 +97,7 @@ and doing:
 
 Than build find-blobs pointing where the required libraries are:
 
+    export CXXFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0 -std=c++98"  # for GCC 5
     cmake -D CMAKE_PREFIX_PATH=$HOME/miniconda2 .
     make
 
