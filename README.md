@@ -5,10 +5,12 @@ Requires several programs from the CCP4 suite.
 
 ## How it works ##
 
-You provide data (merged mtz) and model (pdb) and tell the pipeline
+You provide data (merged mtz) and Apo model (pdb) and tell the pipeline
 where it should dump the results:
 
     $ dimple my.mtz apo.pdb output-dir
+    
+<a href="https://asciinema.org/a/awgcb045doxjstods15xfqi1r" target="_blank"><img src="https://asciinema.org/a/awgcb045doxjstods15xfqi1r.png" width="589px"/></a>
 
 If you wish you can give more than one model or pdb code
 (only one of them will be used - the one with most similar unit cell):
@@ -23,6 +25,8 @@ the pipeline runs macromolecular refinement after a few usual
 preparatory steps (I to F, choosing Rfree set, reindexing if needed).
 Sometimes it needs to run Molecular Replacement before refinement.
 And at the end it checks for unmodelled blobs - suspected ligands.
+
+<a href="https://asciinema.org/a/awg0n6qr6ez14oe8ugverg4bb" target="_blank"><img src="https://asciinema.org/a/awg0n6qr6ez14oe8ugverg4bb.png" width="589px"/></a>
 
 It's quick. Running time depends of course on data, model and computer,
 but about 3 minutes is typical. With MR it is usually 5-10 minutes,
@@ -55,11 +59,11 @@ In some cases this steps saves as a couple minutes by avoiding MR.
 
 **_free_ reflections** -
 Rfree statistic depend to some degree on how lucky is the pseudo-random
-set of _free_ flags. To eliminate this luck factor when comparing
-different data collection one may want to use the same set of _free_
+set of free flags. To eliminate this luck factor when comparing
+different data collection one may want to use the same set of free
 flags. It is possible by passing external set of reference flags
 (option `--free-r-flags`), but we wanted to do even without the
-reference file. This was implemented by generating the same _free_ set
+reference file. This was implemented by generating the same free set
 for the same pdb file and should work if the space group is the same
 and the resolution is below 1A (we had to pick arbitrary limit).
 
@@ -71,6 +75,10 @@ images (PNG or JPEG) of the blobs. They are used by
 Pictures are generated with Coot+Raster3d - this combines
 the familiar look and feel of Coot with nicer graphics and headless
 rendering.
+
+<img src="http://i.imgur.com/cTDWIzK.png" width="300px"/>
+<img src="http://i.imgur.com/e61cB7G.png" width="300px"/>
+
 
 ## Installation ##
 
