@@ -536,7 +536,7 @@ def parse_dimple_commands(args):
                         help='output mtz file'+dstr)
     group2.add_argument('--xyzout', metavar='out.pdb', default='final.pdb',
                         help='output pdb file'+dstr)
-    group2.add_argument('-f', choices=['png', 'jpeg', 'tiff'],
+    group2.add_argument('-f', choices=['png', 'jpeg', 'tiff', 'none'],
                         dest='img_format',
                         help='format of generated images'+dstr)
     group2.add_argument('--no-cleanup', dest='cleanup', action='store_false',
@@ -593,6 +593,8 @@ def parse_dimple_commands(args):
     all_args = [opt.pos_arg1, opt.pos_arg2, opt.pos_arg3] + opt.more_args
     # all_args should be one mtz, one or more pdbs and output_dir
     opt.output_dir = all_args.pop()
+    if opt.img_format == 'none':  # this option is kept for compatibility only
+        opt.img_format = None
     if (opt.output_dir.endswith('.mtz') or opt.output_dir.endswith('.pdb')
             or opt.output_dir.endswith('.gz')):
         put_error('The last argument should be output directory')
