@@ -76,9 +76,12 @@ def dimple(wf, opt):
         comment("\nRemoved %d HETATM atoms" % n_het)
     else:
         rb_xyzin = ini_pdb
+    # run rwcontents even without CRYST1 - it will show mol. weight only
     wf.rwcontents(xyzin=rb_xyzin).run()
     rw_data = wf.jobs[-1].data
-    if rw_data.get('solvent_percent') is None:
+    if pdb_meta is None:
+        pass # we already had a warning message
+    elif rw_data.get('solvent_percent') is None:
         put_error("rwcontents could not interpret %s" % rb_xyzin)
     elif rw_data['solvent_percent'] > HIGH_SOLVENT_PCT:
         comment("\nHmm... %.1f%% of solvent or incomplete model" %
