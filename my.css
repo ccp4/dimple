@@ -1,0 +1,68 @@
+body {
+ font: 16px/1.5 Georgia,'Bitstream Charter',serif;
+ margin: 1em 0;
+ color: #303338;
+ background: #fff;
+}
+@media screen and (min-width: 480px) {
+body {
+ margin: 2em 0;
+ background: #f0efe7;
+}}
+
+.container {
+ background-color: #fff;
+ max-width: 600px;
+ margin: 0 auto;
+ padding: 0.5em;
+}
+@media screen and (min-width: 480px) {
+.container {
+ border: solid 1px #e3e1d9;
+ border-radius: 6px;
+ padding: 1em 1.6em;
+}}
+
+a { color: #04a; text-decoration: none; }
+a:hover, a:focus { text-decoration: underline; }
+
+h1, h2, h3, h4, h5, h6 {
+ font-family: 'Garamond', 'Georgia', 'Bitstream Charter', serif;
+ color: #444;
+}
+
+h1 { font-size: 250%; text-align: center; }
+@media screen and (min-width: 480px) { h1 { font-size: 300%; }}
+
+h2 { font-size: 125%; margin-bottom: 0.4em; }
+@media screen and (min-width: 480px) { h2 { font-size: 150%; }}
+
+h3 { font-size: 110%; }
+
+p, ul, ol, dl, table, pre, blockquote { margin: 0 0 1em; }
+
+ul, ol { padding-left: 1.0em; }
+@media screen and (min-width: 480px) { ul, ol { padding-left: 1.2em; }}
+
+pre, code {
+ font-family: 'Consolas', 'Menlo', 'Deja Vu Sans Mono', 'Bitstream Vera Sans Mono', monospace;
+ background-color: #feb;
+ color: #544;
+ font-size: 95%;
+}
+pre { padding: .5em 1em; }
+code { padding: .1em .25em; }
+
+hr {
+ border: none;
+ margin: 1.5em 0;
+ border-bottom: 1px solid #ccc;
+ position: relative;
+ top: -1px;
+}
+
+.container img, .container iframe { max-width: 100%; }
+.container img { margin: 0 auto; }
+
+#footer { padding-top: 1em; text-align: center; font-size: 80%;
+          font-family: Georgia,'Bitstream Charter',serif; }
