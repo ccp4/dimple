@@ -70,6 +70,13 @@ reference file. This was implemented by generating the same free set
 for the same pdb file and should work if the space group is the same
 and the resolution is below 1A (we had to pick arbitrary limit).
 
+**different asu volume** -
+if asu in the data is much larger than in the model,
+we search for multiple copies of the model in MR.
+In the opposite case, when asu in the data is smaller,
+we make a single ensemble from all the chains
+(*phaser.ensembler*) before MR.
+
 **scoring blobs** - it is rather simplistic now, we need to work on it
 
 **generating pictures** - we have an option (`-f`) to generate static
@@ -96,7 +103,7 @@ through to the CCP4 suite yet, get it from
 
 ## Comments? ##
 
-Any thoughts or comments are genuinely welcome.
+Any comments and thoughts how to improve this tool are genuinely welcome.
 If it doesn't work as expected or doesn't work at all - let us know asap.
 Use the [issue tracker](https://github.com/ccp4/dimple/issues) or
 email CCP4 helpdesk or
