@@ -77,6 +77,27 @@ In the opposite case, when asu in the data is smaller,
 we make a single ensemble from all the chains
 (*phaser.ensembler*) before MR.
 
+**rigid-body** refinement - both *refmac* and *phaser* can do it.
+We could simplify our pipeline by always running phaser before
+refmac, but it would be slower (on average).
+Not by large margin, though. Phaser checks if the input model is
+already placed correctly and skips search if it is.
+
+Since we use only data up to 3.5A for rigid-body, in some cases
+5% of free reflections was not enough to give reliable statistics.
+On the other hand there is no danger of overfitting in rigid-body.
+Thus, we stopped using Rfree set in this step at all.
+
+actual **refinement** - we run refmac restrained refinement twice.
+The first run (labelled as *jelly*) has jelly-body restraints,
+no hydrogens and ignores very high resolution reflections.
+In the default mode we run only 4 cycles with these settings,
+and 8 cycles of the final refinement. Note that the usual
+recommendation for jelly-body refinement is 100+ cycles.
+We picked the numbers 4 and 8 after testing various combinations
+on hundreds of datasets. This split happened to give slightly
+better results than other combinations within the same time limit.
+
 **scoring blobs** - it is rather simplistic now, we need to work on it
 
 **generating pictures** - we have an option (`-f`) to generate static
