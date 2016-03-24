@@ -35,7 +35,7 @@ It's quick. Running time depends of course on data, model and computer,
 but about 3 minutes is typical. With MR it is usually 3-10 minutes,
 but from time to time much, much longer.
 
-### Options ###
+## Options ##
 
 DIMPLE has a lot of options (`dimple -h` lists all of them),
 but since the goal of the pipeline is to make things simple,
@@ -51,16 +51,17 @@ to get 100 cycles of jelly-body refinement.
 in data up to 3.5A, is above 0.4.
 Edge cases: `-M0` -- always run MR, `-M1` -- never.
 
-### Selected Details ###
+## Selected Details ##
 
-**reindexing (Pointless)** - if the data and model are in compatible
-but different spacegroups, we change the spacegroup in the MTZ file.
-We also check all possible _settings_ - Pointless calculates structure
+**reindexing** --
+if the data and model are in compatible but different spacegroups,
+we use *pointless* to change the spacegroup in the MTZ file.
+We also check all possible _settings_ -- pointless calculates structure
 factors from the model and compares the CC on E^2 to find the best
 matching settings, reindexing data if necessary.
 In some cases this steps saves as a couple minutes by avoiding MR.
 
-**_free_ reflections** -
+**free reflections** --
 Rfree statistic depend to some degree on how lucky is the pseudo-random
 set of free flags. To eliminate this luck factor when comparing
 different data collection one may want to use the same set of free
@@ -70,14 +71,15 @@ reference file. This was implemented by generating the same free set
 for the same pdb file and should work if the space group is the same
 and the resolution is below 1A (we had to pick arbitrary limit).
 
-**different asu volume** -
+**different asu volume** --
 if asu in the data is much larger than in the model,
 we search for multiple copies of the model in MR.
 In the opposite case, when asu in the data is smaller,
 we make a single ensemble from all the chains
 (*phaser.ensembler*) before MR.
 
-**rigid-body** refinement - both *refmac* and *phaser* can do it.
+**rigid-body** refinement --
+both *refmac* and *phaser* can do it.
 We could simplify our pipeline by always running phaser before
 refmac, but it would be slower (on average).
 Not by large margin, though. Phaser checks if the input model is
@@ -88,7 +90,8 @@ Since we use only data up to 3.5A for rigid-body, in some cases
 On the other hand there is no danger of overfitting in rigid-body.
 Thus, we stopped using Rfree set in this step at all.
 
-actual **refinement** - we run refmac restrained refinement twice.
+actual **refinement** --
+we run refmac restrained refinement twice.
 The first run (labelled as *jelly*) has jelly-body restraints,
 no hydrogens and ignores very high resolution reflections.
 In the default mode we run only 4 cycles with these settings,
@@ -98,17 +101,19 @@ We picked the numbers 4 and 8 after testing various combinations
 on hundreds of datasets. This split happened to give slightly
 better results than other combinations within the same time limit.
 
-**scoring blobs** - it is rather simplistic now, we need to work on it
+**scoring blobs** --
+it is rather simplistic now, we need to work on it
 
-**generating pictures** - we have an option (`-f`) to generate static
+**generating pictures** --
+we have an option (`-f`) to generate static
 images (PNG or JPEG) of the blobs. They are used by
 [SynchWeb](https://github.com/DiamondLightSource/SynchWeb) in DLS.
 Pictures are generated with Coot+Raster3d - this combines
 the familiar look and feel of Coot with nicer graphics and headless
 rendering.
 
-[<img src="http://i.imgur.com/cTDWIzK.png" width="290px"/>](http://i.imgur.com/cTDWIzK.png)
-[<img src="http://i.imgur.com/e61cB7G.png" width="290px"/>](http://i.imgur.com/e61cB7G.png)
+[<img src="http://ccp4.github.io/img/blob-th.png" width="290px"/>](http://ccp4.github.io/img/blob-th.png)
+[<img src="http://ccp4.github.io/img/blob2.png" width="290px"/>](http://ccp4.github.io/img/blob2.png)
 
 
 ## Installation ##
@@ -125,7 +130,7 @@ through to the CCP4 suite yet, get it from
 ## Comments? ##
 
 Any comments and thoughts how to improve this tool are genuinely welcome.
-If it doesn't work as expected or doesn't work at all - let us know asap.
+If it doesn't work as expected or doesn't work at all -- let us know asap.
 Use the [issue tracker](https://github.com/ccp4/dimple/issues) or
 email CCP4 helpdesk or
 email wojdyr@gmail.com or

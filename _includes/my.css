@@ -1,6 +1,6 @@
 body {
- font: 16px/1.5 Georgia,'Bitstream Charter',serif;
- margin: 1em 0;
+ font: 16px/1.5 'Source Sans Pro', sans-serif;
+ margin: 0 0;
  color: #303338;
  background: #fff;
 }
@@ -28,16 +28,16 @@ a:hover, a:focus { text-decoration: underline; }
 
 h1, h2, h3, h4, h5, h6 {
  font-family: 'Garamond', 'Georgia', 'Bitstream Charter', serif;
- color: #444;
+ color: #555;
 }
 
 h1 { font-size: 250%; text-align: center; }
 @media screen and (min-width: 480px) { h1 { font-size: 300%; }}
 
-h2 { font-size: 125%; margin-bottom: 0.4em; }
-@media screen and (min-width: 480px) { h2 { font-size: 150%; }}
+h2 { font-size: 150%; margin-bottom: 0.4em; font-weight: 500; }
+@media screen and (min-width: 480px) { h2 { font-size: 180%; }}
 
-h3 { font-size: 110%; }
+h3 { font-size: 130%; margin-bottom: 0.4em; }
 
 p, ul, ol, dl, table, pre, blockquote { margin: 0 0 1em; }
 
@@ -64,5 +64,4 @@ hr {
 .container img, .container iframe { max-width: 100%; }
 .container img { margin: 0 auto; }
 
-#footer { padding-top: 1em; text-align: center; font-size: 80%;
-          font-family: Georgia,'Bitstream Charter',serif; }
+#footer { padding-top: 1em; text-align: center; font-size: 80%; }
