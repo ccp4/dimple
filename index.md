@@ -2,9 +2,14 @@
 layout: default
 ---
 
-# dimple
-Macromolecular crystallography pipeline for refinement and ligand screening.
-Based on CCP4 programs.
+# dim<span id="p">p</span>le
+
+#### Macromolecular crystallography pipeline
+
+#### for refinement and ligand screening
+
+#### based on CCP4 programs.
+
 
 ## How it works ##
 
@@ -59,7 +64,7 @@ we use *pointless* to change the spacegroup in the MTZ file.
 We also check all possible _settings_ -- pointless calculates structure
 factors from the model and compares the CC on E^2 to find the best
 matching settings, reindexing data if necessary.
-In some cases this steps saves as a couple minutes by avoiding MR.
+In some cases this steps saves us a couple minutes by avoiding MR.
 
 **free reflections** --
 Rfree statistic depend to some degree on how lucky is the pseudo-random
@@ -115,6 +120,12 @@ rendering.
 [<img src="http://ccp4.github.io/img/blob-th.png" width="290px"/>](http://ccp4.github.io/img/blob-th.png)
 [<img src="http://ccp4.github.io/img/blob2.png" width="290px"/>](http://ccp4.github.io/img/blob2.png)
 
+## FAQ ##
+
+_Why final R factor in one refmac run is different than initial R factor
+in succeeding run?_
+
+Because of different refinement options (hydrogens, resolution).
 
 ## Installation ##
 
