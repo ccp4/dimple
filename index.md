@@ -13,7 +13,7 @@ layout: default
 
 ## How it works ##
 
-You provide the data (merged mtz) and Apo model (pdb) and tell the pipeline
+You provide the reflection data (merged mtz) and Apo model (pdb) and tell the pipeline
 where it should dump the results:
 
     $ dimple my.mtz apo.pdb output-dir
@@ -25,7 +25,7 @@ only one of them will be used -- the one with most similar unit cell:
 
     $ dimple my.mtz apo.pdb my-other.pdb 4uqi output-dir
 
-DIMPLE will do what it can to quickly return a refined model,
+DIMPLE will do what it can to quickly return a refined model and difference density map
 pointing to unmodelled electron density blobs -- potential ligand sites.
 
 Simplifying a bit:
@@ -36,7 +36,7 @@ And at the end it checks for unmodelled blobs -- suspected ligands.
 
 <script type="text/javascript" src="https://asciinema.org/a/awg0n6qr6ez14oe8ugverg4bb.js" id="asciicast-awg0n6qr6ez14oe8ugverg4bb" async data-size="13"></script>
 
-It's quick. Running time depends of course on data, model and computer,
+It's quick. Run time depends of course on the data, such as resolution, size of unit cell, etc., the model and computer,
 but about 3 minutes is typical. With MR it is usually 3-10 minutes,
 but from time to time much, much longer.
 
@@ -47,12 +47,12 @@ but since the goal of the pipeline is to make things simple,
 we present here only two of them:
 
  `--slow` (or `-s` for short) -- recommended if you are not in hurry.
-DIMPLE will take twice more time, spending it mostly on extra cycles
+DIMPLE will take twice as long, spending more time on extra cycles
 of refinement. If this is still too fast, give this option twice --
 to get 100 cycles of jelly-body refinement.
 
 `-M` is also quite popular. It decides when MR should kick in.
-`-M 0.4` (the default value) runs MR if R-factor after rigid-body refinement,
+`-M 0.4` (the default value) runs MR if the R-factor after rigid-body refinement,
 in data up to 3.5A, is above 0.4.
 Edge cases: `-M0` -- always run MR, `-M1` -- never.
 
@@ -67,14 +67,14 @@ matching settings, reindexing data if necessary.
 In some cases this steps saves us a couple minutes by avoiding MR.
 
 **free reflections** --
-Rfree statistic depend to some degree on how lucky is the pseudo-random
+Rfree statistics depend to some degree on how lucky is the pseudo-random
 set of free flags. To eliminate this luck factor when comparing
-different data collection one may want to use the same set of free
-flags. It is possible by passing external set of reference flags
+data collected from different crystals one may want to use the same set of free
+flags. This is possible by passing an external set of reference flags
 (option `--free-r-flags`), but we wanted to do even without the
 reference file. This was implemented by generating the same free set
 for the same pdb file and should work if the space group is the same
-and the resolution is below 1A (we had to pick arbitrary limit).
+and the resolution is below 1A (we had to pick an arbitrary limit).
 
 **different asu volume** --
 if asu in the data is much larger than in the model,
@@ -87,10 +87,10 @@ we make a single ensemble from all the chains
 both *refmac* and *phaser* can do it.
 We could simplify our pipeline by always running phaser before
 refmac, but it would be slower (on average).
-Not by large margin, though. Phaser checks if the input model is
-already placed correctly and skips search if it is.
+Not by a large margin, though. Phaser checks if the input model is
+already placed correctly and skips the search if it is.
 
-Since we use only data up to 3.5A for rigid-body, in some cases
+Since we only use data up to 3.5A for rigid-body, in some cases
 5% of free reflections was not enough to give reliable statistics.
 On the other hand there is no danger of overfitting in rigid-body.
 Thus, we stopped using Rfree set in this step at all.
@@ -122,7 +122,7 @@ rendering.
 
 ## FAQ ##
 
-_Why final R factor in one refmac run is different than initial R factor
+_Why is the final R factor in one refmac run different than the initial R factor
 in succeeding run?_
 
 Because of different refinement options (hydrogens, resolution).
