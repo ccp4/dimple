@@ -53,12 +53,12 @@ to get 100 cycles of jelly-body refinement.
 
 `-M` is also quite popular. It decides when MR should kick in.
 `-M 0.4` (the default value) runs MR if the R-factor after rigid-body refinement,
-in data up to 3.5A, is above 0.4.
+in data up to 3.5Å, is above 0.4.
 Edge cases: `-M0` -- always run MR, `-M1` -- never.
 
 ## Selected Details ##
 
-**reindexing** --
+**Reindexing** --
 if the data and model are in compatible but different spacegroups,
 we use *pointless* to change the spacegroup in the MTZ file.
 We also check all possible _settings_ -- pointless calculates structure
@@ -66,36 +66,36 @@ factors from the model and compares the CC on E^2 to find the best
 matching settings, reindexing data if necessary.
 In some cases this steps saves us a couple minutes by avoiding MR.
 
-**free reflections** --
+**Free reflections** --
 Rfree statistics depend to some degree on how lucky is the pseudo-random
-set of free flags. To eliminate this luck factor when comparing
-data collected from different crystals one may want to use the same set of free
-flags. This is possible by passing an external set of reference flags
-(option `--free-r-flags`), but we wanted to do even without the
-reference file. This was implemented by generating the same free set
-for the same pdb file and should work if the space group is the same
-and the resolution is below 1A (we had to pick an arbitrary limit).
+set of free flags. Therefore one may prefer to use the same free flags
+when comparing data collected from different crystals. That is why Dimple
+always assigns the same flags when the same pdb file is used.
+Unless the data is in different point group than the model
+or the resolution is below 1Å (we had to pick an arbitrary limit).
+Alternatively, you can pass an external set of reference flags
+(option `--free-r-flags`).
 
-**different asu volume** --
+**Different asu volume** --
 if asu in the data is much larger than in the model,
 we search for multiple copies of the model in MR.
 In the opposite case, when asu in the data is smaller,
 we make a single ensemble from all the chains
 (*phaser.ensembler*) before MR.
 
-**rigid-body** refinement --
+**Rigid-body** refinement --
 both *refmac* and *phaser* can do it.
 We could simplify our pipeline by always running phaser before
 refmac, but it would be slower (on average).
 Not by a large margin, though. Phaser checks if the input model is
 already placed correctly and skips the search if it is.
 
-Since we only use data up to 3.5A for rigid-body, in some cases
+Since we only use data up to 3.5Å for rigid-body, in some cases
 5% of free reflections was not enough to give reliable statistics.
 On the other hand there is no danger of overfitting in rigid-body.
 Thus, we stopped using Rfree set in this step at all.
 
-actual **refinement** --
+Actual **refinement** --
 we run refmac restrained refinement twice.
 The first run (labelled as *jelly*) has jelly-body restraints,
 no hydrogens and ignores very high resolution reflections.
@@ -106,10 +106,10 @@ We picked the numbers 4 and 8 after testing various combinations
 on hundreds of datasets. This split happened to give slightly
 better results than other combinations within the same time limit.
 
-**scoring blobs** --
+**Scoring blobs** --
 it is rather simplistic now, we need to work on it
 
-**generating pictures** --
+**Generating pictures** --
 we have an option (`-f`) to generate static
 images (PNG or JPEG) of the blobs. They are used by
 [SynchWeb](https://github.com/DiamondLightSource/SynchWeb) in DLS.
@@ -122,10 +122,18 @@ rendering.
 
 ## FAQ ##
 
-_Why is the final R factor in one refmac run different than the initial R factor
-in succeeding run?_
+* _Why is the final R factor in one refmac run different than the initial
+  R factor in succeeding run?_
 
-Because of different refinement options (hydrogens, resolution).
+  Because of different refinement options (hydrogens, resolution).
+
+* _Is it based on the EDNA framework?_
+
+  No, but it was at some point, as an experiment. Being a relatively simple
+  project, dimple was well-suited for testing new frameworks.
+  The current incarnation of Dimple was started in 2013
+  preserving the workflow and parameters from the previous version.
+  And then gradually evolved.
 
 ## Installation ##
 
