@@ -127,7 +127,7 @@ rendering.
 
   Because of different refinement options (hydrogens, resolution).
 
-* _Is it based on the EDNA framework?_
+* _Is Dimple based on the EDNA framework?_
 
   No, but it was at some point, as an experiment. Being a relatively simple
   project, dimple was well-suited for testing new frameworks.
