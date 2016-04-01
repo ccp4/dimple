@@ -11,6 +11,8 @@ class Cell(object):
         self.a, self.b, self.c = parameters[:3]
         self.alpha, self.beta, self.gamma = parameters[3:]
         self.cell = parameters
+        if ' ' not in symmetry:
+            symmetry = add_spaces_to_hm(symmetry)
         self.symmetry = symmetry  # international SG symbol w/ spaces
 
     def get_volume(self):
@@ -199,6 +201,32 @@ _pg_symop = {'1': 1,
              '23': 12,
              '432': 24,
             }
+
+# This list was generated with cctbx:
+#  from cctbx import sgtbx
+#  for s in sgtbx.space_group_symbol_iterator():
+#    if sgtbx.space_group(s).is_chiral(): print '"%s",' % s.hermann_mauguin()
+_hm_symbols = [
+"P 1", "P 1 2 1", "P 1 1 2", "P 2 1 1", "P 1 21 1", "P 1 1 21", "P 21 1 1",
+"C 1 2 1", "A 1 2 1", "I 1 2 1", "A 1 1 2", "B 1 1 2", "I 1 1 2", "B 2 1 1",
+"C 2 1 1", "I 2 1 1", "P 2 2 2", "P 2 2 21", "P 21 2 2", "P 2 21 2",
+"P 21 21 2", "P 2 21 21", "P 21 2 21", "P 21 21 21", "C 2 2 21", "A 21 2 2",
+"B 2 21 2", "C 2 2 2", "A 2 2 2", "B 2 2 2", "F 2 2 2", "I 2 2 2",
+"I 21 21 21", "P 4", "P 41", "P 42", "P 43", "I 4", "I 41", "P 4 2 2",
+"P 4 21 2", "P 41 2 2", "P 41 21 2", "P 42 2 2", "P 42 21 2", "P 43 2 2",
+"P 43 21 2", "I 4 2 2", "I 41 2 2", "P 3", "P 31", "P 32", "R 3",
+"R 3", "P 3 1 2", "P 3 2 1", "P 31 1 2", "P 31 2 1", "P 32 1 2", "P 32 2 1",
+"R 3 2", "R 3 2", "P 6", "P 61", "P 65", "P 62", "P 64", "P 63", "P 6 2 2",
+"P 61 2 2", "P 65 2 2", "P 62 2 2", "P 64 2 2", "P 63 2 2", "P 2 3", "F 2 3",
+"I 2 3", "P 21 3", "I 21 3", "P 4 3 2", "P 42 3 2", "F 4 3 2", "F 41 3 2",
+"I 4 3 2", "P 43 3 2", "P 41 3 2", "I 41 3 2"
+]
+
+def add_spaces_to_hm(symbol):
+    for hm in _hm_symbols:
+        if hm.replace(' ', '') == symbol:
+            return hm
+    return symbol
 
 def calculate_z_order(hm):
     pg = ''.join(a[0] for a in hm.split()[1:])
