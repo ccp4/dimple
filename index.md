@@ -40,6 +40,10 @@ It's quick. Run time depends of course on the data, such as resolution, size of 
 but about 3 minutes is typical. With MR it is usually 3-10 minutes,
 but from time to time much, much longer.
 
+In Diamond (UK's national synchrotron) Dimple is automatically run after
+auto-processing [if the user provided a PDB file](http://www.diamond.ac.uk/Beamlines/Mx/Common/Common-Manual/Data-Analysis/Automated-Software-Pipeline.html#DIMPLE)
+before the experiment.
+
 ## Options ##
 
 DIMPLE has a lot of options (`dimple -h` lists all of them),
