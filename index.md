@@ -62,6 +62,13 @@ Edge cases: `-M0` -- always run MR, `-M1` -- never.
 
 ## Selected Details ##
 
+**MTZ columns** --
+by default, Dimple expects either intensities labeled as IMEAN or
+amplitudes labeled as F or FP. To use different columns
+specify options `--icolumn` / `--fcolumn`.
+Intensities are used only when amplitudes are not in the file, or
+when the user explicitely sets `--icolumn` or `--ItoF-prog`.
+
 **Reindexing** --
 if the data and model are in compatible but different spacegroups,
 we use *pointless* to change the spacegroup in the MTZ file.
