@@ -42,8 +42,6 @@ def dimple(wf, opt):
     comment("%8s### Dimple v%s. Problems and suggestions:"
             " ccp4@ccp4.ac.uk ###" % ('', __version__))
     mtz_meta = wf.read_mtz_metadata(opt.mtz)
-    mtz_meta.check_col_type(opt.icolumn or 'IMEAN', 'J')
-    mtz_meta.check_col_type(opt.sigicolumn, 'Q')
     _comment_summary_line("MTZ (%.1fA)" % mtz_meta.dmax, mtz_meta)
     if opt.dls_naming:
         opt.pdbs = dls_name_filter(opt.pdbs)
@@ -112,9 +110,16 @@ def dimple(wf, opt):
     if reindexed_mtz_meta.symmetry != mtz_meta.symmetry:
         _comment_summary_line('reindexed MTZ', reindexed_mtz_meta)
 
-    ####### (c)truncate - calculate amplitudes #######
-    if (opt.ItoF_prog or opt.icolumn or 'F' not in mtz_meta.columns
-                                  or 'SIGF' not in mtz_meta.columns):
+    ####### (c)truncate - calculate amplitudes if needed #######
+    if not opt.fcolumn:
+        opt.fcolumn = 'F' if 'F' in mtz_meta.columns else 'FP'
+    elif opt.icolumn or opt.ItoF_prog:
+        put_error('Ignoring options --fcolumn/--sigfcolumn')
+    opt.sigfcolumn = opt.sigfcolumn.replace('<FCOL>', opt.fcolumn)
+    if (opt.ItoF_prog or opt.icolumn or opt.fcolumn not in mtz_meta.columns
+                                  or opt.sigfcolumn not in mtz_meta.columns):
+        mtz_meta.check_col_type(opt.icolumn or 'IMEAN', 'J')
+        mtz_meta.check_col_type(opt.sigicolumn, 'Q')
         f_mtz = "amplit.mtz"
         wf.temporary_files.add(f_mtz)
         i_sigi_cols = (opt.icolumn or 'IMEAN', opt.sigicolumn)
@@ -125,11 +130,13 @@ def dimple(wf, opt):
             wf.truncate(hklin=reindexed_mtz, hklout=f_mtz,
                         labin="IMEAN=%s SIGIMEAN=%s" % i_sigi_cols,
                         labout="F=F SIGF=SIGF").run()
+        opt.fcolumn = 'F'
+        opt.sigfcolumn = 'SIGF'
     else:
         f_mtz = reindexed_mtz
 
     ####### rigid body - check if model is good for refinement? #######
-    refmac_labin_nofree = "FP=F SIGFP=SIGF"
+    refmac_labin_nofree = "FP=%s SIGFP=%s" % (opt.fcolumn, opt.sigfcolumn)
     refmac_xyzin = None
     cell_diff = calculate_difference_metric(pdb_meta, reindexed_mtz_meta)
     if pdb_meta is None:
@@ -196,7 +203,7 @@ def dimple(wf, opt):
         else:
             wf.temporary_files |= {"phaser.1.pdb", "phaser.1.mtz"}
             wf.phaser_auto(hklin=f_mtz,
-                           labin="F = F SIGF = SIGF",
+                           labin="F=%s SIGF=%s" % (opt.fcolumn, opt.sigfcolumn),
                            model=dict(pdb=rb_xyzin, identity=100, num=mr_num,
                                       mw=mw),
                            sg_alt="ALL", opt=opt,
@@ -528,8 +535,12 @@ def parse_dimple_commands(args):
     group2 = parser.add_argument_group('options contolling input/output')
     group2.add_argument('-I', '--icolumn', metavar='ICOL',
                         help='I column label (default: IMEAN)')
-    group2.add_argument('--sigicolumn', metavar='SIGICOL',
-                        default='SIG<ICOL>', help='SIGI column label'+dstr)
+    group2.add_argument('--sigicolumn', metavar='SIGICOL', default='SIG<ICOL>',
+                        help='SIGI column label'+dstr)
+    group2.add_argument('--fcolumn', metavar='FCOL',
+                        help='F column label (default: F)')
+    group2.add_argument('--sigfcolumn', metavar='SIGFCOL', default='SIG<FCOL>',
+                        help='SIGF column label'+dstr)
     group2.add_argument('--libin', metavar='CIF',
                         help='ligand descriptions for refmac (LIBIN)')
     group2.add_argument('-R', '--free-r-flags', metavar='MTZ_FILE',
