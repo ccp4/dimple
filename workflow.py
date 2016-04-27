@@ -511,6 +511,7 @@ class Workflow:
             except:
                 self.repl_jobs = None
         self.dry_run = False
+        self.enable_logs = True
         self.argv = sys.argv
         if not os.path.isdir(self.output_dir):
             try:
@@ -628,7 +629,8 @@ class Workflow:
             utils.put("%s" % (parse_output or ""))
             if parse_output:
                 utils.log_value("info", parse_output)
-            self._write_logs(job)
+            if self.enable_logs:
+                self._write_logs(job)
             for k, v in job.data.iteritems():
                 if k != "info":
                     utils.log_value(k, v)

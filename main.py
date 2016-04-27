@@ -603,6 +603,22 @@ def parse_dimple_commands(args):
         output_dir = os.path.join(os.environ.get("CCP4_SCR", ''), "dimple_out")
         args.append(output_dir)
 
+    # special mode for checking pdb file[s]
+    if all(arg.endswith('.pdb') for arg in args):
+        print 'Proper usage: dimple [options...] input.mtz input.pdb output_dir'
+        print '...actually we can run rwcontents for you'
+        wf = workflow.Workflow('')
+        wf.enable_logs = False
+        for p in args:
+            try:
+                wf.read_pdb_metadata(p, print_errors=True)
+                _comment_summary_line(os.path.basename(p), wf.file_info[p])
+                wf.rwcontents(xyzin=p).run()
+            except IOError as e:
+                put_error(e)
+        print '\n\n...but this is NOT how dimple is supposed to be run.'
+        sys.exit(0)
+
     opt = parser.parse_args(args)
     all_args = [opt.pos_arg1, opt.pos_arg2, opt.pos_arg3] + opt.more_args
     # all_args should be one mtz, one or more pdbs and output_dir
