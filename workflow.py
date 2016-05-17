@@ -938,7 +938,7 @@ def parse_steps(args, wf):
     return jobs
 
 def parse_workflow_commands():
-    prog = os.path.basename(sys.argv[0])
+    prog = __package__ or os.path.basename(sys.argv[0])
     args = sys.argv[1:]
     if not args or args[0] not in ('info', 'repeat'):
         return False
