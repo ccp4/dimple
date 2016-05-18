@@ -323,7 +323,10 @@ def _refmac_parser(job):
 # example:
 #     Alternative reindexing        Lklhd      CC     R(E^2)    Number Cell_deviation
 #    [-k,-l,h+k+l]           0.079    0.029    0.506     61253      2.99
-_POINTLESS_ALTREINDEX_MATCH = re.compile(r"^\s+\[[hkl+, -]+\][ \t0-9+.eE-]+$")
+# in pointless 1.10.22 Phil added numbers in the first column
+# 1              [h,k,l]              0.499   ...
+_POINTLESS_ALTREINDEX_RE = re.compile(r"^\s*\d*\s+(\[[hkl+, -]+\]"
+                                      r"[ \t0-9+.eE-]+)$")
 
 _PREVIEW_DISCARD_RE = re.compile(r'[^\w!"#$%&\'()*+,./:;<=>?@[\\]^_`{|}~ -]')
 
@@ -343,8 +346,8 @@ def _pointless_parser(job):
                 job.data["resol"] = float(line.split(":")[1])
             elif line.startswith("Number of reflections:"):
                 job.data["refl_ref"] = int(line.split(":")[1])
-            elif _POINTLESS_ALTREINDEX_MATCH.match(line):
-                s = line.split()
+            elif _POINTLESS_ALTREINDEX_RE.match(line):
+                s = _POINTLESS_ALTREINDEX_RE.match(line).group(1).split()
                 job.data.setdefault('alt_reindex', []).append(
                         {'op': s[0],
                          'cc': _float_or_nan(s[2]),
