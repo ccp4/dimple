@@ -31,7 +31,7 @@ from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
 from dimple import coots
 
-__version__ = '2.5.1'
+__version__ = '2.5.2'
 
 # sometimes provided models are incomplete, be suspicious above this solvent%
 HIGH_SOLVENT_PCT = 75
@@ -39,8 +39,8 @@ HIGH_SOLVENT_PCT = 75
 BAD_FINAL_RFREE = 0.5
 
 def dimple(wf, opt):
-    comment("%8s### Dimple v%s. Problems and suggestions:"
-            " ccp4@ccp4.ac.uk ###" % ('', __version__))
+    comment("     ### Dimple v%s. Problems and suggestions:"
+            " ccp4.github.io/dimple ###" % __version__)
     mtz_meta = wf.read_mtz_metadata(opt.mtz)
     _comment_summary_line("MTZ (%.1fA)" % mtz_meta.dmax, mtz_meta)
     if opt.dls_naming:
