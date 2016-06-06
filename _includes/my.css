@@ -39,7 +39,7 @@ h2 { font-size: 150%; margin-bottom: 0.4em; font-weight: 500; }
 
 h3 { font-size: 130%; margin-bottom: 0.4em; }
 
-h1 { margin-bottom: 0; }
+h1 { margin-bottom: 0; text-shadow: 4px 4px 2px #999;}
 h4 { margin: 0; font-size: 115%; font-weight: 400; text-align: center; }
 h1 span#p { position: relative; top: 4px; }
 

@@ -131,6 +131,10 @@ rendering.
 [<img src="http://ccp4.github.io/img/blob-th.png" width="290px"/>](http://ccp4.github.io/img/blob-th.png)
 [<img src="http://ccp4.github.io/img/blob2.png" width="290px"/>](http://ccp4.github.io/img/blob2.png)
 
+Currently we are working on
+[interactive web-based viewer](https://github.com/uglymol/uglymol)
+that emulates Coot and hopefully works fast enough to replace static images.
+
 ## FAQ ##
 
 * _Why is the final R factor in one refmac run different than the initial
