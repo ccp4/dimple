@@ -94,6 +94,13 @@ In the opposite case, when asu in the data is smaller,
 we make a single ensemble from all the chains
 (*phaser.ensembler*) before MR.
 
+**NCS** --
+The PDB file format stores non-crystallographic symmetry transformations
+in the MTRIXn records. The coordinates of NCS copies may or may not be
+in the file, as reflected (with some exceptions) by the MTRIXn/iGiven field.
+Dimple is generally aware of these things and should work reasonably in all
+cases, although as of Q2 2016 it does not, waiting for a bugfix in refmac.
+
 **Rigid-body** refinement --
 both *refmac* and *phaser* can do it.
 We could simplify our pipeline by always running phaser before
