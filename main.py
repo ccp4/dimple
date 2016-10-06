@@ -26,12 +26,12 @@ if __name__ == "__main__" and __package__ is None:
 from dimple import utils
 from dimple.utils import comment, put_error
 from dimple.cell import match_symmetry
-from dimple.mtz import check_freerflags_column, MtzMeta
+from dimple.mtz import check_freerflags_column, MtzMeta, DEFAULT_FREE_COLS
 from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
 from dimple import coots
 
-__version__ = '2.5.2'
+__version__ = '2.5.3'
 
 # sometimes provided models are incomplete, be suspicious above this solvent%
 HIGH_SOLVENT_PCT = 75
@@ -225,11 +225,12 @@ def dimple(wf, opt):
     if opt.free_r_flags:
         free_mtz = opt.free_r_flags
         free_col = check_freerflags_column(wf.path(free_mtz),
-                                           expected_symmetry=pdb_meta)
+                                           expected_symmetry=pdb_meta,
+                                           column=opt.freecolumn)
         comment("\nFree-R flags from the %s file, column %s." %
                 (("reference" if free_mtz != opt.mtz else 'input'), free_col))
     else:
-        free_col = 'FreeR_flag'
+        free_col = DEFAULT_FREE_COLS[0]
         if free_col in f_mtz_meta.columns:
             comment("\nReplace free-R flags")
         else:
@@ -279,6 +280,8 @@ def dimple(wf, opt):
      refinement type restrained
      weight %s
      """ % refmac_weight
+    if opt.freecolumn_val:
+        restr_ref_keys += "free %s\n" % opt.freecolumn_val
     refmac_labin = "%s FREE=%s" % (refmac_labin_nofree, free_col)
     comment("\nRestrained refinement, %d+%d cycles." % (opt.jelly,
                                                         opt.restr_cycles))
@@ -546,6 +549,8 @@ def parse_dimple_commands(args):
     group2.add_argument('-R', '--free-r-flags', metavar='MTZ_FILE',
                         help='file with freeR flags '
                              '("-" = use flags from data mtz)')
+    group2.add_argument('--freecolumn', metavar='COL[=N]',
+                        help='Rfree column with optional value (default: 0)')
     group2.add_argument('--hklout', metavar='out.mtz', default='final.mtz',
                         help='output mtz file'+dstr)
     group2.add_argument('--xyzout', metavar='out.pdb', default='final.pdb',
@@ -676,6 +681,16 @@ def parse_dimple_commands(args):
         sys.exit(1)
     if opt.free_r_flags == '-':
         opt.free_r_flags = opt.mtz
+    opt.freecolumn_val = None
+    if opt.freecolumn and '=' in opt.freecolumn:
+        opt.freecolumn, opt.freecolumn_val = opt.freecolumn.rsplit('=', 1)
+    if opt.freecolumn and not opt.free_r_flags:
+        if opt.freecolumn == DEFAULT_FREE_COLS[0] and opt.freecolumn_val:
+            pass # this may be useful for excluding different set
+        else:
+            put_error("--freecolumn suggests that you want to use existing free"
+                      " flags.\nFor this you need also option --free-r-flags")
+            sys.exit(1)
 
     # extra checks
     for filename in opt.pdbs + [opt.mtz, opt.free_r_flags, opt.libin]:

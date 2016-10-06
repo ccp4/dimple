@@ -4,6 +4,8 @@ import sys
 from dimple.utils import put_error, comment, silently_run
 from dimple.cell import Cell, match_symmetry
 
+DEFAULT_FREE_COLS = ['FreeR_flag', 'FREE', 'RFREE']
+
 class MtzMeta(Cell):
     d_eps = 0.00051 # dmax precision (so low b/c it is read from mtzdump)
     def __init__(self, cell, symmetry, sg_number, dmin, dmax, columns,
@@ -72,13 +74,16 @@ def read_metadata(hklin):
                    dmin=lower_resol, dmax=upper_resol, columns=columns,
                    filename=hklin)
 
-def check_freerflags_column(free_mtz, expected_symmetry):
-    names = ['FreeR_flag', 'FREE', 'RFREE']
+def check_freerflags_column(free_mtz, expected_symmetry, column):
     rfree_meta = read_metadata(free_mtz)
     if not match_symmetry(rfree_meta, expected_symmetry):
         comment("\nWARNING: R-free flag reference file is %s not %s." %
                 (rfree_meta.symmetry, expected_symmetry.symmetry))
-    for name in names:
+    if column is not None:
+        if not rfree_meta.check_col_type(column, 'I'):
+            sys.exit(1)
+        return column
+    for name in DEFAULT_FREE_COLS:
         if name in rfree_meta.columns:
             rfree_meta.check_col_type(name, 'I')
             return name
