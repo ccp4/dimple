@@ -4,18 +4,14 @@ Script that generates data.py
 """
 
 import csv
+import hashlib
+import json
 import math
 import os
 import re
 import sys
-import urllib
 import urllib2
 from collections import OrderedDict
-
-try:
-    import scratch
-except ImportError:
-    scratch = None
 
 if __name__ == '__main__' and __package__ is None:
     sys.path.insert(1,
@@ -27,16 +23,27 @@ WIKI_URL = ('https://raw.githubusercontent.com/wiki/'
 
 CLUSTER_CUTOFF = 0.03
 
-def download_page_from_dimple_wiki():
-    return open(WIKI_URL.split('/')[-1])
-    response = urllib2.urlopen(WIKI_URL)
-    return response
+CACHE_DIR = 'cached'
+
+def cached_urlopen(url, cache_name=None):
+    if not cache_name:
+        cache_name = hashlib.sha1('abc').hexdigest()[:12]
+    elif cache_name == -1:
+        cache_name = url.split('/')[-1]
+    path = os.path.join(CACHE_DIR, cache_name)
+    if not os.path.exists(path):
+        if not os.path.isdir(CACHE_DIR):
+            os.mkdir(CACHE_DIR)
+        response = urllib2.urlopen(url)
+        with open(path, 'wb') as f:
+            f.write(response.read())
+    return open(path)
 
 def extract_pdb_ids(page):
     pdb_ids = []
     for line in page:
         if ' - ' in line:
-            desc, ids = line.rsplit(' - ', 1)
+            _, ids = line.rsplit(' - ', 1)
             for pdb_id in ids.split(','):
                 pdb_id = pdb_id.strip().upper()
                 assert len(pdb_id) == 4, pdb_id
@@ -55,7 +62,18 @@ def extract_uniprot_names(page):
             sys.stderr.write('No UniProt name? ' + line)
     return names
 
-def fetch_pdb_info(pdb_id):
+def estimate_map_quality(resolution, r_free):
+    # use simplistic criterium, similar to the one from
+    # http://www.rcsb.org/pdb/statistics/clusterStatistics.do
+    # TODO: for our purpose we regard those with unit-cell axes in non-standard
+    # order as low quality
+    # return -20
+    try:
+        return 1.0 / float(resolution) - float(r_free)  # higher is better
+    except (ValueError, TypeError):
+        return -10
+
+def fetch_pdb_info_from_rcsb(pdb_id):
     par_names = ('lengthOfUnitCellLatticeA,lengthOfUnitCellLatticeB,'
                  'lengthOfUnitCellLatticeC,unitCellAngleAlpha,'
                  'unitCellAngleBeta,unitCellAngleGamma')
@@ -64,19 +82,69 @@ def fetch_pdb_info(pdb_id):
            ',Z_PDB,releaseDate,revisionDate,'
            'experimentalTechnique,resolution,rAll,rFree'
            '&service=wsfile&format=csv')
-    response = urllib2.urlopen(url % pdb_id)
+    response = cached_urlopen(url % pdb_id, 'rcsb-%s.csv' % pdb_id)
     reader = csv.DictReader(response)
     d = reader.next()
     assert pdb_id == d['structureId']
-    if d['experimentalTechnique'] == 'X-RAY DIFFRACTION':
-        sg = d['spaceGroup']
-        parameters = [float(d[x]) for x in par_names.split(',')]
-        d['cell'] = dimple.cell.Cell(tuple(parameters), symmetry=sg)
-        # TODO: standarize unit cell settings
-    else:
+    if d['experimentalTechnique'] != 'X-RAY DIFFRACTION':
         print 'No unit cell for %s (method: %s)' % (
                     pdb_id, d['experimentalTechnique'])
-    return d
+        return None
+    sg = d['spaceGroup']
+    parameters = [float(d[x]) for x in par_names.split(',')]
+    cell = dimple.cell.Cell(tuple(parameters), symmetry=sg)
+    cell.pdb_id = pdb_id
+    cell.quality = estimate_map_quality(resolution=d['resolution'],
+                                        r_free=d['rFree'])
+    # TODO: standarize unit cell settings (e.g. 3wai, 1y6e)
+    return cell
+
+def fetch_pdb_info_from_ebi(pdb_id):
+    pdb_id = pdb_id.lower()
+    # We tried to remove heteromers when quering Uniprot, but we still have
+    # things like 4TTD (Hetero 3-mer with a single link to UniProt AC).
+    # An assembly that is a monomer can also be classified as "hetero", e.g.
+    # http://www.ebi.ac.uk/pdbe/api/pdb/entry/summary/2war
+    # From what I understand such forms are unlikely as contaminants?
+    # The same about "homo" monomeric assemblies that contain 2 distinct
+    # polypeptide molecules (e.g. 5AQ9) or polypeptide and DNA or RNA.
+    entry_url = "http://www.ebi.ac.uk/pdbe/api/pdb/entry/"
+    response = cached_urlopen(entry_url + 'summary/' + pdb_id,
+                              'ebi-summary-%s.json' % pdb_id)
+    summary = json.load(response)[pdb_id]
+    assert isinstance(summary, list)
+    assert len(summary) == 1
+    summary = summary[0]
+    exper_method = summary['experimental_method']
+    if exper_method != ['X-ray diffraction']:
+        if exper_method != ['X-ray powder diffraction']:
+            print 'WARNING: got %s in %s' % (exper_method, pdb_id)
+        return None
+    print pdb_id
+    forms = set(a['form'] for a in summary['assemblies'])
+    assert forms.issubset({'homo', 'hetero'}) # some are both (2EKS)
+    if forms != {'homo'}:
+        return None
+    entities = summary['number_of_entities']
+    big_molecules = ['polypeptide', 'dna', 'dna/rna', 'rna']
+    if sum(entities[x] for x in big_molecules) > 1:
+        return None
+    # now http://www.ebi.ac.uk/pdbe/api/pdb/entry/experiment/:pdbid
+    response = cached_urlopen(entry_url + 'experiment/' + pdb_id,
+                              'ebi-exper-%s.json' % pdb_id)
+    summary = json.load(response)[pdb_id]
+    assert isinstance(summary, list)
+    assert len(summary) == 1
+    summary = summary[0]
+    parameters = [summary['cell'][x] for x in 'a b c alpha beta gamma'.split()]
+    sg = summary['spacegroup']
+    cell = dimple.cell.Cell(tuple(parameters), symmetry=sg)
+    cell.pdb_id = pdb_id
+    if summary['experiment_data_available'] != 'Y':
+        print 'no experiment_data_available'
+    cell.quality = estimate_map_quality(resolution=summary['resolution'],
+                                        r_free=summary['r_free'])
+    return cell
 
 def dump_uniprot_tab(pdb_ids):
     query_url = ('http://www.uniprot.org/uniprot/'
@@ -85,36 +153,34 @@ def dump_uniprot_tab(pdb_ids):
     assert all(len(x) == 4 for x in pdb_ids)
     print >>sys.stderr, 'Read %d IDs' % len(pdb_ids)
     for pdb_id in pdb_ids:
-        response = urllib2.urlopen(query_url % pdb_id)
+        response = cached_urlopen(query_url % pdb_id, 'up-pdb-%s.tab' % pdb_id)
         text = response.read()
         print pdb_id
         print text
         print
 
 def uniprot_names_to_acs(names):
-    return scratch.ACS #XXX
     query_url = ('http://www.uniprot.org/uniprot/'
                  '?query=%s&columns=id,entry%%20name&format=tab')
     acs = OrderedDict()
     for name in names:
-        response = urllib2.urlopen(query_url % name)
+        response = cached_urlopen(query_url % name, 'up-%s-ie.tab' % name)
         lines = response.readlines()
-        assert len(lines) == 2
+        assert len(lines) >= 2
         ac, entry_name = lines[1].strip().split('\t')
         assert entry_name == name
         acs[ac] = name
     return acs
 
 def fetch_uniref_clusters(acs):
-    return scratch.CLUSTERS
     query_url = ('http://www.uniprot.org/uniref/'
                  '?query=%s&fil=identity:1.0&format=tab')
     clusters = OrderedDict()
     for ac in acs:
         #print query_url % ac
-        response = urllib2.urlopen(query_url % ac)
+        response = cached_urlopen(query_url % ac, 'ur100-%s.tab' % ac)
         reader = csv.DictReader(response, delimiter='\t')
-        for n, d in enumerate(reader):
+        for d in reader:
             key = d['Cluster ID']
             name = d['Cluster name']
             if name.startswith('Cluster: '):
@@ -131,7 +197,7 @@ def fetch_uniref_clusters(acs):
 
 def read_pdbtosp():
     f = open('pdbtosp.txt')
-    #f = urllib2.urlopen('http://www.uniprot.org/docs/pdbtosp.txt')
+    f = cached_urlopen('http://www.uniprot.org/docs/pdbtosp.txt', -1)
     def get_acs_from_line(line):
         ac1 = line[40:52]
         assert ac1[0] == '(', line
@@ -163,68 +229,52 @@ def group_homomeric_crystals_by_ac(pdbtosp):
             hmap.setdefault(acs[0], []).append(key)
     return hmap
 
-def get_pdb_clusters(infos):
+def get_pdb_clusters(cells):
     # simplistic clustering
     # TODO: use scipy instead
     # scipy.spatial.distance.pdist(lambda a, b: cell_distance(a, b))
     # scipy.cluster.hierarchy.linkage
-    rinfos = infos[::-1]
-    rinfos.sort(key=lambda x: (x['cell'].symmetry, x['cell'].a))
-    while rinfos:
-        clu = [rinfos.pop()]
-        for n in range(len(rinfos)-1, -1, -1):
-            dist = cell_distance(rinfos[n], clu[0])
-            #print ':::', rinfos[n]['cell'], clu[0]['cell'], dist
+    cc = [x for x in cells[::-1] if x is not None]
+    cc.sort(key=lambda x: (x.symmetry, x.a))
+    while cc:
+        clu = [cc.pop()]
+        for n in range(len(cc)-1, -1, -1):
+            dist = cell_distance(cc[n], clu[0])
+            #print ':::', cc[n], clu[0], dist
             if dist < CLUSTER_CUTOFF:
-                clu.append(rinfos.pop(n))
+                clu.append(cc.pop(n))
         yield clu
 
-def cell_distance(a_info, b_info):
-    a = a_info['cell']
-    b = b_info['cell']
+def cell_distance(a, b):
     if a.symmetry != b.symmetry:
         return float('inf')
     return a.max_shift_in_mapping(b)
 
-def estimate_map_quality(info):
-    # use simplistic criterium, similar to the one from
-    # http://www.rcsb.org/pdb/statistics/clusterStatistics.do
-    # TODO: for our purpose we regard those with unit-cell axes in non-standard
-    # order as low quality
-    # return -20
-    try:
-        resolution = float(info['resolution'])
-        rfree = float(info['rFree'])
-    except ValueError:
-        return -10
-    return 1.0 / resolution - rfree  # higher is better
-
 # Representative entry is picked as a one with at least median "quality"
 # metric that is least dissimilar to other cells.
-def get_representative_unit_cell(infos):
-    if len(infos) < 2:
-        return infos[0]
-    infos.sort(key=lambda x: -estimate_map_quality(x))
-    cutoff = int(math.ceil(len(infos) / 2))
-    def med_metric(inf):
-        return max(cell_distance(inf, other) for other in infos)
-    best = min(infos[:cutoff], key=med_metric)
+def get_representative_unit_cell(cells):
+    if len(cells) < 2:
+        return cells[0]
+    cells.sort(key=lambda x: -x.quality)
+    cutoff = int(math.ceil(0.5 * len(cells)))
+    def med_metric(c):
+        return max(cell_distance(c, other) for other in cells)
+    best = min(cells[:cutoff], key=med_metric)
     #print '===>', med_metric(best)
     return best
 
 def write_data_py(representants):
     with open('data.py', 'w') as data_py:
         data_py.write('\nDATA = [\n')
-        for info in representants:
-            cell = info['cell']
-            data = ['"%s"' % info['structureId'],
+        for cell in representants:
+            data = ['"%s"' % cell.pdb_id,
                     '"%s"' % cell.symmetry
                    ] + ['%6.2f' % x for x in cell.cell]
             data_py.write('(' + ', '.join(data) + '),\n')
         data_py.write(']')
 
 def main():
-    page = download_page_from_dimple_wiki()
+    page = cached_urlopen(WIKI_URL, -1).readlines()
     pdb_ids_from_page = extract_pdb_ids(page)
     pdbtosp = read_pdbtosp()
     missing = [p for p in pdb_ids_from_page if p not in pdbtosp]
@@ -233,17 +283,21 @@ def main():
     uniprot_names = extract_uniprot_names(page)
     acs = uniprot_names_to_acs(uniprot_names)
     clusters = fetch_uniref_clusters(acs)
+    #clusters = {'UniRef100_P00698': clusters['UniRef100_P00698']}
     homomers = group_homomeric_crystals_by_ac(pdbtosp)
     representants = []
     for name, clust in clusters.items():
         pdb_set = sum([homomers[c] for c in clust if c in homomers], [])
-        print name, len(pdb_set)
-        infos = [fetch_pdb_info(pdb_id) for pdb_id in pdb_set]
-        for pdb_cluster in get_pdb_clusters(infos):
+        up_name = ' '.join(acs[a] for a in clust if a in acs)
+        print '%s -> %s (%d entries) -> %d PDBs' % (
+                up_name, name, len(clust), len(pdb_set))
+        cells = [fetch_pdb_info_from_ebi(pdb_id) for pdb_id in pdb_set]
+        #cells = [fetch_pdb_info_from_rcsb(pdb_id) for pdb_id in pdb_set]
+        for pdb_cluster in get_pdb_clusters(cells):
             r = get_representative_unit_cell(pdb_cluster)
-            print r['structureId'], r['cell'].symmetry, r['cell']
+            print r.pdb_id, r.symmetry, r
             representants.append(r)
-    representants.sort(key=lambda x: x['cell'].a)
+    representants.sort(key=lambda x: x.a)
     write_data_py(representants)
 
 
