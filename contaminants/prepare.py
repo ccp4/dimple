@@ -34,6 +34,7 @@ def cached_urlopen(url, cache_name=None):
     if not os.path.exists(path):
         if not os.path.isdir(CACHE_DIR):
             os.mkdir(CACHE_DIR)
+        print '--> %s' % path
         response = urllib2.urlopen(url)
         with open(path, 'wb') as f:
             f.write(response.read())
@@ -62,43 +63,6 @@ def extract_uniprot_names(page):
             sys.stderr.write('No UniProt name? ' + line)
     return names
 
-def estimate_map_quality(resolution, r_free):
-    # use simplistic criterium, similar to the one from
-    # http://www.rcsb.org/pdb/statistics/clusterStatistics.do
-    # TODO: for our purpose we regard those with unit-cell axes in non-standard
-    # order as low quality
-    # return -20
-    try:
-        return 1.0 / float(resolution) - float(r_free)  # higher is better
-    except (ValueError, TypeError):
-        return -10
-
-def fetch_pdb_info_from_rcsb(pdb_id):
-    par_names = ('lengthOfUnitCellLatticeA,lengthOfUnitCellLatticeB,'
-                 'lengthOfUnitCellLatticeC,unitCellAngleAlpha,'
-                 'unitCellAngleBeta,unitCellAngleGamma')
-    url = ('http://www.rcsb.org/pdb/rest/customReport.csv?pdbids=%s'
-           '&customReportColumns=structureId,spaceGroup,' + par_names +
-           ',Z_PDB,releaseDate,revisionDate,'
-           'experimentalTechnique,resolution,rAll,rFree'
-           '&service=wsfile&format=csv')
-    response = cached_urlopen(url % pdb_id, 'rcsb-%s.csv' % pdb_id)
-    reader = csv.DictReader(response)
-    d = reader.next()
-    assert pdb_id == d['structureId']
-    if d['experimentalTechnique'] != 'X-RAY DIFFRACTION':
-        print 'No unit cell for %s (method: %s)' % (
-                    pdb_id, d['experimentalTechnique'])
-        return None
-    sg = d['spaceGroup']
-    parameters = [float(d[x]) for x in par_names.split(',')]
-    cell = dimple.cell.Cell(tuple(parameters), symmetry=sg)
-    cell.pdb_id = pdb_id
-    cell.quality = estimate_map_quality(resolution=d['resolution'],
-                                        r_free=d['rFree'])
-    # TODO: standarize unit cell settings (e.g. 3wai, 1y6e)
-    return cell
-
 def fetch_pdb_info_from_ebi(pdb_id):
     pdb_id = pdb_id.lower()
     # We tried to remove heteromers when quering Uniprot, but we still have
@@ -120,7 +84,6 @@ def fetch_pdb_info_from_ebi(pdb_id):
         if exper_method != ['X-ray powder diffraction']:
             print 'WARNING: got %s in %s' % (exper_method, pdb_id)
         return None
-    print pdb_id
     forms = set(a['form'] for a in summary['assemblies'])
     assert forms.issubset({'homo', 'hetero'}) # some are both (2EKS)
     if forms != {'homo'}:
@@ -138,12 +101,21 @@ def fetch_pdb_info_from_ebi(pdb_id):
     summary = summary[0]
     parameters = [summary['cell'][x] for x in 'a b c alpha beta gamma'.split()]
     sg = summary['spacegroup']
+    # TODO: standarize unit cell settings (e.g. 3wai, 1y6e)
     cell = dimple.cell.Cell(tuple(parameters), symmetry=sg)
     cell.pdb_id = pdb_id
+    # Estimate the model quality (cell.quality). Higher is better.
+    # Use simplistic criterium, similar to the one from
+    # http://www.rcsb.org/pdb/statistics/clusterStatistics.do
+    try:
+        cell.quality = 1.0 / summary['resolution'] - summary['r_free']
+    except (ValueError, TypeError):
+        cell.quality = -10
     if summary['experiment_data_available'] != 'Y':
-        print 'no experiment_data_available'
-    cell.quality = estimate_map_quality(resolution=summary['resolution'],
-                                        r_free=summary['r_free'])
+        cell.quality = -20
+    # TODO: unit-cell axes in non-standard order can be confusing
+    if False:
+        cell.quality = -30
     return cell
 
 def dump_uniprot_tab(pdb_ids):
@@ -177,7 +149,6 @@ def fetch_uniref_clusters(acs):
                  '?query=%s&fil=identity:1.0&format=tab')
     clusters = OrderedDict()
     for ac in acs:
-        #print query_url % ac
         response = cached_urlopen(query_url % ac, 'ur100-%s.tab' % ac)
         reader = csv.DictReader(response, delimiter='\t')
         for d in reader:
@@ -292,10 +263,9 @@ def main():
         print '%s -> %s (%d entries) -> %d PDBs' % (
                 up_name, name, len(clust), len(pdb_set))
         cells = [fetch_pdb_info_from_ebi(pdb_id) for pdb_id in pdb_set]
-        #cells = [fetch_pdb_info_from_rcsb(pdb_id) for pdb_id in pdb_set]
         for pdb_cluster in get_pdb_clusters(cells):
             r = get_representative_unit_cell(pdb_cluster)
-            print r.pdb_id, r.symmetry, r
+            print '%s %-10s %s  %.2f' % (r.pdb_id, r.symmetry, r, r.quality)
             representants.append(r)
     representants.sort(key=lambda x: x.a)
     write_data_py(representants)
