@@ -83,7 +83,11 @@ def fetch_pdb_info_from_ebi(pdb_id):
     if exper_method != ['X-ray diffraction']:
         if len(exper_method) != 1:
             print 'Hmmm: multiple methods %s in %s' % (exper_method, pdb_id)
-        if exper_method[0] not in ('X-ray powder diffraction', 'Solution NMR'):
+        if exper_method[0] not in ('X-ray powder diffraction',
+                                   'Solution NMR',
+                                   'Electron Microscopy',
+                                   'Electron crystallography',
+                                   'Neutron Diffraction'):
             print 'WARNING: got %s in %s' % (exper_method, pdb_id)
         return None
     # TODO: ignore non-standard space groups such as  "A 1" (1LKS)
@@ -169,31 +173,6 @@ def fetch_uniref_clusters(acs):
             clusters[key] = members
     return clusters
 
-def read_pdbtosp():
-    f = cached_urlopen('http://www.uniprot.org/docs/pdbtosp.txt', -1)
-    def get_acs_from_line(line):
-        ac1 = line[40:52]
-        assert ac1[0] == '(', line
-        assert ac1[-1] in ' )', line
-        acs = [ac1.strip(' ()')]
-        if len(line) > 66:
-            ac2 = line[66:78]
-            assert ac2[0] == '(', line
-            assert ac2[-1] in ' )', line
-            acs.append(ac2.strip(' ()'))
-        return acs
-    ret = {}
-    for line in f:
-        if len(line) > 25 and line[0].isdigit():
-            pdbid = line[0:4]
-            assert pdbid not in ret
-            #method = line[6:14].strip()
-            acs = get_acs_from_line(line)
-            if line[78:79] == ',':
-                acs += get_acs_from_line(f.next())
-            ret[pdbid] = acs
-    return ret
-
 def read_current_pdb_entries():
     f = cached_urlopen('http://www.rcsb.org/pdb/rest/getCurrent',
                        'current-rcsb.xml')
@@ -213,13 +192,6 @@ def read_sifts_mapping():
         for p in pp.split(';'):
             ret.setdefault(p.upper(), []).append(u)
     return ret
-
-def group_homomeric_crystals_by_ac(pdbtosp):
-    hmap = {}
-    for key, acs in pdbtosp.iteritems():
-        if len(acs) == 1:
-            hmap.setdefault(acs[0], []).append(key)
-    return hmap
 
 def get_pdb_clusters(cells):
     # simplistic clustering
@@ -264,38 +236,47 @@ def write_output_file(representants):
             data = ['"%s"' % cell.pdb_id,
                     '"%s"' % cell.symmetry
                    ] + ['%.2f' % x for x in cell.cell]
-            out.write('(' + ', '.join(data) + '),\n')
+            out.write('(' + ', '.join(data) + '), # %s\n' % cell.comment)
         out.write(']')
 
 def main():
     page = cached_urlopen(WIKI_URL, -1).readlines()
-    uniprot_names = parse_wiki_page(page)
-    pdb_ids_from_page = sum(uniprot_names.values(), [])
-    pdbtosp = read_pdbtosp()
-    sifts = read_sifts_mapping()
-    current_pdb_entries = read_current_pdb_entries()
-    obsolete = [k for k in pdbtosp if k not in current_pdb_entries]
-    for k in obsolete:
-        del pdbtosp[k]
-    missing = [p for p in pdb_ids_from_page if p not in pdbtosp]
-    print 'missing:', missing
-    missing2 = [p for p in pdb_ids_from_page if p not in sifts]
-    print 'missing2:', missing2
+    parsed_page = parse_wiki_page(page) # { UniProt name: [some PDB IDs] }
+    uniprot_acs = uniprot_names_to_acs(parsed_page) # { AC: UniProt name }
+    pdb2up = read_sifts_mapping()
 
-    acs = uniprot_names_to_acs(uniprot_names)
-    clusters = fetch_uniref_clusters(acs)
-    #clusters = {'UniRef100_P00698': clusters['UniRef100_P00698']}
-    homomers = group_homomeric_crystals_by_ac(pdbtosp)
+    # check for missing PDB IDs that were given explicitely in the wiki
+    for u, pp in parsed_page.iteritems():
+        for p in pp:
+            if p not in pdb2up:
+                print 'Missing in SIFTS: %s' % p
+                pdb2up[p] = [k for k, v in uniprot_acs.iteritems() if v == u]
+
+    # check for deprecated/removed PDB entries
+    current_pdb_entries = read_current_pdb_entries()
+    obsolete = [k for k in pdb2up if k not in current_pdb_entries]
+    print 'Obsolete PDB entries in SIFTS:', len(obsolete)
+    for k in obsolete:
+        del pdb2up[k]
+
+    # reverse the PDB->UniProt mapping
+    ac2pdb = {}
+    for p, acs in pdb2up.iteritems():
+        if len(acs) == 1: # don't care about heteromers
+            ac2pdb.setdefault(acs[0], []).append(p)
+
+    uniref_clusters = fetch_uniref_clusters(uniprot_acs)
     representants = []
-    for uniref_name, clust in clusters.items():
-        pdb_set = sum([homomers[c] for c in clust if c in homomers], [])
-        # TODO: check if all explicit entries are included
-        orig_names = ' '.join(acs[a] for a in clust if a in acs)
+    for uniref_name, uclust in uniref_clusters.items():
+        pdb_set = sum([ac2pdb[ac] for ac in uclust if ac in ac2pdb], [])
+        sources = [uniprot_acs[ac] for ac in uclust if ac in uniprot_acs]
+        assert len(sources) == 1, sources
         print '%s -> %s (%d entries) -> %d PDBs' % (
-                orig_names, uniref_name, len(clust), len(pdb_set))
+                sources[0], uniref_name, len(uclust), len(pdb_set))
         cells = [fetch_pdb_info_from_ebi(pdb_id) for pdb_id in pdb_set]
         for pdb_cluster in get_pdb_clusters(cells):
             r = get_representative_unit_cell(pdb_cluster)
+            r.comment = '%s / %s' % (sources[0], uniref_name)
             print '\t%s %-10s (%6.2f %6.2f %6.2f %5.1f %5.1f %5.1f) %8.2f' % (
                     r.pdb_id, r.symmetry, r.a, r.b, r.c,
                     r.alpha, r.beta, r.gamma, r.quality)
@@ -303,7 +284,7 @@ def main():
     representants.sort(key=lambda x: x.a)
     write_output_file(representants)
     print '%d entries -> %d unique unit cells -> %s' % (
-            len(uniprot_names), len(representants), OUTPUT_FILE)
+            len(uniprot_acs), len(representants), OUTPUT_FILE)
 
 
 
