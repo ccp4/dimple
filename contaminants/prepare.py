@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 """
-Script that generates data.py
+Script that generates data.py - list of unit cells of contaminants
 """
 
 import csv
@@ -23,6 +23,7 @@ WIKI_URL = ('https://raw.githubusercontent.com/wiki/'
 
 CLUSTER_CUTOFF = 0.03
 
+OUTPUT_FILE = 'data.py'
 CACHE_DIR = 'cached'
 
 def cached_urlopen(url, cache_name=None):
@@ -40,28 +41,25 @@ def cached_urlopen(url, cache_name=None):
             f.write(response.read())
     return open(path)
 
-def extract_pdb_ids(page):
-    pdb_ids = []
-    for line in page:
-        if ' - ' in line:
-            _, ids = line.rsplit(' - ', 1)
-            for pdb_id in ids.split(','):
-                pdb_id = pdb_id.strip().upper()
-                assert len(pdb_id) == 4, pdb_id
-                assert pdb_id[0].isdigit(), pdb_id
-                pdb_ids.append(pdb_id)
-    return pdb_ids
-
-def extract_uniprot_names(page):
+def parse_wiki_page(page):
     pat = re.compile(r'`[A-Z0-9]+_[A-Z0-9]+`')
-    names = []
+    data = OrderedDict()
     for line in page:
         obj = pat.search(line)
         if obj:
-            names.append(obj.group(0).strip('`'))
+            name = obj.group(0).strip('`')
         elif '`' in line:
-            sys.stderr.write('No UniProt name? ' + line)
-    return names
+            sys.exit('No UniProt name? ' + line)
+        else:
+            continue
+        pdb_ids = []
+        if ' - ' in line:
+            pdb_ids = [i.strip().upper() for i in
+                       line.split(' - ')[-1].split(',')]
+            assert all(len(i) == 4 for i in pdb_ids), pdb_ids
+            assert all(i[0].isdigit() for i in pdb_ids), pdb_ids
+        data[name] = pdb_ids
+    return data
 
 def fetch_pdb_info_from_ebi(pdb_id):
     pdb_id = pdb_id.lower()
@@ -167,7 +165,6 @@ def fetch_uniref_clusters(acs):
     return clusters
 
 def read_pdbtosp():
-    f = open('pdbtosp.txt')
     f = cached_urlopen('http://www.uniprot.org/docs/pdbtosp.txt', -1)
     def get_acs_from_line(line):
         ac1 = line[40:52]
@@ -235,23 +232,23 @@ def get_representative_unit_cell(cells):
     return best
 
 def write_data_py(representants):
-    with open('data.py', 'w') as data_py:
-        data_py.write('\nDATA = [\n')
+    with open(OUTPUT_FILE, 'w') as out:
+        out.write('\nDATA = [\n')
         for cell in representants:
             data = ['"%s"' % cell.pdb_id,
                     '"%s"' % cell.symmetry
-                   ] + ['%6.2f' % x for x in cell.cell]
-            data_py.write('(' + ', '.join(data) + '),\n')
-        data_py.write(']')
+                   ] + ['%.2f' % x for x in cell.cell]
+            out.write('(' + ', '.join(data) + '),\n')
+        out.write(']')
 
 def main():
     page = cached_urlopen(WIKI_URL, -1).readlines()
-    pdb_ids_from_page = extract_pdb_ids(page)
+    uniprot_names = parse_wiki_page(page)
+    pdb_ids_from_page = sum(uniprot_names.values(), [])
     pdbtosp = read_pdbtosp()
     missing = [p for p in pdb_ids_from_page if p not in pdbtosp]
     print 'missing:', missing
 
-    uniprot_names = extract_uniprot_names(page)
     acs = uniprot_names_to_acs(uniprot_names)
     clusters = fetch_uniref_clusters(acs)
     #clusters = {'UniRef100_P00698': clusters['UniRef100_P00698']}
@@ -259,16 +256,21 @@ def main():
     representants = []
     for name, clust in clusters.items():
         pdb_set = sum([homomers[c] for c in clust if c in homomers], [])
+        # TODO: check if all explicit entries are included
         up_name = ' '.join(acs[a] for a in clust if a in acs)
         print '%s -> %s (%d entries) -> %d PDBs' % (
                 up_name, name, len(clust), len(pdb_set))
         cells = [fetch_pdb_info_from_ebi(pdb_id) for pdb_id in pdb_set]
         for pdb_cluster in get_pdb_clusters(cells):
             r = get_representative_unit_cell(pdb_cluster)
-            print '%s %-10s %s  %.2f' % (r.pdb_id, r.symmetry, r, r.quality)
+            print '\t%s %-10s (%6.2f %6.2f %6.2f %5.1f %5.1f %5.1f) %8.2f' % (
+                    r.pdb_id, r.symmetry, r.a, r.b, r.c,
+                    r.alpha, r.beta, r.gamma, r.quality)
             representants.append(r)
     representants.sort(key=lambda x: x.a)
     write_data_py(representants)
+    print '%d entries -> %d unique unit cells -> %s' % (
+            len(uniprot_names), len(representants), OUTPUT_FILE)
 
 
 
