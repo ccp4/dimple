@@ -155,19 +155,20 @@ class Mat3(object):
         # http://en.wikipedia.org/wiki/Eigenvalue_algorithm#3.C3.973_matrices
         p1 = A[1]**2 + A[2]**2 + A[5]**2
         if p1 == 0:
-            return max(A[0], A[4], A[8])
-        q = A.trace() / 3.
-        p2 = (A[0] - q)**2 + (A[4] - q)**2 + (A[8] - q)**2 + 2 * p1
-        p = sqrt(p2 / 6.)
-        B = (A - Mat3.identity() * q) * (1. / p)
-        r = B.det() / 2.
-        if r <= -1:
-            phi = pi / 3.
-        elif r >= 1:
-            phi = 0
+            eig1 = max(A[0], A[4], A[8])
         else:
-            phi = acos(r) / 3.
-        eig1 = q + 2 * p * cos(phi)
+            q = A.trace() / 3.
+            p2 = (A[0] - q)**2 + (A[4] - q)**2 + (A[8] - q)**2 + 2 * p1
+            p = sqrt(p2 / 6.)
+            B = (A - Mat3.identity() * q) * (1. / p)
+            r = B.det() / 2.
+            if r <= -1:
+                phi = pi / 3.
+            elif r >= 1:
+                phi = 0
+            else:
+                phi = acos(r) / 3.
+            eig1 = q + 2 * p * cos(phi)
         return sqrt(eig1)
 
 # space group
