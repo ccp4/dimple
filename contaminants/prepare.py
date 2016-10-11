@@ -5,6 +5,7 @@ Script that generates data.py - list of unit cells of contaminants
 
 import csv
 import hashlib
+import itertools
 import json
 import math
 import os
@@ -108,6 +109,12 @@ def fetch_pdb_info_from_ebi(pdb_id):
     summary = summary[0]
     parameters = [summary['cell'][x] for x in 'a b c alpha beta gamma'.split()]
     sg = summary['spacegroup']
+    if sg == 'A 1': # pesky 1LKS
+        return None
+    # Correct spacegroup, but in non-standard settings.
+    # We could convert it to the reference/standard settings.
+    if sg in ['P 1 1 21']: # only this one for now
+        return None
     # TODO: standarize unit cell settings (e.g. 3wai, 1y6e)
     cell = dimple.cell.Cell(tuple(parameters), symmetry=sg)
     cell.pdb_id = pdb_id
@@ -164,8 +171,9 @@ def fetch_uniref_clusters(acs):
             if name.startswith('Cluster: '):
                 name = name[9:]
             members = [a.strip() for a in d['Cluster members'].split(';')]
-            if ac not in members:
+            if ac not in members:  # querying P63165 also returns P63165-2
                 continue
+            #if key != 'UniRef100_P02931': continue
             print '%s -> %s (%s) - %d members, %d residues' % (
                     ac, key, name, len(members), int(d['Length']))
             if key in clusters:
@@ -198,15 +206,16 @@ def get_pdb_clusters(cells):
     # TODO: use scipy instead
     # scipy.spatial.distance.pdist(lambda a, b: cell_distance(a, b))
     # scipy.cluster.hierarchy.linkage
-    cc = [x for x in cells[::-1] if x is not None]
-    cc.sort(key=lambda x: (x.symmetry, x.a))
+    cc = sorted(cells[:], key=lambda x: (x.symmetry, x.a))
+    #for c in cc: print '-=-', c.pdb_id, c.symmetry, c
     while cc:
         clu = [cc.pop()]
         for n in range(len(cc)-1, -1, -1):
             dist = cell_distance(cc[n], clu[0])
-            #print ':::', cc[n], clu[0], dist
+            #if dist < 1e9: print ':::', cc[n].pdb_id, clu[0].pdb_id, dist
             if dist < CLUSTER_CUTOFF:
                 clu.append(cc.pop(n))
+        #print '-*-', ' '.join(c.pdb_id for c in clu)
         yield clu
 
 def cell_distance(a, b):
@@ -273,7 +282,18 @@ def main():
         assert len(sources) == 1, sources
         print '%s -> %s (%d entries) -> %d PDBs' % (
                 sources[0], uniref_name, len(uclust), len(pdb_set))
-        cells = [fetch_pdb_info_from_ebi(pdb_id) for pdb_id in pdb_set]
+        cells = []
+        for pdb_id in pdb_set:
+            cell = fetch_pdb_info_from_ebi(pdb_id)
+            if cell is not None:
+                cells.append(cell)
+
+        # FIXME: should we exclude some mutants? Especially if many entries
+        # are deposited for the same protein.
+        # Maybe remove those with "Engineered mutation". We could use
+        # http://www.ebi.ac.uk/pdbe/api/pdb/entry/mutated_AA_or_NA/:pdbid
+        # Or Wild Type Search from RCSB.
+
         for pdb_cluster in get_pdb_clusters(cells):
             r = get_representative_unit_cell(pdb_cluster)
             r.comment = '%s / %s' % (sources[0], uniref_name)
@@ -285,8 +305,10 @@ def main():
     write_output_file(representants)
     print '%d entries -> %d unique unit cells -> %s' % (
             len(uniprot_acs), len(representants), OUTPUT_FILE)
-
-
+    a, b = min(itertools.combinations(representants, 2),
+               key=lambda x: cell_distance(*x))
+    print 'Min. dist: %.2f%% between %s and %s' % (100*cell_distance(a, b),
+                                                   a.pdb_id, b.pdb_id)
 
 if __name__ == '__main__':
     main()
