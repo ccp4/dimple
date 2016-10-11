@@ -115,8 +115,15 @@ def fetch_pdb_info_from_ebi(pdb_id):
     # We could convert it to the reference/standard settings.
     if sg in ['P 1 1 21']: # only this one for now
         return None
-    # TODO: standarize unit cell settings (e.g. 3wai, 1y6e)
-    cell = dimple.cell.Cell(tuple(parameters), symmetry=sg)
+
+    # Standarize unit cell settings (e.g. 3wai, 1y6e).
+    # It'd be better to use a library function (cctbx?) for this.
+    # to_standard() below makes a<b<c in primitive orthorhombic cells.
+    if sg in ['P 1 2 1', 'P 1 21 1'] and parameters[0] > parameters[2]:
+        parameters[0], parameters[2] = parameters[2], parameters[0]
+
+    cell = dimple.cell.Cell(tuple(parameters), symmetry=sg).to_standard()
+
     cell.pdb_id = pdb_id
     # Estimate the model quality (cell.quality). Higher is better.
     # Use simplistic criterium, similar to the one from
@@ -174,8 +181,9 @@ def fetch_uniref_clusters(acs):
             if ac not in members:  # querying P63165 also returns P63165-2
                 continue
             #if key != 'UniRef100_P02931': continue
-            print '%s -> %s (%s) - %d members, %d residues' % (
-                    ac, key, name, len(members), int(d['Length']))
+            if verbose:
+                print '%s -> %s (%s) - %d members, %d residues' % (
+                        ac, key, name, len(members), int(d['Length']))
             if key in clusters:
                 sys.exit('Duplicated cluster: ' + key)
             clusters[key] = members
@@ -242,10 +250,9 @@ def write_output_file(representants):
                   'contaminants/prepare.py script.')
         out.write('\nDATA = [\n')
         for cell in representants:
-            data = ['"%s"' % cell.pdb_id,
-                    '"%s"' % cell.symmetry
-                   ] + ['%.2f' % x for x in cell.cell]
-            out.write('(' + ', '.join(data) + '), # %s\n' % cell.comment)
+            out.write('("%s", "%s", ' % (cell.pdb_id, cell.symmetry))
+            out.write('%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, ' % cell.cell)
+            out.write('"%s"), # %s\n' % (cell.uniprot_name, cell.comment))
         out.write(']')
 
 def main():
@@ -294,13 +301,18 @@ def main():
         # http://www.ebi.ac.uk/pdbe/api/pdb/entry/mutated_AA_or_NA/:pdbid
         # Or Wild Type Search from RCSB.
 
+        prev_len = len(representants)
         for pdb_cluster in get_pdb_clusters(cells):
             r = get_representative_unit_cell(pdb_cluster)
-            r.comment = '%s / %s' % (sources[0], uniref_name)
-            print '\t%s %-10s (%6.2f %6.2f %6.2f %5.1f %5.1f %5.1f) %8.2f' % (
-                    r.pdb_id, r.symmetry, r.a, r.b, r.c,
-                    r.alpha, r.beta, r.gamma, r.quality)
+            r.uniprot_name = sources[0]
+            r.comment = uniref_name
+            if verbose:
+                print ' '.join(p.pdb_id for p in pdb_cluster), '=>', r.pdb_id
+                print('\t%s %-9s (%6.2f %6.2f %6.2f %5.1f %5.1f %5.1f) %8.2f'
+                      % ((r.pdb_id, r.symmetry) + r.cell + (r.quality,)))
             representants.append(r)
+        if not verbose:
+            print '\t-> %d' % (len(representants) - prev_len)
     representants.sort(key=lambda x: x.a)
     write_output_file(representants)
     print '%d entries -> %d unique unit cells -> %s' % (
@@ -311,4 +323,5 @@ def main():
                                                    a.pdb_id, b.pdb_id)
 
 if __name__ == '__main__':
+    verbose = ('-v' in sys.argv[1:])
     main()
