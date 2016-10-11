@@ -7,7 +7,7 @@ class Cell(object):
             self.cell = None
             return
         assert isinstance(parameters, tuple)
-        assert len(parameters) == 6
+        assert len(parameters) == 6, parameters
         self.a, self.b, self.c = parameters[:3]
         self.alpha, self.beta, self.gamma = parameters[3:]
         self.cell = parameters
@@ -57,14 +57,13 @@ class Cell(object):
     # Convert the "reference" (symmetry-based) settings to the "standard"
     # (cell-based) settings. See the SETTING keyword in POINTLESS.
     def to_standard(self):
-        if self.alpha == self.beta == self.gamma == 90 and (
+        sym = self.symmetry.split()
+        if [i[0] for i in sym] == ['P', '2', '2', '2'] and (
                 self.a > self.b or self.b > self.c):
-            sym_splitted = self.symmetry.split()
-            if len(sym_splitted) == 4:  # is this condition redundant?
-                reordered = sorted(zip(self.cell[:3], sym_splitted[1:]))
-                new_cell, new_symm = zip(*reordered)
-                return Cell(new_cell + (90., 90., 90.),
-                            symmetry=' '.join((sym_splitted[0],) + new_symm))
+            reordered = sorted(zip(self.cell[:3], sym[1:]))
+            new_cell, new_symm = zip(*reordered)
+            return Cell(new_cell + (90., 90., 90.),
+                        symmetry=' '.join((sym[0],) + new_symm))
         return self
 
     # returns symmetry with screw axes removed (changed to rotation axes)
