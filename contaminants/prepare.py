@@ -14,6 +14,13 @@ import sys
 import urllib2
 from collections import OrderedDict
 import xml.etree.ElementTree as ET
+import numpy
+
+SCIPY_CLUSTERING = True
+
+if SCIPY_CLUSTERING:
+    import scipy.cluster
+    import scipy.spatial
 
 if __name__ == '__main__' and __package__ is None:
     sys.path.insert(1,
@@ -23,7 +30,7 @@ import dimple.cell
 WIKI_URL = ('https://raw.githubusercontent.com/wiki/'
             'ccp4/dimple/Crystallization-Contaminants.md')
 
-CLUSTER_CUTOFF = 0.03
+CLUSTER_CUTOFF = 0.04
 
 OUTPUT_FILE = 'data.py'
 CACHE_DIR = 'cached'
@@ -91,7 +98,6 @@ def fetch_pdb_info_from_ebi(pdb_id):
                                    'Neutron Diffraction'):
             print 'WARNING: got %s in %s' % (exper_method, pdb_id)
         return None
-    # TODO: ignore non-standard space groups such as  "A 1" (1LKS)
     forms = set(a['form'] for a in summary['assemblies'])
     assert forms.issubset({'homo', 'hetero'}) # some are both (2EKS)
     if forms != {'homo'}:
@@ -134,9 +140,6 @@ def fetch_pdb_info_from_ebi(pdb_id):
         cell.quality = -10
     if summary['experiment_data_available'] != 'Y':
         cell.quality = -20
-    # TODO: unit-cell axes in non-standard order can be confusing
-    if False:
-        cell.quality = -30
     return cell
 
 def dump_uniprot_tab(pdb_ids):
@@ -210,20 +213,42 @@ def read_sifts_mapping():
     return ret
 
 def get_pdb_clusters(cells):
+    ordered = sorted(cells, key=lambda x: (x.symmetry, x.a))
+    for _, same_sg in itertools.groupby(ordered, key=lambda x: x.symmetry):
+        same_sg = list(same_sg)
+        if len(same_sg) == 1:
+            yield same_sg
+        elif SCIPY_CLUSTERING:
+            for cluster in cluster_by_cell_size_scipy(same_sg):
+                yield cluster
+        else:
+            for cluster in cluster_by_cell_size(same_sg):
+                yield cluster
+
+def cluster_by_cell_size(cells):
     # simplistic clustering
-    # TODO: use scipy instead
-    # scipy.spatial.distance.pdist(lambda a, b: cell_distance(a, b))
-    # scipy.cluster.hierarchy.linkage
-    cc = sorted(cells[:], key=lambda x: (x.symmetry, x.a))
-    #for c in cc: print '-=-', c.pdb_id, c.symmetry, c
-    while cc:
-        clu = [cc.pop()]
-        for n in range(len(cc)-1, -1, -1):
-            dist = cell_distance(cc[n], clu[0])
-            #if dist < 1e9: print ':::', cc[n].pdb_id, clu[0].pdb_id, dist
-            if dist < CLUSTER_CUTOFF:
-                clu.append(cc.pop(n))
-        #print '-*-', ' '.join(c.pdb_id for c in clu)
+    while cells:
+        clu = [cells.pop()]
+        for n in range(len(cells)-1, -1, -1):
+            if cell_distance(cells[n], clu[0]) < CLUSTER_CUTOFF:
+                clu.append(cells.pop(n))
+        yield clu
+
+def cluster_by_cell_size_scipy(cells):
+    n = len(cells)
+    # matrix like from scipy.spatial.distance.pdist(..., metric=func)
+    dist_matrix = numpy.zeros(n * (n - 1) // 2, dtype=numpy.double)
+    k = 0
+    for i in xrange(0, n-1):
+        for j in xrange(i+1, n):
+            dist_matrix[k] = cells[i].max_shift_in_mapping(cells[j])
+            k += 1
+    assert k == len(dist_matrix)
+    linkage = scipy.cluster.hierarchy.linkage(dist_matrix, method='complete')
+    r = scipy.cluster.hierarchy.fcluster(linkage, CLUSTER_CUTOFF,
+                                         criterion='distance')
+    for cluster_number in range(1, max(r)+1):
+        clu = [c for n, c in enumerate(cells) if r[n] == cluster_number]
         yield clu
 
 def cell_distance(a, b):
@@ -251,7 +276,12 @@ def write_output_file(representants):
         out.write('\nDATA = [\n')
         for cell in representants:
             out.write('("%s", "%s", ' % (cell.pdb_id, cell.symmetry))
-            out.write('%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, ' % cell.cell)
+            out.write('%.2f, %.2f, %.2f, ' % (cell.a, cell.b, cell.c))
+            for angle in (cell.alpha, cell.beta, cell.gamma):
+                if angle in (90.0, 120.0):
+                    out.write('%.0f., ' % angle)
+                else:
+                    out.write('%.2f, ' % angle)
             out.write('"%s"), # %s\n' % (cell.uniprot_name, cell.comment))
         out.write(']')
 
@@ -283,6 +313,7 @@ def main():
 
     uniref_clusters = fetch_uniref_clusters(uniprot_acs)
     representants = []
+    empty_cnt = 0
     for uniref_name, uclust in uniref_clusters.items():
         pdb_set = sum([ac2pdb[ac] for ac in uclust if ac in ac2pdb], [])
         sources = [uniprot_acs[ac] for ac in uclust if ac in uniprot_acs]
@@ -311,12 +342,14 @@ def main():
                 print('\t%s %-9s (%6.2f %6.2f %6.2f %5.1f %5.1f %5.1f) %8.2f'
                       % ((r.pdb_id, r.symmetry) + r.cell + (r.quality,)))
             representants.append(r)
+        if len(representants) == prev_len:
+            empty_cnt += 1
         if not verbose:
             print '\t-> %d' % (len(representants) - prev_len)
     representants.sort(key=lambda x: x.a)
     write_output_file(representants)
-    print '%d entries -> %d unique unit cells -> %s' % (
-            len(uniprot_acs), len(representants), OUTPUT_FILE)
+    print '%d (incl. %d absent) proteins -> %d unique unit cells -> %s' % (
+            len(uniprot_acs), empty_cnt, len(representants), OUTPUT_FILE)
     a, b = min(itertools.combinations(representants, 2),
                key=lambda x: cell_distance(*x))
     print 'Min. dist: %.2f%% between %s and %s' % (100*cell_distance(a, b),
