@@ -30,6 +30,8 @@ import dimple.cell
 WIKI_URL = ('https://raw.githubusercontent.com/wiki/'
             'ccp4/dimple/Crystallization-Contaminants.md')
 
+CONTAMINER_XML = 'https://strube.cbrc.kaust.edu.sa/static/contabase.xml'
+
 CLUSTER_CUTOFF = 0.04
 
 OUTPUT_FILE = 'data.py'
@@ -70,6 +72,17 @@ def parse_wiki_page(page):
             assert all(i[0].isdigit() for i in pdb_ids), pdb_ids
         data[name] = pdb_ids
     return data
+
+def fetch_contaminer_protein_acs():
+    response = cached_urlopen(CONTAMINER_XML, -1)
+    root = ET.parse(response).getroot()
+    all_acs = []
+    for contaminant in root:
+        assert contaminant.tag == 'contaminant'
+        acs = [t.text for t in contaminant.findall('uniprot_id')]
+        assert len(acs) == 1
+        all_acs += acs
+    return all_acs
 
 def fetch_pdb_info_from_ebi(pdb_id):
     pdb_id = pdb_id.lower()
@@ -312,14 +325,21 @@ def main():
             ac2pdb.setdefault(acs[0], []).append(p)
 
     uniref_clusters = fetch_uniref_clusters(uniprot_acs)
-    representants = []
-    empty_cnt = 0
-    for uniref_name, uclust in uniref_clusters.items():
-        pdb_set = sum([ac2pdb[ac] for ac in uclust if ac in ac2pdb], [])
+
+    # mapping back uniref id to uniprot name that was used an input
+    uniref_sources = {}
+    for uniref_name, uclust in uniref_clusters.iteritems():
         sources = [uniprot_acs[ac] for ac in uclust if ac in uniprot_acs]
         assert len(sources) == 1, sources
+        uniref_sources[uniref_name] = sources[0]
+
+    representants = []
+    empty_cnt = 0
+    for uniref_name, uclust in uniref_clusters.iteritems():
+        pdb_set = sum([ac2pdb[ac] for ac in uclust if ac in ac2pdb], [])
         print '%s -> %s (%d entries) -> %d PDBs' % (
-                sources[0], uniref_name, len(uclust), len(pdb_set))
+                uniref_sources[uniref_name], uniref_name,
+                len(uclust), len(pdb_set))
         cells = []
         for pdb_id in pdb_set:
             cell = fetch_pdb_info_from_ebi(pdb_id)
@@ -335,7 +355,7 @@ def main():
         prev_len = len(representants)
         for pdb_cluster in get_pdb_clusters(cells):
             r = get_representative_unit_cell(pdb_cluster)
-            r.uniprot_name = sources[0]
+            r.uniprot_name = uniref_sources[uniref_name]
             r.comment = uniref_name
             if verbose:
                 print ' '.join(p.pdb_id for p in pdb_cluster), '=>', r.pdb_id
@@ -354,6 +374,14 @@ def main():
                key=lambda x: cell_distance(*x))
     print 'Min. dist: %.2f%% between %s and %s' % (100*cell_distance(a, b),
                                                    a.pdb_id, b.pdb_id)
+    contaminer_acs = fetch_contaminer_protein_acs()
+    for ac in contaminer_acs:
+        if not any(ac in uclast for uclast in uniref_clusters.values()):
+            print 'ContaBase item not included the output: %s' % ac
+    contaminer_acs = set(contaminer_acs)
+    for uniref_name, uclast in uniref_clusters.iteritems():
+        if len(set(uclast).intersection(contaminer_acs)) == 0:
+            print 'Not in ContaBase:', uniref_sources[uniref_name]
 
 if __name__ == '__main__':
     verbose = ('-v' in sys.argv[1:])
