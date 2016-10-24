@@ -20,11 +20,12 @@ class MtzMeta(Cell):
         self.filename = filename
 
     def __str__(self):
+        col_str = ' '.join('%s:%s' % item for item in self.columns.items())
         return """\
 cell: %(cell)s
-symmetry: "%(symmetry)s" (symmetry group no. %(sg_number)d)
+symmetry: "%(symmetry)s" (space group no. %(sg_number)d)
 resolution range: %(dmin)s - %(dmax)s
-columns: %(columns)s""" % self.__dict__
+columns: """ % self.__dict__ + col_str
 
     def check_col_type(self, label, expected_type):
         if label not in self.columns:
