@@ -31,7 +31,10 @@ from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
 from dimple import coots
 
-__version__ = '2.5.3'
+__version__ = '2.5.4'
+
+PROG = 'dimple'
+USAGE_SHORT = '%s [options...] input.mtz input.pdb output_dir' % PROG
 
 # sometimes provided models are incomplete, be suspicious above this solvent%
 HIGH_SOLVENT_PCT = 75
@@ -520,8 +523,7 @@ def _generate_scripts_and_pictures(wf, opt, data):
 def parse_dimple_commands(args):
     dstr = ' (default: %(default)s)'
     parser = argparse.ArgumentParser(
-                usage='%(prog)s [options...] input.mtz input.pdb output_dir',
-                epilog=workflow.commands_help, prog="dimple",
+                usage=USAGE_SHORT, epilog=workflow.commands_help, prog=PROG,
                 formatter_class=argparse.RawDescriptionHelpFormatter)
     # positional args can be separated by options, but not after the 3rd one
     # see http://bugs.python.org/issue15112 , http://bugs.python.org/issue14191
@@ -610,7 +612,8 @@ def parse_dimple_commands(args):
 
     # special mode for checking pdb file[s]
     if all(arg.endswith('.pdb') for arg in args):
-        print 'Proper usage: dimple [options...] input.mtz input.pdb output_dir'
+        print 'Proper usage: %s' % USAGE_SHORT
+        check_ccp4_envvars()
         print '...actually we can run rwcontents for you'
         wf = workflow.Workflow('')
         wf.enable_logs = False
@@ -619,10 +622,24 @@ def parse_dimple_commands(args):
                 wf.read_pdb_metadata(p, print_errors=True)
                 _comment_summary_line(os.path.basename(p), wf.file_info[p])
                 wf.rwcontents(xyzin=p).run()
-            except IOError as e:
+            except (IOError, IOError) as e:
                 put_error(e)
         print '\n\n...but this is NOT how dimple is supposed to be run.'
         sys.exit(0)
+
+    # special mode for checking mtz file
+    if len(args) == 1 and args[0].endswith('.mtz'):
+        print 'Usage: %s' % USAGE_SHORT
+        check_ccp4_envvars()
+        wf = workflow.Workflow('')
+        wf.enable_logs = False
+        try:
+            mtz_meta = wf.read_mtz_metadata(args[0])
+            print 'Basic MTZ file info:'
+            print mtz_meta
+        except IOError as e:
+            put_error(e)
+        sys.exit(1)
 
     opt = parser.parse_args(args)
     all_args = [opt.pos_arg1, opt.pos_arg2, opt.pos_arg3] + opt.more_args
@@ -740,19 +757,21 @@ def dls_name_filter(pdbs):
                 % (len(matched_pdbs), len(pdbs)))
     return matched_pdbs
 
-
-def main(args):
-    if workflow.parse_workflow_commands():
-        return
-
-    options = parse_dimple_commands(args)
-
+def check_ccp4_envvars():
     for necessary_var in ("CCP4", "CCP4_SCR"):
         if necessary_var not in os.environ:
             put_error('$%s not found, giving up' % necessary_var)
             sys.exit(1)
     if not os.path.isdir(os.environ["CCP4_SCR"]):
         put_error('No such directory: $CCP4_SCR, refmac shall not work!')
+
+
+def main(args):
+    if workflow.parse_workflow_commands():
+        return
+
+    options = parse_dimple_commands(args)
+    check_ccp4_envvars()
 
     wf = workflow.Workflow(options.output_dir, from_job=options.from_step)
     utils.start_log(os.path.join(options.output_dir, "dimple.log"),
