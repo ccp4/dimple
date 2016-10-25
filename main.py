@@ -32,7 +32,7 @@ from dimple import workflow
 from dimple import coots
 from dimple import contaminants
 
-__version__ = '2.5.4'
+__version__ = '2.5.5'
 
 PROG = 'dimple'
 USAGE_SHORT = '%s [options...] input.mtz input.pdb output_dir' % PROG
@@ -41,6 +41,8 @@ USAGE_SHORT = '%s [options...] input.mtz input.pdb output_dir' % PROG
 HIGH_SOLVENT_PCT = 75
 # do not search blobs if the model is too bad
 BAD_FINAL_RFREE = 0.5
+# do not check the list of contaminants if the model is good
+GOOD_FINAL_RFREE = 0.4
 
 def dimple(wf, opt):
     comment("     ### Dimple v%s. Problems and suggestions:"
@@ -592,34 +594,12 @@ def parse_dimple_commands(args):
 
     # special mode for checking pdb file[s]
     if all(arg.endswith('.pdb') for arg in args):
-        print 'Proper usage: %s' % USAGE_SHORT
-        check_ccp4_envvars()
-        print '...actually we can run rwcontents for you'
-        wf = workflow.Workflow('')
-        wf.enable_logs = False
-        for p in args:
-            try:
-                wf.read_pdb_metadata(p, print_errors=True)
-                _comment_summary_line(os.path.basename(p), wf.file_info[p])
-                wf.rwcontents(xyzin=p).run()
-            except (IOError, RuntimeError) as e:
-                put_error(e)
-        print '\n\n...but this is NOT how dimple is supposed to be run.'
+        special_pdb_mode(args)
         sys.exit(0)
 
     # special mode for checking mtz file
     if len(args) == 1 and args[0].endswith('.mtz'):
-        print 'Usage: %s' % USAGE_SHORT
-        check_ccp4_envvars()
-        wf = workflow.Workflow('')
-        wf.enable_logs = False
-        try:
-            mtz_meta = wf.read_mtz_metadata(args[0])
-            print 'Basic MTZ file info:'
-            print mtz_meta.info()
-            contaminants.check_and_print(mtz_meta)
-        except (IOError, RuntimeError) as e:
-            put_error(e)
+        special_mtz_mode(args)
         sys.exit(1)
 
     opt = parser.parse_args(args)
@@ -722,6 +702,36 @@ def parse_dimple_commands(args):
 
     return opt
 
+def special_pdb_mode(args):
+    print 'Proper usage: %s' % USAGE_SHORT
+    check_ccp4_envvars()
+    print '...actually we can run rwcontents for you'
+    wf = workflow.Workflow('')
+    wf.enable_logs = False
+    for p in args:
+        try:
+            wf.read_pdb_metadata(p, print_errors=True)
+            _comment_summary_line(os.path.basename(p), wf.file_info[p])
+            wf.rwcontents(xyzin=p).run()
+        except (IOError, RuntimeError) as e:
+            put_error(e)
+    print '\n\n...but this is NOT how dimple is supposed to be run.'
+
+def special_mtz_mode(args):
+    print 'Usage: %s' % USAGE_SHORT
+    check_ccp4_envvars()
+    wf = workflow.Workflow('')
+    wf.enable_logs = False
+    try:
+        mtz_meta = wf.read_mtz_metadata(args[0])
+        print 'Basic MTZ file info:'
+        print mtz_meta.info()
+        contam_info =  contaminants.get_info(mtz_meta)
+        if contam_info:
+            print contam_info
+    except (IOError, RuntimeError) as e:
+        put_error(e)
+
 def dls_name_filter(pdbs):
     # Filename matching used in Diamond synchrotron. PDB filenames
     # are matched against the current (!) directory.
@@ -746,6 +756,13 @@ def check_ccp4_envvars():
     if not os.path.isdir(os.environ["CCP4_SCR"]):
         put_error('No such directory: $CCP4_SCR, refmac shall not work!')
 
+def check_contaminants_if_bad(wf, mtz):
+    ref_job = wf.get_final_refinement_job()
+    if not ref_job or ref_job.data.get('free_r', 1) > GOOD_FINAL_RFREE:
+        mtz_meta = wf.read_mtz_metadata(mtz)  # it's cached
+        info = contaminants.get_info(mtz_meta)
+        if info:
+            comment('\n' + info)
 
 def main(args):
     if workflow.parse_workflow_commands():
@@ -761,6 +778,7 @@ def main(args):
     utils.start_log_screen(os.path.join(options.output_dir, "screen.log"))
     try:
         dimple(wf=wf, opt=options)
+        check_contaminants_if_bad(wf, mtz=options.mtz)
         exit_status = 0
     except workflow.JobError as e:
         put_error(e.msg, comment=e.note)

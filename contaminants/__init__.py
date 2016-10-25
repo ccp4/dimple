@@ -24,13 +24,14 @@ def find_similar_rel(cell, rel_tol):
     similar_cells.sort(key=lambda x: calculate_difference(cell, x))
     return similar_cells
 
-def check_and_print(cell, rel_tol=0.05):
+def get_info(cell, rel_tol=0.05):
     similar = find_similar_rel(cell, rel_tol)
     n = len(similar)
     if n == 0:
-        return
-    n_str = ('%d entries' % n if n > 1 else '1 entry')
-    print(' Our little contaminant list has %s with similar unit cell:' % n_str)
+        return None
+    info = [' Our little contaminant list has %s with similar unit cell:' %
+            ('%d entries' % n if n > 1 else '1 entry')]
     for c in similar:
-        print('  %(pdb_id)s (%(uniprot_src)s): %(symmetry)s ' % c.__dict__ +
-              '(%s)' % c.parameters_as_str())
+        info.append('%s (%s): %s (%s)' % (c.pdb_id, c.uniprot_src, c.symmetry,
+                                          c.parameters_as_str()))
+    return '\n  '.join(info)

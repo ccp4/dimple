@@ -803,6 +803,11 @@ class Workflow:
                 job.data["ncyc"] = int(words[n+1])
         return job
 
+    def get_final_refinement_job(self):
+        for job in reversed(self.jobs):
+            if job.name in ('refmac5 restr', 'refmac5 jelly'):
+                return job
+
     def findwaters(self, pdbin, hklin, f, phi, pdbout, sigma=2.0):
         job = Job(self, "findwaters")
         job.args += ["--pdbin", pdbin, "--hklin", hklin, "--f", f, "--phi", phi,
