@@ -25,11 +25,12 @@ if __name__ == "__main__" and __package__ is None:
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dimple import utils
 from dimple.utils import comment, put_error
-from dimple.cell import match_symmetry
+from dimple.cell import match_symmetry, calculate_difference
 from dimple.mtz import check_freerflags_column, MtzMeta, DEFAULT_FREE_COLS
 from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
 from dimple import coots
+from dimple import contaminants
 
 __version__ = '2.5.4'
 
@@ -56,8 +57,8 @@ def dimple(wf, opt):
         wf.read_pdb_metadata(p, print_errors=(len(opt.pdbs) > 1))
     if len(opt.pdbs) > 1:
         comment("\nPDBs in order of similarity (using the first one):")
-        opt.pdbs.sort(key=lambda x: calculate_difference_metric(wf.file_info[x],
-                                                                mtz_meta))
+        opt.pdbs.sort(key=lambda x: calculate_difference(wf.file_info[x],
+                                                         mtz_meta))
     utils.log_value("data_file", opt.mtz)
     utils.log_value("pdb_files", opt.pdbs)
     for p in opt.pdbs:
@@ -141,7 +142,7 @@ def dimple(wf, opt):
     ####### rigid body - check if model is good for refinement? #######
     refmac_labin_nofree = "FP=%s SIGFP=%s" % (opt.fcolumn, opt.sigfcolumn)
     refmac_xyzin = None
-    cell_diff = calculate_difference_metric(pdb_meta, reindexed_mtz_meta)
+    cell_diff = calculate_difference(pdb_meta, reindexed_mtz_meta)
     if pdb_meta is None:
         pass # the error message was already printed
     elif opt.mr_when_r <= 0:
@@ -350,17 +351,6 @@ def _after_phaser_comments(phaser_job, sg_in):
 
 def _comment_summary_line(name, meta):
     comment('\n%-21s %s' % (name, meta or '???'))
-
-def calculate_difference_metric(meta1, meta2):
-    match = match_symmetry(meta1, meta2)
-    # wrong or corrupted file (no CRYST1) is worse than non-matching file
-    if match is None:
-        return sys.float_info.max
-    if match is False:
-        return sys.float_info.max / 2
-    #return sum(abs(a-b) for a,b in zip(meta1.cell, meta2.cell))
-    return meta1.to_standard().max_shift_in_mapping(meta2.to_standard())
-
 
 def guess_number_of_molecules(mtz_meta, rw_data, vol_ratio):
     Va = mtz_meta.asu_volume()
@@ -612,7 +602,7 @@ def parse_dimple_commands(args):
                 wf.read_pdb_metadata(p, print_errors=True)
                 _comment_summary_line(os.path.basename(p), wf.file_info[p])
                 wf.rwcontents(xyzin=p).run()
-            except (IOError, IOError) as e:
+            except (IOError, RuntimeError) as e:
                 put_error(e)
         print '\n\n...but this is NOT how dimple is supposed to be run.'
         sys.exit(0)
@@ -627,7 +617,8 @@ def parse_dimple_commands(args):
             mtz_meta = wf.read_mtz_metadata(args[0])
             print 'Basic MTZ file info:'
             print mtz_meta.info()
-        except IOError as e:
+            contaminants.check_and_print(mtz_meta)
+        except (IOError, RuntimeError) as e:
             put_error(e)
         sys.exit(1)
 

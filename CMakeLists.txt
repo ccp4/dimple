@@ -17,3 +17,5 @@ install(FILES ccp4i-dimple.py DESTINATION ${CCP4_PY2_DIR})
 install(FILES __init__.py __main__.py coots.py pdb.py utils.py
               cell.py main.py mtz.py workflow.py
         DESTINATION ${CCP4_PY2_DIR}/dimple)
+install(FILES contaminants/__init__.py contaminants/data.py
+        DESTINATION ${CCP4_PY2_DIR}/dimple/contaminants)

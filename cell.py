@@ -1,19 +1,19 @@
 from math import radians, sin, cos, acos, sqrt, pi
+import sys
 
 
 class Cell(object):
     def __init__(self, parameters, symmetry):
-        if parameters is None:
-            self.cell = None
-            return
-        assert isinstance(parameters, tuple)
-        assert len(parameters) == 6, parameters
-        self.a, self.b, self.c = parameters[:3]
-        self.alpha, self.beta, self.gamma = parameters[3:]
         self.cell = parameters
-        if ' ' not in symmetry:
-            symmetry = add_spaces_to_hm(symmetry)
-        self.symmetry = symmetry  # international SG symbol w/ spaces
+        if parameters:
+            assert isinstance(parameters, tuple)
+            assert len(parameters) == 6, parameters
+            self.a, self.b, self.c = parameters[:3]
+            self.alpha, self.beta, self.gamma = parameters[3:]
+        if symmetry:
+            if ' ' not in symmetry:
+                symmetry = add_spaces_to_hm(symmetry)
+            self.symmetry = symmetry  # international SG symbol w/ spaces
 
     def get_volume(self):
         ca = cos(radians(self.alpha))
@@ -178,7 +178,19 @@ class Mat3(object):
             eig1 = q + 2 * p * cos(phi)
         return sqrt(eig1)
 
-# space group
+
+def calculate_difference(meta1, meta2):
+    match = match_symmetry(meta1, meta2)
+    # wrong or corrupted file (no CRYST1) is worse than non-matching file
+    if match is None:
+        return sys.float_info.max
+    if match is False:
+        return sys.float_info.max / 2
+    #return sum(abs(a-b) for a,b in zip(meta1.cell, meta2.cell))
+    return meta1.to_standard().max_shift_in_mapping(meta2.to_standard())
+
+# space group utils
+
 def match_symmetry(meta1, meta2):
     if not meta1 or not meta2:
         return None
