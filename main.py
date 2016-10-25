@@ -715,6 +715,8 @@ def special_pdb_mode(args):
             wf.rwcontents(xyzin=p).run()
         except (IOError, RuntimeError) as e:
             put_error(e)
+        except workflow.JobError as e:
+            put_error(e.msg, comment=e.note)
     print '\n\n...but this is NOT how dimple is supposed to be run.'
 
 def special_mtz_mode(args):

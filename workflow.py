@@ -593,7 +593,7 @@ class Workflow:
                             cwd=self.output_dir)
         except OSError as e:
             if e.errno == errno.ENOENT:
-                raise JobError("Program not found: %s\n" % job.args[0])
+                raise JobError("Program not found: %s" % job.args[0])
             else:
                 raise
 
