@@ -50,6 +50,7 @@ def _run_mtzdump(hklin, keys):
 def read_metadata(hklin):
     "for now using mtzdump, directly calling libccp4/mtzlib would be better"
     lines = _run_mtzdump(hklin, ["HEAD"]).splitlines()
+    cell = None
     for n, line in enumerate(lines):
         if not line.startswith(" * "):
             continue
@@ -57,7 +58,12 @@ def read_metadata(hklin):
             try:
                 cell = tuple(float(x) for x in lines[n + 5].split())
             except ValueError:
-                cell = None
+                pass
+        elif line.startswith(" * Cell Dimensions :") and cell is None:
+            try:
+                cell = tuple(float(x) for x in lines[n + 2].split())
+            except ValueError:
+                pass
         elif line.startswith(" * Space group = "):
             symmetry = line.split("'")[1].strip()
             sg_number = int(line.split()[-1].rstrip(")"))
