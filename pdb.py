@@ -23,11 +23,6 @@ class PdbMeta(Cell):
         Cell.__init__(self, (a, b, c, alpha, beta, gamma), symmetry)
         self.has_hetatm_x = None
 
-    def __str__(self):
-        return '''\
-cell: %(cell)s
-symmetry: "%(symmetry)s"''' % self.__dict__
-
 
 def read_metadata(pdb, print_errors):
     if pdb.endswith('.gz'):

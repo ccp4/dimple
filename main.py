@@ -349,17 +349,7 @@ def _after_phaser_comments(phaser_job, sg_in):
     return True
 
 def _comment_summary_line(name, meta):
-    def angle(x):
-        if x == 90.: return '90'
-        else:        return str(x)
-    if meta:
-        line = '\n%-21s %-12s (%.2f, %.2f, %.2f,  %s, %s, %s)' % (
-                name, meta.symmetry, meta.a, meta.b, meta.c,
-                angle(meta.alpha), angle(meta.beta), angle(meta.gamma))
-    else:
-        line = '\n%-21s ???' % name
-    comment(line)
-
+    comment('\n%-21s %s' % (name, meta or '???'))
 
 def calculate_difference_metric(meta1, meta2):
     match = match_symmetry(meta1, meta2)
@@ -636,7 +626,7 @@ def parse_dimple_commands(args):
         try:
             mtz_meta = wf.read_mtz_metadata(args[0])
             print 'Basic MTZ file info:'
-            print mtz_meta
+            print mtz_meta.info()
         except IOError as e:
             put_error(e)
         sys.exit(1)

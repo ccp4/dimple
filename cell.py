@@ -27,8 +27,16 @@ class Cell(object):
             z = calculate_z_order(self.symmetry)
         return self.get_volume() / z
 
+    def parameters_as_str(self):
+        def angle(x):
+            if x == 90.: return '90'
+            else:        return '%.2f' % x
+        return '%.2f, %.2f, %.2f,  %s, %s, %s' % (
+                self.a, self.b, self.c,
+                angle(self.alpha), angle(self.beta), angle(self.gamma))
+
     def __str__(self):
-        return str(self.cell)
+        return '%-12s (%s)' % (self.symmetry, self.parameters_as_str())
 
     # The orthogonalization matrix we use is described in ITfC B p.262:
     # "An alternative mode of orthogonalization, used by the Protein

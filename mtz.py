@@ -19,13 +19,13 @@ class MtzMeta(Cell):
         self.columns = OrderedDict(columns)
         self.filename = filename
 
-    def __str__(self):
-        col_str = ' '.join('%s:%s' % item for item in self.columns.items())
-        return """\
-cell: %(cell)s
-symmetry: "%(symmetry)s" (space group no. %(sg_number)d)
-resolution range: %(dmin)s - %(dmax)s
-columns: """ % self.__dict__ + col_str
+    def info(self):
+        return '\n'.join([
+            'symmetry: %s (SG no. %d)' % (self.symmetry, self.sg_number),
+            'cell: (%s)' % self.parameters_as_str(),
+            'resolution range: %s - %s' % (self.dmin, self.dmax),
+            'columns: ' + ' '.join('%s:%s' % kv for kv in self.columns.items())
+            ])
 
     def check_col_type(self, label, expected_type):
         if label not in self.columns:
