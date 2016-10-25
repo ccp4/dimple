@@ -593,7 +593,7 @@ def parse_dimple_commands(args):
         args.append(output_dir)
 
     # special mode for checking pdb file[s]
-    if all(arg.endswith('.pdb') for arg in args):
+    if len(args) >= 1 and all(arg.endswith('.pdb') for arg in args):
         special_pdb_mode(args)
         sys.exit(0)
 
