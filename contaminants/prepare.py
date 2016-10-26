@@ -37,6 +37,9 @@ CLUSTER_CUTOFF = 0.04
 OUTPUT_FILE = 'data.py'
 CACHE_DIR = 'cached'
 
+# ContaBase has homologs of these
+NOT_IN_CONTABASE = ['POLG_HRV2', 'THRB_HUMAN', 'FA10_BOVIN']
+
 def cached_urlopen(url, cache_name=None):
     assert os.path.dirname(__file__) == '.', "Run it from script's directory"
     if not cache_name:
@@ -381,7 +384,9 @@ def main():
     contaminer_acs = set(contaminer_acs)
     for uniref_name, uclast in uniref_clusters.iteritems():
         if len(set(uclast).intersection(contaminer_acs)) == 0:
-            print 'Not in ContaBase:', uniref_sources[uniref_name]
+            src = uniref_sources[uniref_name]
+            if src not in NOT_IN_CONTABASE: # these are not news
+                print 'Not in ContaBase:', src
 
 if __name__ == '__main__':
     verbose = ('-v' in sys.argv[1:])
