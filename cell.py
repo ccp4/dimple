@@ -74,6 +74,19 @@ class Cell(object):
                         symmetry=' '.join((sym[0],) + new_symm))
         return self
 
+    # the opposite of to_symmetry() for oP cells
+    def to_reference(self):
+        p = self.cell
+        if self.symmetry == 'P 21 2 21':
+            return Cell((p[0], p[2], p[1]) + p[3:], symmetry='P 21 21 2')
+        if self.symmetry == 'P 2 21 21':
+            return Cell((p[2], p[1], p[0]) + p[3:], symmetry='P 21 21 2')
+        if self.symmetry == 'P 21 2 2':
+            return Cell((p[2], p[1], p[0]) + p[3:], symmetry='P 2 2 21')
+        if self.symmetry == 'P 2 21 2':
+            return Cell((p[0], p[2], p[1]) + p[3:], symmetry='P 2 2 21')
+        return self
+
     # returns symmetry with screw axes removed (changed to rotation axes)
     def unscrewed_symmetry(self):
         return ' '.join(a[0] for a in self.symmetry.split())
