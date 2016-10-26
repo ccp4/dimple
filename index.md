@@ -150,6 +150,12 @@ Currently we are working on
 [interactive web-based viewer](https://github.com/uglymol/uglymol)
 that emulates Coot and hopefully works fast enough to replace static images.
 
+**Contaminants** --
+in the end, if the data does not match the model, we check if the unit cell
+matches any of [the unit cells](contaminants/tree.html)
+corresponding to this
+[list of crystallization contaminants](https://github.com/ccp4/dimple/wiki/Crystallization-Contaminants).
+
 ## FAQ ##
 
 * _Why is the final R factor in one refmac run different than the initial
