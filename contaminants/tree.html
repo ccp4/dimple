@@ -11,7 +11,7 @@ body { font-family: sans-serif; }
 .node circle { fill: #999; }
 .node text { font-size: 10px; }
 .node--internal circle { fill: #555; }
-.node--internal text {
+text.depth-2 {
   text-shadow: 0 1px 0 #fff, 0 -1px 0 #fff, 1px 0 0 #fff, -1px 0 0 #fff;
 }
 footer {
@@ -28,7 +28,7 @@ footer {
   top: 5px;
   font-size: 12px;
   padding: 2px;
-  background: #eef;
+  background: #ffd;
 }
 a { text-decoration: none; }
 </style>
@@ -59,7 +59,8 @@ function describe(d) {
   if (d.depth === 1) {
     var a_up = '<a href="http://www.uniprot.org/';
     return a_up + 'uniprot/' + d.data.ac + '">' + d.data.ac + '</a>  → ' +
-           a_up + 'uniref/' + d.data.uniref + '">' + d.data.uniref + '</a>';
+           a_up + 'uniref/' + d.data.uniref + '">' + d.data.uniref + '</a>' +
+           '<br>' + d.data.desc;
   }
   if (d.depth === 3) {
     var pdb = d.data.name.slice(0, 4);
@@ -93,6 +94,7 @@ d3.json("data.json", function(error, data) {
   node.append("text")
       .attr("dy", 3)
       .attr("x", function(d) { return d.depth < 3 ? -8 : 8; })
+      .attr("class", function(d) { return "depth-" + d.depth; })
       .style("text-anchor", function(d) { return d.depth < 3 ? "end" : "start"; })
       .text(function(d) { return d.data.name; });
 

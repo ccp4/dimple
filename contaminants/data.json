@@ -4,7 +4,6 @@
   {
    "ac": "P0AEX9",
    "uniref": "UniRef100_P0AEY0",
-   "name": "MALE_ECOLI",
    "children": [
     {
      "name": "P 1",
@@ -169,12 +168,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "MALE_ECOLI",
+   "desc": "Maltose-binding protein (MBP)\n"
   },
   {
    "ac": "P08515",
    "uniref": "UniRef100_P08515",
-   "name": "GST26_SCHJA",
    "children": [
     {
      "name": "P 63",
@@ -219,12 +219,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "GST26_SCHJA",
+   "desc": "Glutathione-S-transferase (GST)\n"
   },
   {
    "ac": "P0AA25",
    "uniref": "UniRef100_P0AA27",
-   "name": "THIO_ECOLI",
    "children": [
     {
      "name": "P 1",
@@ -315,27 +316,31 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "THIO_ECOLI",
+   "desc": "Thioredoxin (Trx)\n"
   },
   {
    "ac": "P0AFF6",
    "uniref": "UniRef100_P0AFF8",
-   "name": "NUSA_ECOLI"
+   "name": "NUSA_ECOLI",
+   "desc": "N-Utilization substance (NusA)\n"
   },
   {
    "ac": "P0AFG0",
    "uniref": "UniRef100_P0AFG1",
-   "name": "NUSG_ECOLI"
+   "name": "NUSG_ECOLI",
+   "desc": "Transcription termination/antitermination protein\n"
   },
   {
    "ac": "P63165",
    "uniref": "UniRef100_P63165",
-   "name": "SUMO1_HUMAN"
+   "name": "SUMO1_HUMAN",
+   "desc": "Small ubiquitin related modifier 1 (SUMO1)\n"
   },
   {
    "ac": "P0A3G2",
    "uniref": "UniRef100_P0A3G4",
-   "name": "DHAA_RHORH",
    "children": [
     {
      "name": "P 1 21 1",
@@ -375,12 +380,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "DHAA_RHORH",
+   "desc": "Haloalkane dehalogenase\n"
   },
   {
    "ac": "P0ABD8",
    "uniref": "UniRef100_P0ABE0",
-   "name": "BCCP_ECOLI",
    "children": [
     {
      "name": "P 21 21 2",
@@ -390,12 +396,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "BCCP_ECOLI",
+   "desc": "Biotin carboxyl carrier protein BCCP\n"
   },
   {
    "ac": "P04517",
    "uniref": "UniRef100_P04517",
-   "name": "POLG_TEV",
    "children": [
     {
      "name": "C 1 2 1",
@@ -405,12 +412,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "POLG_TEV",
+   "desc": "Tobacco etch virus (TEV)\n"
   },
   {
    "ac": "P04936",
    "uniref": "UniRef100_P04936",
-   "name": "POLG_HRV2",
    "children": [
     {
      "name": "P 32 2 1",
@@ -452,12 +460,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "POLG_HRV2",
+   "desc": "Rhinovirus 3C protease (in polyprotein)\n"
   },
   {
    "ac": "P03303",
    "uniref": "UniRef100_P03303",
-   "name": "POLG_HRV14",
    "children": [
     {
      "name": "P 31 2 1",
@@ -467,12 +476,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "POLG_HRV14",
+   "desc": "Rhinovirus genome polyprotein\n"
   },
   {
    "ac": "Q02724",
    "uniref": "UniRef100_Q02724",
-   "name": "ULP1_YEAST",
    "children": [
     {
      "name": "C 1 2 1",
@@ -482,17 +492,19 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "ULP1_YEAST",
+   "desc": "SUMO protease C-terminal domain\n"
   },
   {
    "ac": "P98072",
    "uniref": "UniRef100_P98072",
-   "name": "ENTK_BOVIN"
+   "name": "ENTK_BOVIN",
+   "desc": "Enterokinase\n"
   },
   {
    "ac": "P00760",
    "uniref": "UniRef100_P00760",
-   "name": "TRY1_BOVIN",
    "children": [
     {
      "name": "C 2 2 21",
@@ -625,12 +637,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "TRY1_BOVIN",
+   "desc": "Trypsin\n"
   },
   {
    "ac": "P00766",
    "uniref": "UniRef100_P00766",
-   "name": "CTRA_BOVIN",
    "children": [
     {
      "name": "P 1 21 1",
@@ -667,12 +680,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "CTRA_BOVIN",
+   "desc": "Chymotrypsin\n"
   },
   {
    "ac": "P00734",
    "uniref": "UniRef100_P00734",
-   "name": "THRB_HUMAN",
    "children": [
     {
      "name": "P 1 21 1",
@@ -735,12 +749,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "THRB_HUMAN",
+   "desc": "Thrombin active form (Prothrombin)\n"
   },
   {
    "ac": "P00735",
    "uniref": "UniRef100_P00735",
-   "name": "THRB_BOVIN",
    "children": [
     {
      "name": "P 43 21 2",
@@ -758,12 +773,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "THRB_BOVIN",
+   "desc": "Prothrombin\n"
   },
   {
    "ac": "P00800",
    "uniref": "UniRef100_P00800",
-   "name": "THER_BACTH",
    "children": [
     {
      "name": "P 61 2 2",
@@ -781,12 +797,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "THER_BACTH",
+   "desc": "Thermolysin\n"
   },
   {
    "ac": "P06873",
    "uniref": "UniRef100_P06873",
-   "name": "PRTK_ENGAL",
    "children": [
     {
      "name": "P 43 21 2",
@@ -799,12 +816,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "PRTK_ENGAL",
+   "desc": "Proteinase K\n"
   },
   {
    "ac": "P00791",
    "uniref": "UniRef100_P00791",
-   "name": "PEPA_PIG",
    "children": [
     {
      "name": "P 1 21 1",
@@ -830,17 +848,19 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "PEPA_PIG",
+   "desc": "Pepsin\n"
   },
   {
    "ac": "P08246",
    "uniref": "UniRef100_P08246",
-   "name": "ELNE_HUMAN"
+   "name": "ELNE_HUMAN",
+   "desc": "Neutrophil elastase\n"
   },
   {
    "ac": "P81054",
    "uniref": "UniRef100_P81054",
-   "name": "PLMP_GRIFR",
    "children": [
     {
      "name": "P 1",
@@ -874,12 +894,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "PLMP_GRIFR",
+   "desc": "LysN Peptidyl-Lys metalloendopeptidase\n"
   },
   {
    "ac": "Q7M135",
    "uniref": "UniRef100_Q7M135",
-   "name": "LYSC_LYSEN",
    "children": [
     {
      "name": "P 1 21 1",
@@ -889,22 +910,25 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "LYSC_LYSEN",
+   "desc": "Lysyl endopeptidase\n"
   },
   {
    "ac": "P00743",
    "uniref": "UniRef100_P00743",
-   "name": "FA10_BOVIN"
+   "name": "FA10_BOVIN",
+   "desc": "Factor Xa (Coagulation factor X)\n"
   },
   {
    "ac": "P00742",
    "uniref": "UniRef100_P00742",
-   "name": "FA10_HUMAN"
+   "name": "FA10_HUMAN",
+   "desc": "Factor Xa (Coagulation factor X)\n"
   },
   {
    "ac": "P00698",
    "uniref": "UniRef100_P00698",
-   "name": "LYSC_CHICK",
    "children": [
     {
      "name": "P 1",
@@ -1060,17 +1084,19 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "LYSC_CHICK",
+   "desc": "Lysozyme\n"
   },
   {
    "ac": "P00639",
    "uniref": "UniRef100_P00639",
-   "name": "DNAS1_BOVIN"
+   "name": "DNAS1_BOVIN",
+   "desc": "DNase protein\n"
   },
   {
    "ac": "P76344",
    "uniref": "UniRef100_P76344",
-   "name": "ZINT_ECOLI",
    "children": [
     {
      "name": "P 1 21 1",
@@ -1110,12 +1136,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "ZINT_ECOLI",
+   "desc": "Metal-binding lipocalin (YodA)"
   },
   {
    "ac": "P61517",
    "uniref": "UniRef100_P61517",
-   "name": "CAN_ECOLI",
    "children": [
     {
      "name": "P 43 21 2",
@@ -1141,12 +1168,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "CAN_ECOLI",
+   "desc": "Carbonic anhydrase (YadF)"
   },
   {
    "ac": "P0A9A9",
    "uniref": "UniRef100_P0A9B1",
-   "name": "FUR_ECOLI",
    "children": [
     {
      "name": "P 21 21 2",
@@ -1156,12 +1184,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "FUR_ECOLI",
+   "desc": "Ferric uptake regulator (Fur)\n"
   },
   {
    "ac": "P0ACJ8",
    "uniref": "UniRef100_P0ACK0",
-   "name": "CRP_ECOLI",
    "children": [
     {
      "name": "P 1",
@@ -1239,12 +1268,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "CRP_ECOLI",
+   "desc": "cAMP-regulatory protein (CRP)\n"
   },
   {
    "ac": "P17169",
    "uniref": "UniRef100_P17169",
-   "name": "GLMS_ECOLI",
    "children": [
     {
      "name": "H 3 2",
@@ -1279,12 +1309,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "GLMS_ECOLI",
+   "desc": "Glucosamine-6-phosphate synthase (GlmS)\n"
   },
   {
    "ac": "P0A6U8",
    "uniref": "UniRef100_A7ZSW2",
-   "name": "GLGA_ECOLI",
    "children": [
     {
      "name": "I 41",
@@ -1302,17 +1333,19 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "GLGA_ECOLI",
+   "desc": "Glycogen synthase (GlgA)\n"
   },
   {
    "ac": "P0AFG3",
    "uniref": "UniRef100_P0AFG5",
-   "name": "ODO1_ECOLI"
+   "name": "ODO1_ECOLI",
+   "desc": "Component 1 of the 2-oxoglutarate dehydrogenase complex (ODO1)\n"
   },
   {
    "ac": "P0AFG6",
    "uniref": "UniRef100_P0AFG7",
-   "name": "ODO2_ECOLI",
    "children": [
     {
      "name": "P 31 2 1",
@@ -1330,12 +1363,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "ODO2_ECOLI",
+   "desc": "Component E2 of dihydrolipoamide succinyltransferase (ODO2)\n"
   },
   {
    "ac": "P77398",
    "uniref": "UniRef100_C4ZU97",
-   "name": "ARNA_ECOLI",
    "children": [
     {
      "name": "C 2 2 21",
@@ -1372,12 +1406,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "ARNA_ECOLI",
+   "desc": "Formyl transferase (YfbG, ArnA)\n"
   },
   {
    "ac": "P0AGD1",
    "uniref": "UniRef100_P0AGD2",
-   "name": "SODC_ECOLI",
    "children": [
     {
      "name": "P 1 21 1",
@@ -1387,12 +1422,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "SODC_ECOLI",
+   "desc": "Cu/Zn-superoxide dismutase (Cu/Zn-SODM)\n"
   },
   {
    "ac": "P62577",
    "uniref": "UniRef100_P62577",
-   "name": "CAT_ECOLX",
    "children": [
     {
      "name": "P 1 21 1",
@@ -1413,12 +1449,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "CAT_ECOLX",
+   "desc": "Chloramphenicol-O-acetyl transferase (CAT)\n"
   },
   {
    "ac": "P0A6X3",
    "uniref": "UniRef100_A7ZV41",
-   "name": "HFQ_ECOLI",
    "children": [
     {
      "name": "P 1",
@@ -1487,12 +1524,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "HFQ_ECOLI",
+   "desc": "Host factor-I protein (Hfq)\n"
   },
   {
    "ac": "P21179",
    "uniref": "UniRef100_P21179",
-   "name": "CATE_ECOLI",
    "children": [
     {
      "name": "P 1 21 1",
@@ -1513,12 +1551,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "CATE_ECOLI",
+   "desc": "Catalase HPII\n"
   },
   {
    "ac": "P02931",
    "uniref": "UniRef100_P02931",
-   "name": "OMPF_ECOLI",
    "children": [
     {
      "name": "P 3",
@@ -1618,12 +1657,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "OMPF_ECOLI",
+   "desc": "Porin (OmpF)\n"
   },
   {
    "ac": "P0A6F5",
    "uniref": "UniRef100_A1AJ51",
-   "name": "CH60_ECOLI",
    "children": [
     {
      "name": "C 2 2 21",
@@ -1707,12 +1747,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "CH60_ECOLI",
+   "desc": "GroEL Chaperonin (GROEL)\n"
   },
   {
    "ac": "P0A7A9",
    "uniref": "UniRef100_P0A7B0",
-   "name": "IPYR_ECOLI",
    "children": [
     {
      "name": "P 32 2 1",
@@ -1747,12 +1788,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "IPYR_ECOLI",
+   "desc": "Inorganic pyrophosphatase\n"
   },
   {
    "ac": "P27302",
    "uniref": "UniRef100_P27302",
-   "name": "TKT1_ECOLI",
    "children": [
     {
      "name": "P 21 21 21",
@@ -1765,12 +1807,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "TKT1_ECOLI",
+   "desc": "Transketolase 1\n"
   },
   {
    "ac": "P0A715",
    "uniref": "UniRef100_A7ZKY9",
-   "name": "KDSA_ECOLI",
    "children": [
     {
      "name": "I 2 3",
@@ -1783,22 +1826,25 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "KDSA_ECOLI",
+   "desc": "2-dehydro-3-deoxyphosphooctonate aldolase\n"
   },
   {
    "ac": "P0A9K9",
    "uniref": "UniRef100_P0A9L1",
-   "name": "SLYD_ECOLI"
+   "name": "SLYD_ECOLI",
+   "desc": "PPIase\n"
   },
   {
    "ac": "P69054",
    "uniref": "UniRef100_P69055",
-   "name": "DHSC_ECOLI"
+   "name": "DHSC_ECOLI",
+   "desc": "Cytochrome b-556\n"
   },
   {
    "ac": "P31224",
    "uniref": "UniRef100_P31224",
-   "name": "ACRB_ECOLI",
    "children": [
     {
      "name": "P 1 21 1",
@@ -1832,12 +1878,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "ACRB_ECOLI",
+   "desc": "Multidrug efflux pump subunit AcrB\n"
   },
   {
    "ac": "P0AD61",
    "uniref": "UniRef100_P0AD62",
-   "name": "KPYK1_ECOLI",
    "children": [
     {
      "name": "P 1 21 1",
@@ -1855,12 +1902,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "KPYK1_ECOLI",
+   "desc": "Pyruvate kinase I\n"
   },
   {
    "ac": "P0A8N5",
    "uniref": "UniRef100_P0A8N6",
-   "name": "SYK2_ECOLI",
    "children": [
     {
      "name": "C 2 2 21",
@@ -1878,12 +1926,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "SYK2_ECOLI",
+   "desc": "Lysine-tRNA ligase\n"
   },
   {
    "ac": "P00957",
    "uniref": "UniRef100_B1XCM5",
-   "name": "SYA_ECOLI",
    "children": [
     {
      "name": "P 41 21 2",
@@ -1915,12 +1964,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "SYA_ECOLI",
+   "desc": "Alanine-tRNA ligase\n"
   },
   {
    "ac": "P13029",
    "uniref": "UniRef100_B1XBA8",
-   "name": "KATG_ECOLI",
    "children": [
     {
      "name": "P 1",
@@ -1946,12 +1996,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "KATG_ECOLI",
+   "desc": "Catalase-peroxidase\n"
   },
   {
    "ac": "P0ABD3",
    "uniref": "UniRef100_P0ABD4",
-   "name": "BFR_ECOLI",
    "children": [
     {
      "name": "C 2 2 21",
@@ -2004,12 +2055,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "BFR_ECOLI",
+   "desc": "Bacterioferritin\n"
   },
   {
    "ac": "P0AEE3",
    "uniref": "UniRef100_P0AEE4",
-   "name": "DEGS_ECOLI",
    "children": [
     {
      "name": "H 3",
@@ -2052,12 +2104,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "DEGS_ECOLI",
+   "desc": "Serine endoprotease DegS\n"
   },
   {
    "ac": "P0A858",
    "uniref": "UniRef100_A7ZUD3",
-   "name": "TPIS_ECOLI",
    "children": [
     {
      "name": "P 1 21 1",
@@ -2075,12 +2128,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "TPIS_ECOLI",
+   "desc": "Triosephosphate isomerase (tpiA)"
   },
   {
    "ac": "P0A9S3",
    "uniref": "UniRef100_P0A9S4",
-   "name": "GATD_ECOLI",
    "children": [
     {
      "name": "P 1 21 1",
@@ -2093,12 +2147,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "GATD_ECOLI",
+   "desc": "Galactitol-1-phosphate 5-dehydrogenase\n"
   },
   {
    "ac": "P0A9Q1",
    "uniref": "UniRef100_P0A9Q3",
-   "name": "ARCA_ECOLI",
    "children": [
     {
      "name": "P 65 2 2",
@@ -2108,12 +2163,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "ARCA_ECOLI",
+   "desc": "Aerobic respiration control protein ArcA\n"
   },
   {
    "ac": "P03023",
    "uniref": "UniRef100_P03023",
-   "name": "LACI_ECOLI",
    "children": [
     {
      "name": "I 41 2 2",
@@ -2169,32 +2225,37 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "LACI_ECOLI",
+   "desc": "Lactose operon repressor\n"
   },
   {
    "ac": "P0ADZ4",
    "uniref": "UniRef100_A7ZS62",
-   "name": "RS15_ECOLI"
+   "name": "RS15_ECOLI",
+   "desc": "30S ribosomal protein S15\n"
   },
   {
    "ac": "P06720",
    "uniref": "UniRef100_P06720",
-   "name": "AGAL_ECOLI"
+   "name": "AGAL_ECOLI",
+   "desc": "Alpha-galactosidase\n"
   },
   {
    "ac": "P0AC53",
    "uniref": "UniRef100_P0AC54",
-   "name": "G6PD_ECOLI"
+   "name": "G6PD_ECOLI",
+   "desc": "Glucose-6-phosphate 1-dehydrogenase\n"
   },
   {
    "ac": "P23908",
    "uniref": "UniRef100_B7LA57",
-   "name": "ARGE_ECOLI"
+   "name": "ARGE_ECOLI",
+   "desc": "Acetylornithine deacetylase\n"
   },
   {
    "ac": "P00330",
    "uniref": "UniRef100_P00330",
-   "name": "ADH1_YEAST",
    "children": [
     {
      "name": "P 3 2 1",
@@ -2207,12 +2268,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "ADH1_YEAST",
+   "desc": "Alcohol dehydrogenase 1\n"
   },
   {
    "ac": "P53184",
    "uniref": "UniRef100_P53184",
-   "name": "PNC1_YEAST",
    "children": [
     {
      "name": "H 3",
@@ -2222,12 +2284,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "PNC1_YEAST",
+   "desc": "Nicotinamidase\n"
   },
   {
    "ac": "B4SL31",
    "uniref": "UniRef100_B4SL31",
-   "name": "B4SL31_STRM5",
    "children": [
     {
      "name": "P 1 21 1",
@@ -2237,12 +2300,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "B4SL31_STRM5",
+   "desc": "Alkaline phosphatase"
   },
   {
    "ac": "Q9I4D6",
    "uniref": "UniRef100_A0A157WLQ6",
-   "name": "Q9I4D6_PSEAE",
    "children": [
     {
      "name": "P 1 21 1",
@@ -2260,12 +2324,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "Q9I4D6_PSEAE",
+   "desc": "probable cysteine hydrolase (YcaC)"
   },
   {
    "ac": "P85173",
    "uniref": "UniRef100_P85173",
-   "name": "PHBP_UNKP",
    "children": [
     {
      "name": "C 2 2 21",
@@ -2286,12 +2351,13 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "PHBP_UNKP",
+   "desc": "Phosphate-binding protein, DING family (HPBP)"
   },
   {
    "ac": "P83696",
    "uniref": "UniRef100_P83696",
-   "name": "P83696_ALCXX",
    "children": [
     {
      "name": "C 2 2 21",
@@ -2301,7 +2367,9 @@
       }
      ]
     }
-   ]
+   ],
+   "name": "P83696_ALCXX",
+   "desc": "Glyceraldehyde-3-phosphate dehydrogenase (GAPDH)"
   }
  ]
 }
