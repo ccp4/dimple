@@ -2,6 +2,8 @@
  "name": "",
  "children": [
   {
+   "ac": "P0AEX9",
+   "uniref": "UniRef100_P0AEY0",
    "name": "MALE_ECOLI",
    "children": [
     {
@@ -170,6 +172,8 @@
    ]
   },
   {
+   "ac": "P08515",
+   "uniref": "UniRef100_P08515",
    "name": "GST26_SCHJA",
    "children": [
     {
@@ -218,6 +222,8 @@
    ]
   },
   {
+   "ac": "P0AA25",
+   "uniref": "UniRef100_P0AA27",
    "name": "THIO_ECOLI",
    "children": [
     {
@@ -312,15 +318,23 @@
    ]
   },
   {
+   "ac": "P0AFF6",
+   "uniref": "UniRef100_P0AFF8",
    "name": "NUSA_ECOLI"
   },
   {
+   "ac": "P0AFG0",
+   "uniref": "UniRef100_P0AFG1",
    "name": "NUSG_ECOLI"
   },
   {
+   "ac": "P63165",
+   "uniref": "UniRef100_P63165",
    "name": "SUMO1_HUMAN"
   },
   {
+   "ac": "P0A3G2",
+   "uniref": "UniRef100_P0A3G4",
    "name": "DHAA_RHORH",
    "children": [
     {
@@ -364,6 +378,8 @@
    ]
   },
   {
+   "ac": "P0ABD8",
+   "uniref": "UniRef100_P0ABE0",
    "name": "BCCP_ECOLI",
    "children": [
     {
@@ -377,6 +393,8 @@
    ]
   },
   {
+   "ac": "P04517",
+   "uniref": "UniRef100_P04517",
    "name": "POLG_TEV",
    "children": [
     {
@@ -390,6 +408,8 @@
    ]
   },
   {
+   "ac": "P04936",
+   "uniref": "UniRef100_P04936",
    "name": "POLG_HRV2",
    "children": [
     {
@@ -435,6 +455,8 @@
    ]
   },
   {
+   "ac": "P03303",
+   "uniref": "UniRef100_P03303",
    "name": "POLG_HRV14",
    "children": [
     {
@@ -448,6 +470,8 @@
    ]
   },
   {
+   "ac": "Q02724",
+   "uniref": "UniRef100_Q02724",
    "name": "ULP1_YEAST",
    "children": [
     {
@@ -461,9 +485,13 @@
    ]
   },
   {
+   "ac": "P98072",
+   "uniref": "UniRef100_P98072",
    "name": "ENTK_BOVIN"
   },
   {
+   "ac": "P00760",
+   "uniref": "UniRef100_P00760",
    "name": "TRY1_BOVIN",
    "children": [
     {
@@ -600,6 +628,8 @@
    ]
   },
   {
+   "ac": "P00766",
+   "uniref": "UniRef100_P00766",
    "name": "CTRA_BOVIN",
    "children": [
     {
@@ -640,6 +670,8 @@
    ]
   },
   {
+   "ac": "P00734",
+   "uniref": "UniRef100_P00734",
    "name": "THRB_HUMAN",
    "children": [
     {
@@ -706,6 +738,8 @@
    ]
   },
   {
+   "ac": "P00735",
+   "uniref": "UniRef100_P00735",
    "name": "THRB_BOVIN",
    "children": [
     {
@@ -727,6 +761,8 @@
    ]
   },
   {
+   "ac": "P00800",
+   "uniref": "UniRef100_P00800",
    "name": "THER_BACTH",
    "children": [
     {
@@ -748,6 +784,8 @@
    ]
   },
   {
+   "ac": "P06873",
+   "uniref": "UniRef100_P06873",
    "name": "PRTK_ENGAL",
    "children": [
     {
@@ -764,6 +802,8 @@
    ]
   },
   {
+   "ac": "P00791",
+   "uniref": "UniRef100_P00791",
    "name": "PEPA_PIG",
    "children": [
     {
@@ -793,9 +833,13 @@
    ]
   },
   {
+   "ac": "P08246",
+   "uniref": "UniRef100_P08246",
    "name": "ELNE_HUMAN"
   },
   {
+   "ac": "P81054",
+   "uniref": "UniRef100_P81054",
    "name": "PLMP_GRIFR",
    "children": [
     {
@@ -833,6 +877,8 @@
    ]
   },
   {
+   "ac": "Q7M135",
+   "uniref": "UniRef100_Q7M135",
    "name": "LYSC_LYSEN",
    "children": [
     {
@@ -846,12 +892,18 @@
    ]
   },
   {
+   "ac": "P00743",
+   "uniref": "UniRef100_P00743",
    "name": "FA10_BOVIN"
   },
   {
+   "ac": "P00742",
+   "uniref": "UniRef100_P00742",
    "name": "FA10_HUMAN"
   },
   {
+   "ac": "P00698",
+   "uniref": "UniRef100_P00698",
    "name": "LYSC_CHICK",
    "children": [
     {
@@ -1011,9 +1063,13 @@
    ]
   },
   {
+   "ac": "P00639",
+   "uniref": "UniRef100_P00639",
    "name": "DNAS1_BOVIN"
   },
   {
+   "ac": "P76344",
+   "uniref": "UniRef100_P76344",
    "name": "ZINT_ECOLI",
    "children": [
     {
@@ -1057,6 +1113,8 @@
    ]
   },
   {
+   "ac": "P61517",
+   "uniref": "UniRef100_P61517",
    "name": "CAN_ECOLI",
    "children": [
     {
@@ -1086,6 +1144,8 @@
    ]
   },
   {
+   "ac": "P0A9A9",
+   "uniref": "UniRef100_P0A9B1",
    "name": "FUR_ECOLI",
    "children": [
     {
@@ -1099,6 +1159,8 @@
    ]
   },
   {
+   "ac": "P0ACJ8",
+   "uniref": "UniRef100_P0ACK0",
    "name": "CRP_ECOLI",
    "children": [
     {
@@ -1180,6 +1242,8 @@
    ]
   },
   {
+   "ac": "P17169",
+   "uniref": "UniRef100_P17169",
    "name": "GLMS_ECOLI",
    "children": [
     {
@@ -1218,6 +1282,8 @@
    ]
   },
   {
+   "ac": "P0A6U8",
+   "uniref": "UniRef100_A7ZSW2",
    "name": "GLGA_ECOLI",
    "children": [
     {
@@ -1239,9 +1305,13 @@
    ]
   },
   {
+   "ac": "P0AFG3",
+   "uniref": "UniRef100_P0AFG5",
    "name": "ODO1_ECOLI"
   },
   {
+   "ac": "P0AFG6",
+   "uniref": "UniRef100_P0AFG7",
    "name": "ODO2_ECOLI",
    "children": [
     {
@@ -1263,6 +1333,8 @@
    ]
   },
   {
+   "ac": "P77398",
+   "uniref": "UniRef100_C4ZU97",
    "name": "ARNA_ECOLI",
    "children": [
     {
@@ -1303,6 +1375,8 @@
    ]
   },
   {
+   "ac": "P0AGD1",
+   "uniref": "UniRef100_P0AGD2",
    "name": "SODC_ECOLI",
    "children": [
     {
@@ -1316,6 +1390,8 @@
    ]
   },
   {
+   "ac": "P62577",
+   "uniref": "UniRef100_P62577",
    "name": "CAT_ECOLX",
    "children": [
     {
@@ -1340,6 +1416,8 @@
    ]
   },
   {
+   "ac": "P0A6X3",
+   "uniref": "UniRef100_A7ZV41",
    "name": "HFQ_ECOLI",
    "children": [
     {
@@ -1412,6 +1490,8 @@
    ]
   },
   {
+   "ac": "P21179",
+   "uniref": "UniRef100_P21179",
    "name": "CATE_ECOLI",
    "children": [
     {
@@ -1436,6 +1516,8 @@
    ]
   },
   {
+   "ac": "P02931",
+   "uniref": "UniRef100_P02931",
    "name": "OMPF_ECOLI",
    "children": [
     {
@@ -1539,6 +1621,8 @@
    ]
   },
   {
+   "ac": "P0A6F5",
+   "uniref": "UniRef100_A1AJ51",
    "name": "CH60_ECOLI",
    "children": [
     {
@@ -1626,6 +1710,8 @@
    ]
   },
   {
+   "ac": "P0A7A9",
+   "uniref": "UniRef100_P0A7B0",
    "name": "IPYR_ECOLI",
    "children": [
     {
@@ -1664,6 +1750,8 @@
    ]
   },
   {
+   "ac": "P27302",
+   "uniref": "UniRef100_P27302",
    "name": "TKT1_ECOLI",
    "children": [
     {
@@ -1680,6 +1768,8 @@
    ]
   },
   {
+   "ac": "P0A715",
+   "uniref": "UniRef100_A7ZKY9",
    "name": "KDSA_ECOLI",
    "children": [
     {
@@ -1696,12 +1786,18 @@
    ]
   },
   {
+   "ac": "P0A9K9",
+   "uniref": "UniRef100_P0A9L1",
    "name": "SLYD_ECOLI"
   },
   {
+   "ac": "P69054",
+   "uniref": "UniRef100_P69055",
    "name": "DHSC_ECOLI"
   },
   {
+   "ac": "P31224",
+   "uniref": "UniRef100_P31224",
    "name": "ACRB_ECOLI",
    "children": [
     {
@@ -1739,6 +1835,8 @@
    ]
   },
   {
+   "ac": "P0AD61",
+   "uniref": "UniRef100_P0AD62",
    "name": "KPYK1_ECOLI",
    "children": [
     {
@@ -1760,6 +1858,8 @@
    ]
   },
   {
+   "ac": "P0A8N5",
+   "uniref": "UniRef100_P0A8N6",
    "name": "SYK2_ECOLI",
    "children": [
     {
@@ -1781,6 +1881,8 @@
    ]
   },
   {
+   "ac": "P00957",
+   "uniref": "UniRef100_B1XCM5",
    "name": "SYA_ECOLI",
    "children": [
     {
@@ -1816,6 +1918,8 @@
    ]
   },
   {
+   "ac": "P13029",
+   "uniref": "UniRef100_B1XBA8",
    "name": "KATG_ECOLI",
    "children": [
     {
@@ -1845,6 +1949,8 @@
    ]
   },
   {
+   "ac": "P0ABD3",
+   "uniref": "UniRef100_P0ABD4",
    "name": "BFR_ECOLI",
    "children": [
     {
@@ -1901,6 +2007,8 @@
    ]
   },
   {
+   "ac": "P0AEE3",
+   "uniref": "UniRef100_P0AEE4",
    "name": "DEGS_ECOLI",
    "children": [
     {
@@ -1947,6 +2055,8 @@
    ]
   },
   {
+   "ac": "P0A858",
+   "uniref": "UniRef100_A7ZUD3",
    "name": "TPIS_ECOLI",
    "children": [
     {
@@ -1968,6 +2078,8 @@
    ]
   },
   {
+   "ac": "P0A9S3",
+   "uniref": "UniRef100_P0A9S4",
    "name": "GATD_ECOLI",
    "children": [
     {
@@ -1984,6 +2096,8 @@
    ]
   },
   {
+   "ac": "P0A9Q1",
+   "uniref": "UniRef100_P0A9Q3",
    "name": "ARCA_ECOLI",
    "children": [
     {
@@ -1997,6 +2111,8 @@
    ]
   },
   {
+   "ac": "P03023",
+   "uniref": "UniRef100_P03023",
    "name": "LACI_ECOLI",
    "children": [
     {
@@ -2056,18 +2172,28 @@
    ]
   },
   {
+   "ac": "P0ADZ4",
+   "uniref": "UniRef100_A7ZS62",
    "name": "RS15_ECOLI"
   },
   {
+   "ac": "P06720",
+   "uniref": "UniRef100_P06720",
    "name": "AGAL_ECOLI"
   },
   {
+   "ac": "P0AC53",
+   "uniref": "UniRef100_P0AC54",
    "name": "G6PD_ECOLI"
   },
   {
+   "ac": "P23908",
+   "uniref": "UniRef100_B7LA57",
    "name": "ARGE_ECOLI"
   },
   {
+   "ac": "P00330",
+   "uniref": "UniRef100_P00330",
    "name": "ADH1_YEAST",
    "children": [
     {
@@ -2084,6 +2210,8 @@
    ]
   },
   {
+   "ac": "P53184",
+   "uniref": "UniRef100_P53184",
    "name": "PNC1_YEAST",
    "children": [
     {
@@ -2097,6 +2225,8 @@
    ]
   },
   {
+   "ac": "B4SL31",
+   "uniref": "UniRef100_B4SL31",
    "name": "B4SL31_STRM5",
    "children": [
     {
@@ -2110,6 +2240,8 @@
    ]
   },
   {
+   "ac": "Q9I4D6",
+   "uniref": "UniRef100_A0A157WLQ6",
    "name": "Q9I4D6_PSEAE",
    "children": [
     {
@@ -2131,6 +2263,8 @@
    ]
   },
   {
+   "ac": "P85173",
+   "uniref": "UniRef100_P85173",
    "name": "PHBP_UNKP",
    "children": [
     {
@@ -2155,6 +2289,8 @@
    ]
   },
   {
+   "ac": "P83696",
+   "uniref": "UniRef100_P83696",
    "name": "P83696_ALCXX",
    "children": [
     {
