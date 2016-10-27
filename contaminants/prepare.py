@@ -64,6 +64,8 @@ def parse_wiki_page(page):
         obj = pat.search(line)
         if obj:
             name = obj.group(0).strip('`')
+            if name == 'LIKE_THIS':
+                continue
         elif '`' in line:
             sys.exit('No UniProt name? ' + line)
         else:
@@ -179,7 +181,7 @@ def uniprot_names_to_acs(names):
     for name in names:
         response = cached_urlopen(query_url % name, 'up-%s-ie.tab' % name)
         lines = response.readlines()
-        assert len(lines) >= 2
+        assert len(lines) >= 2, 'up-%s-ie.tab' % name
         ac, entry_name = lines[1].strip().split('\t')
         assert entry_name == name
         acs[ac] = name
@@ -302,7 +304,7 @@ def write_output_file(representants):
             out.write('"%s"), # %s\n' % (cell.uniprot_name, cell.comment))
         out.write(']')
 
-def write_json_file(uniprot_acs, representants):
+def write_json_file(uniprot_acs, uniprot_to_uniref, representants):
     groups = {}
     for r in representants:
         group = groups.setdefault(r.uniprot_name, {})
@@ -311,8 +313,8 @@ def write_json_file(uniprot_acs, representants):
         leaf = {'name': leaf_name}
         group.setdefault(ref.symmetry, []).append(leaf)
     data = {'name': '', 'children': []}
-    for v in uniprot_acs.itervalues():
-        item = {'name': v}
+    for ac, v in uniprot_acs.iteritems():
+        item = {'name': v, 'ac': ac, 'uniref': uniprot_to_uniref[v]}
         if v in groups:
             item['children'] = [{'name': sg, 'children': pdbs}
                                 for sg, pdbs in groups[v].items()]
@@ -392,7 +394,9 @@ def main():
     write_output_file(representants)
     print '%d (incl. %d absent) proteins -> %d unique unit cells -> %s' % (
             len(uniprot_acs), empty_cnt, len(representants), OUTPUT_PY_FILE)
-    write_json_file(uniprot_acs, representants)
+    write_json_file(uniprot_acs,
+                    dict((v, k) for k, v in uniref_sources.items()),
+                    representants)
     a, b = min(itertools.combinations(representants, 2),
                key=lambda x: cell_distance(*x))
     print 'Min. dist: %.2f%% between %s and %s' % (100*cell_distance(a, b),

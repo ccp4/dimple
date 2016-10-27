@@ -22,10 +22,19 @@ footer {
   transform: rotate(-90deg);
   bottom: 10px; left: 10px; width: 10px;
 }
-.link { fill: none; stroke: #555; stroke-opacity: 0.4; stroke-width: 1.5px; }
+.link { fill: none; stroke: #555; stroke-opacity: 0.4; stroke-width: 1.0px; }
+#tip {
+  position: absolute;
+  top: 5px;
+  font-size: 12px;
+  padding: 2px;
+  background: #eef;
+}
+a { text-decoration: none; }
 </style>
 
 <svg width="800" height="5000"></svg>
+<div id="tip">Hover nodes for links</div>
 
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script>
@@ -38,6 +47,30 @@ var svg = d3.select("svg"),
 var tree = d3.tree()
     .size([height, width - 360]);
 
+function linkage(d) {
+  var p = d.parent;
+  return "M" + d.y + "," + d.x
+      + "C" + (d.y + p.y) / 2 + "," + d.x
+      + " " + (d.y + p.y) / 2 + "," + p.x
+      + " " + p.y + "," + p.x;
+}
+
+function describe(d) {
+  if (d.depth === 1) {
+    var a_up = '<a href="http://www.uniprot.org/';
+    return a_up + 'uniprot/' + d.data.ac + '">' + d.data.ac + '</a>  → ' +
+           a_up + 'uniref/' + d.data.uniref + '">' + d.data.uniref + '</a>';
+  }
+  if (d.depth === 3) {
+    var pdb = d.data.name.slice(0, 4);
+    return pdb +
+      ' <a href="http://www.rcsb.org/pdb/explore/explore.do?structureId=' +
+      pdb + '">RCSB</a> <a href="https://www.ebi.ac.uk/pdbe/entry/pdb/' +
+      pdb + '">PDBe</a>';
+  }
+  return ''
+}
+
 d3.json("data.json", function(error, data) {
   if (error) throw error;
   var root = d3.hierarchy(data);
@@ -46,12 +79,7 @@ d3.json("data.json", function(error, data) {
     .data(tree(root).descendants().filter(function(d) { return d.depth > 1; }))
     .enter().append("path")
       .attr("class", "link")
-      .attr("d", function(d) {
-        return "M" + d.y + "," + d.x
-            + "C" + (d.y + d.parent.y) / 2 + "," + d.x
-            + " " + (d.y + d.parent.y) / 2 + "," + d.parent.x
-            + " " + d.parent.y + "," + d.parent.x;
-      });
+      .attr("d", linkage);
 
   var node = g.selectAll(".node")
     .data(root.descendants().slice(1))
@@ -67,6 +95,13 @@ d3.json("data.json", function(error, data) {
       .attr("x", function(d) { return d.depth < 3 ? -8 : 8; })
       .style("text-anchor", function(d) { return d.depth < 3 ? "end" : "start"; })
       .text(function(d) { return d.data.name; });
+
+  node.on("mouseover", function(d) {
+         d3.select("#tip")
+           .html(describe(d))
+           .style("left", (d3.event.pageX + 12) + "px")
+           .style("top", (d3.event.pageY - 12) + "px");
+       });
 });
 
 </script>
