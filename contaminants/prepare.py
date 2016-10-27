@@ -1,4 +1,5 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 """
 Script that generates data.py - list of unit cells of contaminants
 """
@@ -70,13 +71,14 @@ def parse_wiki_page(page):
             sys.exit('No UniProt name? ' + line)
         else:
             continue
+        sp = line[obj.span()[1]:].rsplit(' - ', 1)
+        desc = sp[0].strip(' ①② ')
         pdb_ids = []
-        if ' - ' in line:
-            pdb_ids = [i.strip().upper() for i in
-                       line.split(' - ')[-1].split(',')]
+        if len(sp) == 2:
+            pdb_ids = [i.strip().upper() for i in sp[1].split(',')]
             assert all(len(i) == 4 for i in pdb_ids), pdb_ids
             assert all(i[0].isdigit() for i in pdb_ids), pdb_ids
-        data[name] = pdb_ids
+        data[name] = (desc, pdb_ids)
     return data
 
 def fetch_contaminer_protein_acs():
@@ -304,7 +306,7 @@ def write_output_file(representants):
             out.write('"%s"), # %s\n' % (cell.uniprot_name, cell.comment))
         out.write(']')
 
-def write_json_file(uniprot_acs, uniprot_to_uniref, representants):
+def write_json_file(uniprot_acs, extra_info, representants):
     groups = {}
     for r in representants:
         group = groups.setdefault(r.uniprot_name, {})
@@ -314,7 +316,8 @@ def write_json_file(uniprot_acs, uniprot_to_uniref, representants):
         group.setdefault(ref.symmetry, []).append(leaf)
     data = {'name': '', 'children': []}
     for ac, v in uniprot_acs.iteritems():
-        item = {'name': v, 'ac': ac, 'uniref': uniprot_to_uniref[v]}
+        item = {'name': v, 'ac': ac, 'uniref': extra_info[v][0],
+                'desc': extra_info[v][1]}
         if v in groups:
             item['children'] = [{'name': sg, 'children': pdbs}
                                 for sg, pdbs in groups[v].items()]
@@ -327,9 +330,11 @@ def main():
     parsed_page = parse_wiki_page(page) # { UniProt name: [some PDB IDs] }
     uniprot_acs = uniprot_names_to_acs(parsed_page) # { AC: UniProt name }
     pdb2up = read_sifts_mapping()
+    descriptions_from_wiki = {}
 
     # check for missing PDB IDs that were given explicitely in the wiki
-    for u, pp in parsed_page.iteritems():
+    for u, (desc, pp) in parsed_page.iteritems():
+        descriptions_from_wiki[u] = desc
         for p in pp:
             if p not in pdb2up:
                 print 'Missing in SIFTS: %s' % p
@@ -395,7 +400,8 @@ def main():
     print '%d (incl. %d absent) proteins -> %d unique unit cells -> %s' % (
             len(uniprot_acs), empty_cnt, len(representants), OUTPUT_PY_FILE)
     write_json_file(uniprot_acs,
-                    dict((v, k) for k, v in uniref_sources.items()),
+                    dict((v, (k, descriptions_from_wiki[v]))
+                         for k, v in uniref_sources.items()),
                     representants)
     a, b = min(itertools.combinations(representants, 2),
                key=lambda x: cell_distance(*x))
