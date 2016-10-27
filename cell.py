@@ -41,8 +41,8 @@ class Cell(object):
     # The orthogonalization matrix we use is described in ITfC B p.262:
     # "An alternative mode of orthogonalization, used by the Protein
     # Data Bank and most programs, is to align the a1 axis of the unit
-    # cell with the Cartesian X1 axis, and to align the a*3 aixs with the
-    # Cartesian X3 axis."
+    # cell with the Cartesian X_1 axis, and to align the a*_3 axis with the
+    # Cartesian X_3 axis."
     def get_orth_matrix(self):
         a, b, c = self.a, self.b, self.c
         alpha = radians(self.alpha)
