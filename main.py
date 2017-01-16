@@ -156,8 +156,11 @@ def dimple(wf, opt):
     else:
         comment("\nRigid-body refinement with resolution 3.5 A, 10 cycles.")
         if 'aa_count' in rw_data and 'water_count' in rw_data:
-            comment(" %.1f waters/aa." % (rw_data['water_count'] /
-                                        rw_data['aa_count']))
+            if rw_data['aa_count'] != 0:
+                comment(" %.1f waters/aa." % (rw_data['water_count'] /
+                                              rw_data['aa_count']))
+            else:
+                comment(' %d/0 waters/aa.' % rw_data['water_count'])
         wf.temporary_files |= {"refmacRB.pdb", "refmacRB.mtz"}
         # it may fail because of "Disagreement between mtz and pdb"
         wf.refmac5(hklin=f_mtz, xyzin=rb_xyzin,
