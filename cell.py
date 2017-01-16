@@ -13,7 +13,7 @@ class Cell(object):
         if symmetry:
             if ' ' not in symmetry:
                 symmetry = add_spaces_to_hm(symmetry)
-            self.symmetry = symmetry  # international SG symbol w/ spaces
+        self.symmetry = symmetry  # international SG symbol w/ spaces
 
     def get_volume(self):
         ca = cos(radians(self.alpha))
@@ -41,8 +41,8 @@ class Cell(object):
     # The orthogonalization matrix we use is described in ITfC B p.262:
     # "An alternative mode of orthogonalization, used by the Protein
     # Data Bank and most programs, is to align the a1 axis of the unit
-    # cell with the Cartesian X_1 axis, and to align the a*_3 axis with the
-    # Cartesian X_3 axis."
+    # cell with the Cartesian X1 axis, and to align the a*3 aixs with the
+    # Cartesian X3 axis."
     def get_orth_matrix(self):
         a, b, c = self.a, self.b, self.c
         alpha = radians(self.alpha)
@@ -205,7 +205,7 @@ def calculate_difference(meta1, meta2):
 # space group utils
 
 def match_symmetry(meta1, meta2):
-    if not meta1 or not meta2:
+    if not meta1 or not meta2 or not meta1.symmetry or not meta2.symmetry:
         return None
     def sig(sym):
         first_chars = [a[0] for a in sym.split()]
