@@ -48,7 +48,7 @@ before the experiment.
 
 DIMPLE has a lot of options (`dimple -h` lists all of them),
 but since the goal of the pipeline is to make things simple,
-we present here only two of them:
+we present here only three of them:
 
  `--slow` (or `-s` for short) -- recommended if you are not in hurry.
 DIMPLE will take twice as long, spending more time on extra cycles
@@ -59,6 +59,8 @@ to get 100 cycles of jelly-body refinement.
 `-M 0.4` (the default value) runs MR if the R-factor after rigid-body refinement,
 in data up to 3.5Å, is above 0.4.
 Edge cases: `-M0` -- always run MR, `-M1` -- never.
+
+`--libin CIF` passes your own ligand descriptions to Refmac.
 
 ## Selected Details ##
 
