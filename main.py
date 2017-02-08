@@ -39,6 +39,10 @@ USAGE_SHORT = '%s [options...] input.mtz input.pdb output_dir' % PROG
 
 # sometimes provided models are incomplete, be suspicious above this solvent%
 HIGH_SOLVENT_PCT = 75
+# sometimes provided models are too big - then all chains are put into
+# a single ensemble for MR. If the volume ratio of data and model can be
+# determined, the limit is 2*LOW_SOLVENT_PCT.
+LOW_SOLVENT_PCT = 10
 # do not search blobs if the model is too bad
 BAD_FINAL_RFREE = 0.5
 # do not check the list of contaminants if the model is good
@@ -357,16 +361,17 @@ def _after_phaser_comments(phaser_job, sg_in):
 def _comment_summary_line(name, meta):
     comment('\n%-21s %s' % (name, meta or '???'))
 
+# returns either number of molecules (int) or a fraction of the molecule (float)
 def guess_number_of_molecules(mtz_meta, rw_data, vol_ratio):
-    Va = mtz_meta.asu_volume()
-    m = rw_data['weight']
-
     # if the number of molecules seems to be 1 or 2, don't go into Matthews
     if vol_ratio and rw_data.get('solvent_percent', 100) < HIGH_SOLVENT_PCT:
         if 0.7 < vol_ratio < 1.33:
             return 1
         if 1.8 < vol_ratio < 2.2:
             return 2
+
+    Va = mtz_meta.asu_volume()
+    m = rw_data['weight']
 
     # Vm = Va/(n*M)
     # Vs = 1 - 1.23/Vm  => Vs = 1 - n * 1.23*M/Va
@@ -388,15 +393,20 @@ def guess_number_of_molecules(mtz_meta, rw_data, vol_ratio):
         n -= 1
 
     Vsn = calc_Vs(n)
-    if Vsn < 10:  # model too big, won't fit
-        return float(vol_ratio or Va / (2.4 * m))
     if n > 1:
         # 1-1.23/Vm=50% => Vm=2.46
         other_n = min(int(round(Va / (2.46 * m))), n-1)
         comment("\n%.0f%% solvent for %d, %.0f%% for %d components."
                 % (calc_Vs(other_n), other_n, Vsn, n))
-    else:
+    elif Vsn > 0:
         comment("\n%.0f%% solvent for single component." % Vsn)
+    else:
+        comment("\nModel too big to fit in the unit cell.")
+
+    # if model is too big we will try to split it
+    if Vsn < LOW_SOLVENT_PCT or (Vsn < 2 * LOW_SOLVENT_PCT and vol_ratio):
+        comment(" Let us try to split the model.")
+        return float(vol_ratio or Va / (2.4 * m))
     return n
 
 
