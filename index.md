@@ -184,6 +184,10 @@ But if you'd like to try the very latest version that hasn't filtered
 through to the CCP4 suite yet, get it from
 [github.com/ccp4/dimple](https://github.com/ccp4/dimple).
 
+If you do not want to use git, download
+[master.zip](https://github.com/ccp4/dimple/archive/master.zip),
+unpack it, rename `dimple-master` to `dimple` and run `./dimple/dimple`.
+
 ## Comments? ##
 
 Any comments and thoughts how to improve this tool are genuinely welcome.
