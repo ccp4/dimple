@@ -39,10 +39,11 @@ USAGE_SHORT = '%s [options...] input.mtz input.pdb output_dir' % PROG
 
 # sometimes provided models are incomplete, be suspicious above this solvent%
 HIGH_SOLVENT_PCT = 75
-# sometimes provided models are too big - then all chains are put into
-# a single ensemble for MR. If the volume ratio of data and model can be
-# determined, the limit is 2*LOW_SOLVENT_PCT.
-LOW_SOLVENT_PCT = 10
+# Sometimes provided models are too big - then all chains are put into
+# a single ensemble for MR. The first threshold always triggers ensembling,
+# the second one only if the asu volume of the data and model is different.
+VERY_LOW_SOLVENT_PCT = 10
+LOW_SOLVENT_PCT = 30
 # do not search blobs if the model is too bad
 BAD_FINAL_RFREE = 0.5
 # do not check the list of contaminants if the model is good
@@ -404,7 +405,7 @@ def guess_number_of_molecules(mtz_meta, rw_data, vol_ratio):
         comment("\nModel too big to fit in the unit cell.")
 
     # if model is too big we will try to split it
-    if Vsn < LOW_SOLVENT_PCT or (Vsn < 2 * LOW_SOLVENT_PCT and vol_ratio):
+    if Vsn < VERY_LOW_SOLVENT_PCT or (Vsn < LOW_SOLVENT_PCT and vol_ratio):
         comment(" Let us try to split the model.")
         return float(vol_ratio or Va / (2.4 * m))
     return n
@@ -741,7 +742,7 @@ def special_mtz_mode(args):
         mtz_meta = wf.read_mtz_metadata(args[0])
         print 'Basic MTZ file info:'
         print mtz_meta.info()
-        contam_info =  contaminants.get_info(mtz_meta)
+        contam_info = contaminants.get_info(mtz_meta)
         if contam_info:
             print contam_info
     except (IOError, RuntimeError) as e:
