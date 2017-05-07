@@ -861,7 +861,7 @@ class Workflow:
             with open(dst_fullpath, 'wb') as fdst:
                 fdst.write(content)
         else:
-            shutil.copy2(src_fullpath, dst_fullpath)
+            shutil.copy(src_fullpath, dst_fullpath)
 
     def delete_files(self, filenames):
         for f in filenames:
