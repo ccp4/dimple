@@ -861,7 +861,10 @@ class Workflow:
             with open(dst_fullpath, 'wb') as fdst:
                 fdst.write(content)
         else:
-            shutil.copy(src_fullpath, dst_fullpath)
+            try:
+                shutil.copyfile(src_fullpath, dst_fullpath)
+            except shutil.Error:  # == SameFileError in Python 3.4+
+                pass
 
     def delete_files(self, filenames):
         for f in filenames:
