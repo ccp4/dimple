@@ -786,13 +786,13 @@ def main(args):
 
     options = parse_dimple_commands(args)
     check_ccp4_envvars()
-
-    wf = workflow.Workflow(options.output_dir, from_job=options.from_step)
-    utils.start_log(os.path.join(options.output_dir, "dimple.log"),
-                    output_dir=options.output_dir)
-    utils.log_value("version", __version__)
-    utils.start_log_screen(os.path.join(options.output_dir, "screen.log"))
     try:
+        wf = workflow.Workflow(options.output_dir, from_job=options.from_step)
+        utils.start_log(os.path.join(options.output_dir, "dimple.log"),
+                        output_dir=options.output_dir)
+        utils.log_value("version", __version__)
+        utils.start_log_screen(os.path.join(options.output_dir, "screen.log"))
+
         dimple(wf=wf, opt=options)
         check_contaminants_if_bad(wf, mtz=options.mtz)
         exit_status = 0
@@ -803,7 +803,7 @@ def main(args):
         except KeyboardInterrupt:
             comment("\nok, exiting...")
         exit_status = 1
-    except RuntimeError as e:
+    except (RuntimeError, IOError, OSError) as e:
         put_error(e)
         exit_status = 1
     finally:
@@ -811,7 +811,11 @@ def main(args):
     if options.cleanup:
         wf.delete_files(wf.temporary_files)
     wf.options = options
-    wf.dump_pickle()
+    try:
+        wf.dump_pickle()
+    except IOError as e:
+        put_error(e)
+        exit_status = 1
     return exit_status
 
 if __name__ == "__main__":
