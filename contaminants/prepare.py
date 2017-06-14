@@ -42,7 +42,7 @@ CACHE_DIR = 'cached'
 # ContaBase has homologs of these
 NOT_IN_CONTABASE = ['POLG_HRV2', 'THRB_HUMAN', 'FA10_BOVIN']
 
-def cached_urlopen(url, cache_name=None):
+def cached_urlopen(url, cache_name):
     assert os.path.dirname(__file__) == '.', "Run it from script's directory"
     if not cache_name:
         cache_name = hashlib.sha1('abc').hexdigest()[:12]
@@ -181,11 +181,12 @@ def uniprot_names_to_acs(names):
                  '?query=%s&columns=id,entry%%20name&format=tab')
     acs = OrderedDict()
     for name in names:
-        response = cached_urlopen(query_url % name, 'up-%s-ie.tab' % name)
+        query = query_url % name
+        response = cached_urlopen(query, 'up-%s-ie.tab' % name)
         lines = response.readlines()
         assert len(lines) >= 2, 'up-%s-ie.tab' % name
         ac, entry_name = lines[1].strip().split('\t')
-        assert entry_name == name
+        assert entry_name == name, '%s\n%s != %s' % (query, entry_name, name)
         acs[ac] = name
     return acs
 
