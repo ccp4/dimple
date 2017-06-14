@@ -31,7 +31,7 @@ import dimple.cell
 WIKI_URL = ('https://raw.githubusercontent.com/wiki/'
             'ccp4/dimple/Crystallization-Contaminants.md')
 
-CONTAMINER_XML = 'https://strube.cbrc.kaust.edu.sa/static/contabase.xml'
+CONTAMINER_JSON = 'https://strube.cbrc.kaust.edu.sa/contaminer/contabase.json'
 
 CLUSTER_CUTOFF = 0.04
 
@@ -82,14 +82,12 @@ def parse_wiki_page(page):
     return data
 
 def fetch_contaminer_protein_acs():
-    response = cached_urlopen(CONTAMINER_XML, -1)
-    root = ET.parse(response).getroot()
-    all_acs = []
-    for contaminant in root:
-        assert contaminant.tag == 'contaminant'
-        acs = [t.text for t in contaminant.findall('uniprot_id')]
-        assert len(acs) == 1
-        all_acs += acs
+    response = cached_urlopen(CONTAMINER_JSON, -1)
+    data = json.load(response)
+    all_acs = {}
+    for category in data['categories']:
+        for c in category['contaminants']:
+            all_acs[c['uniprot_id']] = c['short_name'] + ' ' + c['long_name']
     return all_acs
 
 def fetch_pdb_info_from_ebi(pdb_id):
@@ -410,11 +408,10 @@ def main():
                                                    a.pdb_id, b.pdb_id)
     contaminer_acs = fetch_contaminer_protein_acs()
     for ac in contaminer_acs:
-        if not any(ac in uclast for uclast in uniref_clusters.values()):
-            print 'ContaBase item not included the output: %s' % ac
-    contaminer_acs = set(contaminer_acs)
-    for uniref_name, uclast in uniref_clusters.iteritems():
-        if len(set(uclast).intersection(contaminer_acs)) == 0:
+        if not any(ac in uclust for uclust in uniref_clusters.values()):
+            print 'Only in ContaBase: %s %s' % (ac, contaminer_acs[ac])
+    for uniref_name, uclust in uniref_clusters.iteritems():
+        if len(set(uclust).intersection(contaminer_acs.viewkeys())) == 0:
             src = uniref_sources[uniref_name]
             if src not in NOT_IN_CONTABASE: # these are not news
                 print 'Not in ContaBase:', src
