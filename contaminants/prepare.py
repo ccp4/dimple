@@ -107,15 +107,10 @@ def fetch_pdb_info_from_ebi(pdb_id):
     assert len(summary) == 1
     summary = summary[0]
     exper_method = summary['experimental_method']
-    if exper_method != ['X-ray diffraction']:
-        if len(exper_method) != 1:
-            print 'Hmmm: multiple methods %s in %s' % (exper_method, pdb_id)
-        if exper_method[0] not in ('X-ray powder diffraction',
-                                   'Solution NMR',
-                                   'Electron Microscopy',
-                                   'Electron crystallography',
-                                   'Neutron Diffraction'):
-            print 'WARNING: got %s in %s' % (exper_method, pdb_id)
+    single_crystal_methods = ['X-ray diffraction', 'Neutron Diffraction']
+    #other_method = ['X-ray powder diffraction', 'Solution NMR',
+    #                'Electron Microscopy', 'Electron crystallography']
+    if not any(m in single_crystal_methods for m in exper_method):
         return None
     forms = set(a['form'] for a in summary['assemblies'])
     assert forms.issubset({'homo', 'hetero'}) # some are both (2EKS)
@@ -128,12 +123,15 @@ def fetch_pdb_info_from_ebi(pdb_id):
     # now http://www.ebi.ac.uk/pdbe/api/pdb/entry/experiment/:pdbid
     response = cached_urlopen(entry_url + 'experiment/' + pdb_id,
                               'ebi-exper-%s.json' % pdb_id)
-    summary = json.load(response)[pdb_id]
-    assert isinstance(summary, list)
-    assert len(summary) == 1
-    summary = summary[0]
-    parameters = [summary['cell'][x] for x in 'a b c alpha beta gamma'.split()]
+    summaries = json.load(response)[pdb_id]
+    assert isinstance(summaries, list)
+    summary = summaries[0]
+    par_names = ['a', 'b', 'c', 'alpha', 'beta', 'gamma']
+    parameters = [summary['cell'][x] for x in par_names]
     sg = summary['spacegroup']
+    for alt_sum in summaries[1:]:
+        assert [alt_sum['cell'][x] for x in par_names] == parameters
+        assert alt_sum['spacegroup'] == sg
     if sg == 'A 1': # pesky 1LKS
         return None
     # Correct spacegroup, but in non-standard settings.
