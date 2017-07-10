@@ -10,9 +10,8 @@ class Cell(object):
             assert len(parameters) == 6, parameters
             self.a, self.b, self.c = parameters[:3]
             self.alpha, self.beta, self.gamma = parameters[3:]
-        if symmetry:
-            if ' ' not in symmetry:
-                symmetry = add_spaces_to_hm(symmetry)
+        if symmetry in _short_spg_names:
+            symmetry = _short_spg_names[symmetry]
         self.symmetry = symmetry  # international SG symbol w/ spaces
 
     def get_volume(self):
@@ -235,34 +234,46 @@ _pg_symop = {'1': 1,
              '432': 24,
             }
 
-# This list was generated with cctbx:
-#  from cctbx import sgtbx
-#  for s in sgtbx.space_group_symbol_iterator():
-#    if sgtbx.space_group(s).is_chiral(): print '"%s",' % s.hermann_mauguin()
-_hm_symbols = [
-"P 1", "P 1 2 1", "P 1 1 2", "P 2 1 1", "P 1 21 1", "P 1 1 21", "P 21 1 1",
-"C 1 2 1", "A 1 2 1", "I 1 2 1", "A 1 1 2", "B 1 1 2", "I 1 1 2", "B 2 1 1",
-"C 2 1 1", "I 2 1 1", "P 2 2 2", "P 2 2 21", "P 21 2 2", "P 2 21 2",
-"P 21 21 2", "P 2 21 21", "P 21 2 21", "P 21 21 21", "C 2 2 21", "A 21 2 2",
-"B 2 21 2", "C 2 2 2", "A 2 2 2", "B 2 2 2", "F 2 2 2", "I 2 2 2",
-"I 21 21 21", "P 4", "P 41", "P 42", "P 43", "I 4", "I 41", "P 4 2 2",
-"P 4 21 2", "P 41 2 2", "P 41 21 2", "P 42 2 2", "P 42 21 2", "P 43 2 2",
-"P 43 21 2", "I 4 2 2", "I 41 2 2", "P 3", "P 31", "P 32", "R 3",
-"R 3", "P 3 1 2", "P 3 2 1", "P 31 1 2", "P 31 2 1", "P 32 1 2", "P 32 2 1",
-"R 3 2", "R 3 2", "P 6", "P 61", "P 65", "P 62", "P 64", "P 63", "P 6 2 2",
-"P 61 2 2", "P 65 2 2", "P 62 2 2", "P 64 2 2", "P 63 2 2", "P 2 3", "F 2 3",
-"I 2 3", "P 21 3", "I 21 3", "P 4 3 2", "P 42 3 2", "F 4 3 2", "F 41 3 2",
-"I 4 3 2", "P 43 3 2", "P 41 3 2", "I 41 3 2"
-]
 
-def add_spaces_to_hm(symbol):
-    for hm in _hm_symbols:
-        if hm.replace(' ', '') == symbol:
-            return hm
-    return symbol
+# the list of space group names extracted from symop.lib with this script:
+#
+# import shlex
+# from cctbx import sgtbx
+# for line in open('symop.lib'):
+#     if line and not line[0].isspace():
+#         fields = line.partition('!')[0].split(None, 6)
+#         spacegroups = shlex.split(fields[-1])
+#         sgs = sgtbx.space_group_symbols(int(fields[0]) % 1000)
+#         sg = sgtbx.space_group(sgs.hall())
+#         if sg.is_chiral():
+#             print '"%s": "%s",' % (fields[3], spacegroups[0])
+_short_spg_names = {
+"P1": "P 1", "P2": "P 1 2 1", "P21": "P 1 21 1", "C2": "C 1 2 1",
+"P222": "P 2 2 2", "P2221": "P 2 2 21", "P21212": "P 21 21 2",
+"P212121": "P 21 21 21", "C2221": "C 2 2 21", "C222": "C 2 2 2",
+"F222": "F 2 2 2", "I222": "I 2 2 2", "I212121": "I 21 21 21",
+"P4": "P 4", "P41": "P 41", "P42": "P 42", "P43": "P 43", "I4": "I 4",
+"I41": "I 41", "P422": "P 4 2 2", "P4212": "P 4 21 2", "P4122": "P 41 2 2",
+"P41212": "P 41 21 2", "P4222": "P 42 2 2", "P42212": "P 42 21 2",
+"P4322": "P 43 2 2", "P43212": "P 43 21 2", "I422": "I 4 2 2",
+"I4122": "I 41 2 2", "P3": "P 3", "P31": "P 31", "P32": "P 32", "H3": "H 3",
+"R3": "R 3", "P312": "P 3 1 2", "P321": "P 3 2 1", "P3112": "P 31 1 2",
+"P3121": "P 31 2 1", "P3212": "P 32 1 2", "P3221": "P 32 2 1", "H32": "H 3 2",
+"R32": "R 3 2", "P6": "P 6", "P61": "P 61", "P65": "P 65", "P62": "P 62",
+"P64": "P 64", "P63": "P 63", "P622": "P 6 2 2", "P6122": "P 61 2 2",
+"P6522": "P 65 2 2", "P6222": "P 62 2 2", "P6422": "P 64 2 2",
+"P6322": "P 63 2 2", "P23": "P 2 3", "F23": "F 2 3", "I23": "I 2 3",
+"P213": "P 21 3", "I213": "I 21 3", "P432": "P 4 3 2", "P4232": "P 42 3 2",
+"F432": "F 4 3 2", "F4132": "F 41 3 2", "I432": "I 4 3 2", "P4332": "P 43 3 2",
+"P4132": "P 41 3 2", "I4132": "I 41 3 2", "P112": "P 1 1 2",
+"P1121": "P 1 1 21", "B2": "B 1 1 2", "A2": "A 1 2 1", "C21": "C 1 21 1",
+"I2": "I 1 2 1", "I21": "I 1 21 1", "P2122": "P 21 2 2", "P2212": "P 2 21 2",
+"P21212a": "P 21 21 2 (a)", "P21221": "P 21 2 21", "P22121": "P 2 21 21",
+"C2221a": "C 2 2 21a)", "C222a": "C 2 2 2a", "F222a": "F 2 2 2a",
+"I222a": "I 2 2 2a", "P42212a": "P 42 21 2a", "I23a": "I 2 3a",
+}
 
 def calculate_z_order(hm):
     pg = ''.join(a[0] for a in hm.split()[1:])
     return _centering_n[hm[0]] * _pg_symop[pg]
-
 
