@@ -661,7 +661,8 @@ def parse_dimple_commands(args):
     for n, a in enumerate(opt.pdbs):
         if is_pdb_id(a):
             opt.pdbs[n] = download_pdb(a, opt.output_dir)
-        elif not (a.lower().endswith('.pdb') or a.lower().endswith('.pdb.gz')):
+        elif not any(a.lower().endswith(ext) for ext in ['.pdb', '.pdb.gz',
+                                                         '.ent', '.ent.gz']):
             put_error("unexpected arg (neither mtz nor pdb): %s" % a)
             sys.exit(1)
     if len(opt.pdbs) == 0:
