@@ -4,7 +4,7 @@ import sys
 from dimple.utils import put_error, comment, silently_run
 from dimple.cell import Cell, match_symmetry
 
-DEFAULT_FREE_COLS = ['FreeR_flag', 'FREE', 'RFREE']
+DEFAULT_FREE_COLS = ['FreeR_flag', 'FREE', 'RFREE', 'FREER']
 
 class MtzMeta(Cell):
     d_eps = 0.00051 # dmax precision (so low b/c it is read from mtzdump)
