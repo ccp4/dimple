@@ -43,7 +43,6 @@ CACHE_DIR = 'cached'
 NOT_IN_CONTABASE = ['POLG_HRV2', 'THRB_HUMAN', 'FA10_BOVIN']
 
 def cached_urlopen(url, cache_name):
-    assert os.path.dirname(__file__) == '.', "Run it from script's directory"
     if not cache_name:
         cache_name = hashlib.sha1('abc').hexdigest()[:12]
     elif cache_name == -1:
@@ -186,7 +185,7 @@ def uniprot_names_to_acs(names):
         acs[ac] = name
     return acs
 
-def fetch_uniref_clusters(acs):
+def fetch_uniref_clusters(acs, verbose=False):
     query_url = ('http://www.uniprot.org/uniref/'
                  '?query=%s&fil=identity:1.0&format=tab')
     clusters = OrderedDict()
@@ -322,7 +321,7 @@ def write_json_file(uniprot_acs, extra_info, representants):
     with open(OUTPUT_JSON_FILE, 'w') as out:
         json.dump(data, out, indent=1, separators=(',', ': '))
 
-def main():
+def main(verbose=False):
     page = cached_urlopen(WIKI_URL, -1).readlines()
     parsed_page = parse_wiki_page(page) # { UniProt name: [some PDB IDs] }
     uniprot_acs = uniprot_names_to_acs(parsed_page) # { AC: UniProt name }
@@ -350,7 +349,7 @@ def main():
         if len(acs) == 1: # don't care about heteromers
             ac2pdb.setdefault(acs[0], []).append(p)
 
-    uniref_clusters = fetch_uniref_clusters(uniprot_acs)
+    uniref_clusters = fetch_uniref_clusters(uniprot_acs, verbose)
 
     # mapping back uniref id to uniprot name that was used an input
     uniref_sources = {}
@@ -416,4 +415,4 @@ def main():
 
 if __name__ == '__main__':
     verbose = ('-v' in sys.argv[1:])
-    main()
+    main(verbose)
