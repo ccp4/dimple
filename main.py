@@ -32,7 +32,7 @@ from dimple import workflow
 from dimple import coots
 from dimple import contaminants
 
-__version__ = '2.5.6'
+__version__ = '2.5.7'
 
 PROG = 'dimple'
 USAGE_SHORT = '%s [options...] input.mtz input.pdb output_dir' % PROG
@@ -306,13 +306,15 @@ def dimple(wf, opt):
                    labin=refmac_labin, libin=opt.libin,
                    keys=restr_ref_keys+"ridge distance sigma 0.01\n"
                                        "make hydrogen no\n"
-                                       "ncycle %d" % opt.jelly).run()
+                                       "ncycle %d" % opt.jelly
+                                      +opt.extra_ref_keys).run()
         comment(_refmac_rms_line(wf.jobs[-1].data))
         refmac_xyzin = "jelly.pdb"
     restr_job = wf.refmac5(hklin=prepared_mtz, xyzin=refmac_xyzin,
                  hklout=opt.hklout, xyzout=opt.xyzout,
                  labin=refmac_labin, libin=opt.libin,
-                 keys=restr_ref_keys+("ncycle %d" % opt.restr_cycles)).run()
+                 keys=restr_ref_keys+("ncycle %d" % opt.restr_cycles)
+                                    +opt.extra_ref_keys).run()
     comment(_refmac_rms_line(restr_job.data))
     # if that run is repeated with --from-step it's useful to compare Rfree
     if wf.from_job > 0 and wf.from_job <= len(wf.jobs): # from_job is 1-based
@@ -544,6 +546,8 @@ def parse_dimple_commands(args):
                         help='SIGF column label'+dstr)
     group2.add_argument('--libin', metavar='CIF',
                         help='ligand descriptions for refmac (LIBIN)')
+    group2.add_argument('--refmac-key', metavar='LINE', action='append',
+                        help='extra Refmac keywords to be used in refinement')
     group2.add_argument('-R', '--free-r-flags', metavar='MTZ_FILE',
                         help='file with freeR flags '
                              '("-" = use flags from data mtz)')
@@ -684,6 +688,7 @@ def parse_dimple_commands(args):
             put_error("--freecolumn suggests that you want to use existing free"
                       " flags.\nFor this you need also option --free-r-flags")
             sys.exit(1)
+    opt.extra_ref_keys = "".join("\n"+key for key in opt.refmac_key or [])
 
     # extra checks
     for filename in opt.pdbs + [opt.mtz, opt.free_r_flags, opt.libin]:
