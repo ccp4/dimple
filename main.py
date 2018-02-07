@@ -129,11 +129,9 @@ def dimple(wf, opt):
     opt.sigfcolumn = opt.sigfcolumn.replace('<FCOL>', opt.fcolumn)
     if (opt.ItoF_prog or opt.icolumn or opt.fcolumn not in mtz_meta.columns
                                   or opt.sigfcolumn not in mtz_meta.columns):
-        mtz_meta.check_col_type(opt.icolumn or 'IMEAN', 'J')
-        mtz_meta.check_col_type(opt.sigicolumn, 'Q')
         f_mtz = "amplit.mtz"
         wf.temporary_files.add(f_mtz)
-        i_sigi_cols = (opt.icolumn or 'IMEAN', opt.sigicolumn)
+        i_sigi_cols = _find_i_sigi_columns(mtz_meta, opt)
         if opt.ItoF_prog == 'ctruncate' or (opt.ItoF_prog is None and opt.slow):
             wf.ctruncate(hklin=reindexed_mtz, hklout=f_mtz,
                          colin="/*/*/[%s,%s]" % i_sigi_cols).run()
@@ -335,8 +333,30 @@ def dimple(wf, opt):
         _generate_scripts_and_pictures(wf, opt, None)
 
 
+def _find_i_sigi_columns(mtz_meta, opt):
+    if opt.icolumn:
+        icolumn = opt.icolumn
+        mtz_meta.check_col_type(icolumn, 'J')
+    else:
+        j_columns = [k for k, v in mtz_meta.columns.items() if v == 'J']
+        if len(j_columns) == 1:
+            icolumn = j_columns[0]
+        elif 'IMEAN' in j_columns:
+            icolumn = 'IMEAN'
+        elif len(j_columns) > 1:
+            put_error('Multiple intensity columns: %s. '
+                      'Pick one with  --icolumn' % j_columns)
+        else:
+            put_error('No intensity (IMEAN) column in the MTZ file')
+
+    # the default value of sigicolumn ('SIG<ICOL>') needs substitution
+    sigicolumn = opt.sigicolumn.replace('<ICOL>', icolumn)
+    mtz_meta.check_col_type(sigicolumn, 'Q')
+    return (icolumn, sigicolumn)
+
 def _refmac_rms_line(data):
-    rb, ra, rc = [data.get(k, (-1,)) for k in 'rmsBOND', 'rmsANGL', 'rmsCHIRAL']
+    rb, ra, rc = [data.get(k, (-1,))
+                  for k in ('rmsBOND', 'rmsANGL', 'rmsCHIRAL')]
     return ('\n    RMS:   bond %.3f -> %.3f' % (rb[0], rb[-1]) +
             '   angle %.2f -> %.2f' % (ra[0], ra[-1]) +
             '   chiral %.2f -> %.2f' % (rc[0], rc[-1]))
@@ -441,7 +461,7 @@ def _write_script(path, content, executable=False):
             f.write(content)
         if executable:  # chmod +x
             mode = os.stat(path).st_mode
-            os.chmod(path, mode | ((mode & 0444) >> 2))
+            os.chmod(path, mode | ((mode & 0o444) >> 2))
     except (IOError, OSError) as e:
         put_error(e)
 
@@ -706,9 +726,6 @@ def parse_dimple_commands(args):
         opt.free_r_flags = utils.adjust_path(opt.free_r_flags, opt.output_dir)
     if opt.libin:
         opt.libin = utils.adjust_path(opt.libin, opt.output_dir)
-
-    # the default value of sigicolumn ('SIG<ICOL>') needs substitution
-    opt.sigicolumn = opt.sigicolumn.replace('<ICOL>', opt.icolumn or 'IMEAN')
 
     # set defaults that depend on the 'slow' level
     if opt.slow is None:
