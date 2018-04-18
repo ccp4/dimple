@@ -13,25 +13,23 @@ def find_path():
                      utils.cbin("coot.bat")]:      # CCP4 script added in 2018
             if os.path.exists(path):
                 return path
-        utils.put_error("WinCoot not found.")
+        utils.comment("\nNote: WinCoot not found.\n")
     else:
         return utils.syspath("coot")
 
-# returns tuple: coot path and version string
-def find_path_and_version():
-    coot_path = find_path()
+# returns version string
+def find_version(coot_path):
     if not coot_path:
-        return None, None
+        return None
     # On Windows reading output from runwincoot.bat is not reliable.
     # "C:/Windows/bin/coot-real.exe --version" used to work, but in 8.1
     # exe was moved to libexec/coot-bin.exe and DLLs are in different dir
     if os.name == 'nt':
-        return coot_path, 'WinCoot, with python'
+        return 'WinCoot, with python'
     try:
-        version_str = subprocess.check_output([coot_path, "--version"])
+        return subprocess.check_output([coot_path, "--version"])
     except (subprocess.CalledProcessError, OSError):
-        version_str = None
-    return coot_path, version_str
+        return None
 
 def basic_script(pdb, mtz, center, toward):
     same_dir = (os.path.dirname(pdb) == '' and os.path.dirname(mtz) == '')

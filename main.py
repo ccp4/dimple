@@ -32,7 +32,7 @@ from dimple import workflow
 from dimple import coots
 from dimple import contaminants
 
-__version__ = '2.5.7'
+__version__ = '2.5.8'
 
 PROG = 'dimple'
 USAGE_SHORT = '%s [options...] input.mtz input.pdb output_dir' % PROG
@@ -433,28 +433,6 @@ def guess_number_of_molecules(mtz_meta, rw_data, vol_ratio):
     return n
 
 
-def _check_picture_tools():
-    ok = True
-    coot_path, coot_ver = coots.find_path_and_version()
-    if coot_path:
-        if coot_ver is None:
-            put_error("coot not working(?), no pictures")
-            ok = False
-        else:
-            if "with python" not in coot_ver:
-                put_error("coot with Python support is needed")
-                ok = False
-            if "\n0.6." in coot_ver:
-                put_error("coot 0.7+ is needed (0.6 would crash)")
-                ok = False
-    else:
-        put_error("No coot, no pictures")
-        ok = False
-    if not utils.syspath("render"):
-        put_error("No Raster3d, no pictures")
-        ok = False
-    return ok
-
 def _write_script(path, content, executable=False):
     try:
         with open(path, 'w') as f:
@@ -467,15 +445,31 @@ def _write_script(path, content, executable=False):
 
 def _generate_scripts_and_pictures(wf, opt, data):
     blobs = data["blobs"] if data else []
+    coot_path = coots.find_path()
     if not blobs:
         comment("\nUnmodelled blobs not found.")
-    elif opt.img_format and _check_picture_tools():
-        if len(blobs) == 1:
-            comment("\nRendering density blob at (%.1f, %.1f, %.1f)" %
-                    blobs[0])
+    elif opt.img_format:
+        if coot_path:
+            coot_ver = coots.find_version(coot_path)
+            if coot_ver is None:
+                put_error("coot not working(?), no pictures")
+                opt.img_format = None
+            elif "with python" not in coot_ver:
+                put_error("coot with Python support is needed")
+                opt.img_format = None
         else:
-            comment("\nRendering 2 largest blobs: at (%.1f, %.1f, %.1f) "
-                    "and at (%.1f, %.1f, %.1f)" % (blobs[0]+blobs[1]))
+            put_error("No coot, no pictures")
+            opt.img_format = None
+        if not utils.syspath("render"):
+            put_error("No Raster3d, no pictures")
+            opt.img_format = None
+        if opt.img_format:
+            if len(blobs) == 1:
+                comment("\nRendering density blob at (%.1f, %.1f, %.1f)" %
+                        blobs[0])
+            else:
+                comment("\nRendering 2 largest blobs: at (%.1f, %.1f, %.1f) "
+                        "and at (%.1f, %.1f, %.1f)" % (blobs[0]+blobs[1]))
     com = data and data["center"]
 
     # run-coot.py centers on the biggest blob. It uses relative paths -
@@ -502,7 +496,7 @@ def _generate_scripts_and_pictures(wf, opt, data):
     else:
         coot_sh_text = '{coot} --no-guano {out}/final.mtz {out}/final.pdb\n'
     coot_sh_path = os.path.join(wf.output_dir, "coot.sh")
-    _write_script(coot_sh_path, coot_sh_text.format(coot=coots.find_path(),
+    _write_script(coot_sh_path, coot_sh_text.format(coot=coot_path or 'coot',
                                                     out=wf.output_dir),
                   executable=True)
 
