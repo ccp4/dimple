@@ -577,7 +577,7 @@ def parse_dimple_commands(args):
                         help='output mtz file'+dstr)
     group2.add_argument('--xyzout', metavar='out.pdb', default='final.pdb',
                         help='output pdb file'+dstr)
-    group2.add_argument('-f', choices=['png', 'jpeg', 'tiff', 'none'],
+    group2.add_argument('-f', choices=['png', 'jpeg', 'none'],
                         dest='img_format',
                         help='format of generated images'+dstr)
     group2.add_argument('--no-cleanup', dest='cleanup', action='store_false',
