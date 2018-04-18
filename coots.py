@@ -8,11 +8,10 @@ M_SQRT1_2 = 0.5**0.5
 
 def find_path():
     if os.name == 'nt':
-        default_path = "C:/WinCoot/runwincoot.bat"
-        if os.path.exists(default_path):
-            return default_path
-        else:
-            utils.put_error("WinCoot not found.")
+        for path in ["C:/WinCoot/runwincoot.bat", utils.cbin("coot.bat")]:
+            if os.path.exists(path):
+                return path
+        utils.put_error("WinCoot not found.")
     else:
         return utils.syspath("coot")
 
