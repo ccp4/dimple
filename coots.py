@@ -8,7 +8,9 @@ M_SQRT1_2 = 0.5**0.5
 
 def find_path():
     if os.name == 'nt':
-        for path in ["C:/WinCoot/runwincoot.bat", utils.cbin("coot.bat")]:
+        for path in ["C:/WinCoot/wincoot.bat",     # since WinCoot 0.8.8
+                     "C:/WinCoot/runwincoot.bat",  # WinCoot prior to 0.8.8
+                     utils.cbin("coot.bat")]:      # CCP4 script added in 2018
             if os.path.exists(path):
                 return path
         utils.put_error("WinCoot not found.")
