@@ -326,7 +326,7 @@ def _refmac_parser(job):
 # in pointless 1.10.22 Phil added numbers in the first column
 # 1              [h,k,l]              0.499   ...
 _POINTLESS_ALTREINDEX_RE = re.compile(r"^\s*\d*\s+(\[[hkl+, -]+\]"
-                                      r"[ \t0-9+.eE-]+)$")
+                                      r"[ \t\r0-9+.eE-]+)$")
 
 _PREVIEW_DISCARD_RE = re.compile(r'[^\w!"#$%&\'()*+,./:;<=>?@[\\]^_`{|}~ -]')
 
