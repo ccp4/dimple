@@ -11,7 +11,6 @@ import json
 import math
 import os
 import re
-#import ssl
 import sys
 import urllib2
 from collections import OrderedDict
@@ -53,8 +52,6 @@ def cached_urlopen(url, cache_name):
         if not os.path.isdir(CACHE_DIR):
             os.mkdir(CACHE_DIR)
         print '--> %s' % path
-        #context = ssl._create_unverified_context()
-        #response = urllib2.urlopen(url, context=context)
         response = urllib2.urlopen(url)
         with open(path, 'wb') as f:
             f.write(response.read())
