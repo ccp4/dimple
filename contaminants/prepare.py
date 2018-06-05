@@ -180,9 +180,10 @@ def uniprot_names_to_acs(names):
         response = cached_urlopen(query, 'up-%s-ie.tab' % name)
         lines = response.readlines()
         assert len(lines) >= 2, 'up-%s-ie.tab' % name
-        ac, entry_name = lines[1].strip().split('\t')
-        assert entry_name == name, '%s\n%s != %s' % (query, entry_name, name)
-        acs[ac] = name
+        for line in lines:
+            ac, entry_name = line.strip().split('\t')
+            if entry_name == name: 
+                acs[ac] = name
     return acs
 
 def fetch_uniref_clusters(acs, verbose=False):
