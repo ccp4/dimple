@@ -24,6 +24,7 @@ if SCIPY_CLUSTERING:
     import scipy.spatial
 
 if __name__ == '__main__' and __package__ is None:
+    assert os.path.basename(os.getcwd()) == 'contaminants'
     sys.path.insert(1,
           os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 import dimple.cell
