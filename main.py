@@ -479,7 +479,8 @@ def _generate_scripts_and_pictures(wf, opt, data):
     # write coot script (apart from pictures) that centers on the biggest blob
     script_path = os.path.join(wf.output_dir, "run-coot.py")
     script = coots.basic_script(pdb=opt.xyzout, mtz=opt.hklout,
-                               center=(blobs and blobs[0]), toward=com)
+                                center=(blobs and blobs[0]), toward=com,
+                                white_bg=opt.white_bg)
     _write_script(script_path, script, executable=True)
 
     # blob images, for now for not more than two blobs
@@ -488,7 +489,8 @@ def _generate_scripts_and_pictures(wf, opt, data):
         py_path = os.path.join(wf.output_dir, "blob%d-coot.py" % (n+1))
         content = coots.basic_script(pdb=os.path.join(d, opt.xyzout),
                                      mtz=os.path.join(d, opt.hklout),
-                                     center=blobs[n], toward=com)
+                                     center=blobs[n], toward=com,
+                                     white_bg=opt.white_bg)
         _write_script(py_path, content)
     # coot.sh - one-line script for convenience
     if blobs:
@@ -506,8 +508,10 @@ def _generate_scripts_and_pictures(wf, opt, data):
         # as a workaround for buggy coot the maps are reloaded for each blob
         for n, b in enumerate(blobs[:2]):
             script += coots.basic_script(pdb=opt.xyzout, mtz=opt.hklout,
-                                         center=b, toward=com)
-            rs, names = coots.r3d_script(b, com, blobname="blob%s"%(n+1))
+                                         center=b, toward=com,
+                                         white_bg=opt.white_bg)
+            rs, names = coots.r3d_script(center=b, toward=com,
+                                         blobname="blob%s" % (n+1))
             script += rs
             basenames += names
         coot_job = wf.coot_py(script)
@@ -574,6 +578,8 @@ def parse_dimple_commands(args):
     group2.add_argument('-f', choices=['png', 'jpeg', 'none'],
                         dest='img_format',
                         help='format of generated images'+dstr)
+    group2.add_argument('--white-bg', dest='white_bg', action='store_true',
+                        help='white background in Coot and in images')
     group2.add_argument('--no-cleanup', dest='cleanup', action='store_false',
                         help='leave intermediate files')
     group2.add_argument('--cleanup', action='store_true',
