@@ -188,6 +188,43 @@ If you do not want to use git, download
 [master.zip](https://github.com/ccp4/dimple/archive/master.zip),
 unpack it, rename `dimple-master` to `dimple` and run `./dimple/dimple`.
 
+## Diagnostic ##
+
+_(primarily for developers)_  
+Dimple runs a number of CCP4 programs. We will refer here to calling
+an external program as one _step_ of the pipeline.
+The command:
+
+    $ dimple info output-dir
+
+lists all the steps. `output-dir` is a directory used in one of the previous
+runs. Adding a step number to the `info` command shows details, for example:
+
+    $ dimple info out 2
+    <Job pointless 2018-09-07 13:44>
+    pointless HKLIN ../thaumatin.mtz HKLOUT pointless.mtz XYZIN ini.pdb << EOF
+    TOLERANCE 5
+    end
+    EOF
+    Total time: 3.0s
+    Output summary: resol. 1.43 A   #refl: 43611
+    stdout: -> 02-pointless.log
+
+This allows you to re-run a selected step without Dimple.
+But if you would rather use dimple to re-run it, type:
+
+    dimple repeat out [STEPS]
+
+where STEPS is one or more numbers or a range (examples: 1,2 4-6 8-).
+But to be able to re-run any step you need to first run Dimple with option
+`--no-cleanup`, so no intermediate files are removed.
+
+Alternatively, if you want to re-run everything from step N, you could run
+Dimple with option `--from-step N`.
+`dimple repeat` re-runs only external programs,
+while `dimple --from-step` runs all the internal logic,
+but skips running external programs until the specified step.
+
 ## Comments? ##
 
 Any comments and thoughts how to improve this tool are genuinely welcome.
