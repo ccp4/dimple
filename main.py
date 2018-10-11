@@ -32,7 +32,7 @@ from dimple import workflow
 from dimple import coots
 from dimple import contaminants
 
-__version__ = '2.5.6'
+__version__ = '2.5.9'
 
 PROG = 'dimple'
 USAGE_SHORT = '%s [options...] input.mtz input.pdb output_dir' % PROG
@@ -129,11 +129,9 @@ def dimple(wf, opt):
     opt.sigfcolumn = opt.sigfcolumn.replace('<FCOL>', opt.fcolumn)
     if (opt.ItoF_prog or opt.icolumn or opt.fcolumn not in mtz_meta.columns
                                   or opt.sigfcolumn not in mtz_meta.columns):
-        mtz_meta.check_col_type(opt.icolumn or 'IMEAN', 'J')
-        mtz_meta.check_col_type(opt.sigicolumn, 'Q')
         f_mtz = "amplit.mtz"
         wf.temporary_files.add(f_mtz)
-        i_sigi_cols = (opt.icolumn or 'IMEAN', opt.sigicolumn)
+        i_sigi_cols = _find_i_sigi_columns(mtz_meta, opt)
         if opt.ItoF_prog == 'ctruncate' or (opt.ItoF_prog is None and opt.slow):
             wf.ctruncate(hklin=reindexed_mtz, hklout=f_mtz,
                          colin="/*/*/[%s,%s]" % i_sigi_cols).run()
@@ -306,13 +304,15 @@ def dimple(wf, opt):
                    labin=refmac_labin, libin=opt.libin,
                    keys=restr_ref_keys+"ridge distance sigma 0.01\n"
                                        "make hydrogen no\n"
-                                       "ncycle %d" % opt.jelly).run()
+                                       "ncycle %d" % opt.jelly
+                                      +opt.extra_ref_keys).run()
         comment(_refmac_rms_line(wf.jobs[-1].data))
         refmac_xyzin = "jelly.pdb"
     restr_job = wf.refmac5(hklin=prepared_mtz, xyzin=refmac_xyzin,
                  hklout=opt.hklout, xyzout=opt.xyzout,
                  labin=refmac_labin, libin=opt.libin,
-                 keys=restr_ref_keys+("ncycle %d" % opt.restr_cycles)).run()
+                 keys=restr_ref_keys+("ncycle %d" % opt.restr_cycles)
+                                    +opt.extra_ref_keys).run()
     comment(_refmac_rms_line(restr_job.data))
     # if that run is repeated with --from-step it's useful to compare Rfree
     if wf.from_job > 0 and wf.from_job <= len(wf.jobs): # from_job is 1-based
@@ -333,8 +333,30 @@ def dimple(wf, opt):
         _generate_scripts_and_pictures(wf, opt, None)
 
 
+def _find_i_sigi_columns(mtz_meta, opt):
+    if opt.icolumn:
+        icolumn = opt.icolumn
+        mtz_meta.check_col_type(icolumn, 'J')
+    else:
+        j_columns = [k for k, v in mtz_meta.columns.items() if v == 'J']
+        if len(j_columns) == 1:
+            icolumn = j_columns[0]
+        elif 'IMEAN' in j_columns:
+            icolumn = 'IMEAN'
+        elif len(j_columns) > 1:
+            put_error('Multiple intensity columns: %s. '
+                      'Pick one with  --icolumn' % j_columns)
+        else:
+            put_error('No intensity (IMEAN) column in the MTZ file')
+
+    # the default value of sigicolumn ('SIG<ICOL>') needs substitution
+    sigicolumn = opt.sigicolumn.replace('<ICOL>', icolumn)
+    mtz_meta.check_col_type(sigicolumn, 'Q')
+    return (icolumn, sigicolumn)
+
 def _refmac_rms_line(data):
-    rb, ra, rc = [data.get(k, (-1,)) for k in 'rmsBOND', 'rmsANGL', 'rmsCHIRAL']
+    rb, ra, rc = [data.get(k, (-1,))
+                  for k in ('rmsBOND', 'rmsANGL', 'rmsCHIRAL')]
     return ('\n    RMS:   bond %.3f -> %.3f' % (rb[0], rb[-1]) +
             '   angle %.2f -> %.2f' % (ra[0], ra[-1]) +
             '   chiral %.2f -> %.2f' % (rc[0], rc[-1]))
@@ -411,49 +433,43 @@ def guess_number_of_molecules(mtz_meta, rw_data, vol_ratio):
     return n
 
 
-def _check_picture_tools():
-    ok = True
-    coot_path, coot_ver = coots.find_path_and_version()
-    if coot_path:
-        if coot_ver is None:
-            put_error("coot not working(?), no pictures")
-            ok = False
-        else:
-            if "with python" not in coot_ver:
-                put_error("coot with Python support is needed")
-                ok = False
-            if "\n0.6." in coot_ver:
-                put_error("coot 0.7+ is needed (0.6 would crash)")
-                ok = False
-    else:
-        put_error("No coot, no pictures")
-        ok = False
-    if not utils.syspath("render"):
-        put_error("No Raster3d, no pictures")
-        ok = False
-    return ok
-
 def _write_script(path, content, executable=False):
     try:
         with open(path, 'w') as f:
             f.write(content)
         if executable:  # chmod +x
             mode = os.stat(path).st_mode
-            os.chmod(path, mode | ((mode & 0444) >> 2))
+            os.chmod(path, mode | ((mode & 0o444) >> 2))
     except (IOError, OSError) as e:
         put_error(e)
 
 def _generate_scripts_and_pictures(wf, opt, data):
     blobs = data["blobs"] if data else []
+    coot_path = coots.find_path()
     if not blobs:
         comment("\nUnmodelled blobs not found.")
-    elif opt.img_format and _check_picture_tools():
-        if len(blobs) == 1:
-            comment("\nRendering density blob at (%.1f, %.1f, %.1f)" %
-                    blobs[0])
+    elif opt.img_format:
+        if coot_path:
+            coot_ver = coots.find_version(coot_path)
+            if coot_ver is None:
+                put_error("coot not working(?), no pictures")
+                opt.img_format = None
+            elif "with python" not in coot_ver:
+                put_error("coot with Python support is needed")
+                opt.img_format = None
         else:
-            comment("\nRendering 2 largest blobs: at (%.1f, %.1f, %.1f) "
-                    "and at (%.1f, %.1f, %.1f)" % (blobs[0]+blobs[1]))
+            put_error("No coot, no pictures")
+            opt.img_format = None
+        if not utils.syspath("render"):
+            put_error("No Raster3d, no pictures")
+            opt.img_format = None
+        if opt.img_format:
+            if len(blobs) == 1:
+                comment("\nRendering density blob at (%.1f, %.1f, %.1f)" %
+                        blobs[0])
+            else:
+                comment("\nRendering 2 largest blobs: at (%.1f, %.1f, %.1f) "
+                        "and at (%.1f, %.1f, %.1f)" % (blobs[0]+blobs[1]))
     com = data and data["center"]
 
     # run-coot.py centers on the biggest blob. It uses relative paths -
@@ -463,7 +479,8 @@ def _generate_scripts_and_pictures(wf, opt, data):
     # write coot script (apart from pictures) that centers on the biggest blob
     script_path = os.path.join(wf.output_dir, "run-coot.py")
     script = coots.basic_script(pdb=opt.xyzout, mtz=opt.hklout,
-                               center=(blobs and blobs[0]), toward=com)
+                                center=(blobs and blobs[0]), toward=com,
+                                white_bg=opt.white_bg)
     _write_script(script_path, script, executable=True)
 
     # blob images, for now for not more than two blobs
@@ -472,7 +489,8 @@ def _generate_scripts_and_pictures(wf, opt, data):
         py_path = os.path.join(wf.output_dir, "blob%d-coot.py" % (n+1))
         content = coots.basic_script(pdb=os.path.join(d, opt.xyzout),
                                      mtz=os.path.join(d, opt.hklout),
-                                     center=blobs[n], toward=com)
+                                     center=blobs[n], toward=com,
+                                     white_bg=opt.white_bg)
         _write_script(py_path, content)
     # coot.sh - one-line script for convenience
     if blobs:
@@ -480,7 +498,7 @@ def _generate_scripts_and_pictures(wf, opt, data):
     else:
         coot_sh_text = '{coot} --no-guano {out}/final.mtz {out}/final.pdb\n'
     coot_sh_path = os.path.join(wf.output_dir, "coot.sh")
-    _write_script(coot_sh_path, coot_sh_text.format(coot=coots.find_path(),
+    _write_script(coot_sh_path, coot_sh_text.format(coot=coot_path or 'coot',
                                                     out=wf.output_dir),
                   executable=True)
 
@@ -490,8 +508,10 @@ def _generate_scripts_and_pictures(wf, opt, data):
         # as a workaround for buggy coot the maps are reloaded for each blob
         for n, b in enumerate(blobs[:2]):
             script += coots.basic_script(pdb=opt.xyzout, mtz=opt.hklout,
-                                         center=b, toward=com)
-            rs, names = coots.r3d_script(b, com, blobname="blob%s"%(n+1))
+                                         center=b, toward=com,
+                                         white_bg=opt.white_bg)
+            rs, names = coots.r3d_script(center=b, toward=com,
+                                         blobname="blob%s" % (n+1))
             script += rs
             basenames += names
         coot_job = wf.coot_py(script)
@@ -544,6 +564,8 @@ def parse_dimple_commands(args):
                         help='SIGF column label'+dstr)
     group2.add_argument('--libin', metavar='CIF',
                         help='ligand descriptions for refmac (LIBIN)')
+    group2.add_argument('--refmac-key', metavar='LINE', action='append',
+                        help='extra Refmac keywords to be used in refinement')
     group2.add_argument('-R', '--free-r-flags', metavar='MTZ_FILE',
                         help='file with freeR flags '
                              '("-" = use flags from data mtz)')
@@ -553,9 +575,11 @@ def parse_dimple_commands(args):
                         help='output mtz file'+dstr)
     group2.add_argument('--xyzout', metavar='out.pdb', default='final.pdb',
                         help='output pdb file'+dstr)
-    group2.add_argument('-f', choices=['png', 'jpeg', 'tiff', 'none'],
+    group2.add_argument('-f', choices=['png', 'jpeg', 'none'],
                         dest='img_format',
                         help='format of generated images'+dstr)
+    group2.add_argument('--white-bg', dest='white_bg', action='store_true',
+                        help='white background in Coot and in images')
     group2.add_argument('--no-cleanup', dest='cleanup', action='store_false',
                         help='leave intermediate files')
     group2.add_argument('--cleanup', action='store_true',
@@ -684,6 +708,7 @@ def parse_dimple_commands(args):
             put_error("--freecolumn suggests that you want to use existing free"
                       " flags.\nFor this you need also option --free-r-flags")
             sys.exit(1)
+    opt.extra_ref_keys = "".join("\n"+key for key in opt.refmac_key or [])
 
     # extra checks
     for filename in opt.pdbs + [opt.mtz, opt.free_r_flags, opt.libin]:
@@ -701,9 +726,6 @@ def parse_dimple_commands(args):
         opt.free_r_flags = utils.adjust_path(opt.free_r_flags, opt.output_dir)
     if opt.libin:
         opt.libin = utils.adjust_path(opt.libin, opt.output_dir)
-
-    # the default value of sigicolumn ('SIG<ICOL>') needs substitution
-    opt.sigicolumn = opt.sigicolumn.replace('<ICOL>', opt.icolumn or 'IMEAN')
 
     # set defaults that depend on the 'slow' level
     if opt.slow is None:

@@ -83,7 +83,7 @@ def read_metadata(hklin):
 
 def check_freerflags_column(free_mtz, expected_symmetry, column):
     rfree_meta = read_metadata(free_mtz)
-    if not match_symmetry(rfree_meta, expected_symmetry):
+    if expected_symmetry and not match_symmetry(rfree_meta, expected_symmetry):
         comment("\nWARNING: R-free flag reference file is %s not %s." %
                 (rfree_meta.symmetry, expected_symmetry.symmetry))
     if column is not None:

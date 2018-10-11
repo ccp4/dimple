@@ -24,6 +24,7 @@ if SCIPY_CLUSTERING:
     import scipy.spatial
 
 if __name__ == '__main__' and __package__ is None:
+    assert os.path.basename(os.getcwd()) == 'contaminants'
     sys.path.insert(1,
           os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 import dimple.cell
@@ -186,10 +187,13 @@ def uniprot_names_to_acs(names):
         response = cached_urlopen(query, 'up-%s-ie.tab' % name)
         lines = response.readlines()
         assert len(lines) >= 2, 'up-%s-ie.tab' % name
-        for line in lines:
+        for line in lines[1:]:
             ac, entry_name = line.strip().split('\t')
-            if entry_name == name: 
+            if entry_name == name:
                 acs[ac] = name
+                break
+        else:
+            sys.exit(name + ' not in the results of:\n' + query)
     return acs
 
 
