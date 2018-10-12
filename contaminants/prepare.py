@@ -212,6 +212,9 @@ def fetch_uniref_clusters(acs, verbose=False):
             if key in clusters:
                 sys.exit('Duplicated cluster: ' + key)
             clusters[key] = members
+        if reader.line_num == 0:
+            print 'Not found in UniRef:', ac
+            clusters['_' + ac] = [ac]  # we still want to keep this AC
     return clusters
 
 def read_current_pdb_entries():
