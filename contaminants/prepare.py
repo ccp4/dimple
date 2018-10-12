@@ -43,6 +43,7 @@ CACHE_DIR = 'cached'
 # ContaBase has homologs of these
 NOT_IN_CONTABASE = ['POLG_HRV2', 'THRB_HUMAN', 'FA10_BOVIN']
 
+
 def cached_urlopen(url, cache_name):
     if not cache_name:
         cache_name = hashlib.sha1('abc').hexdigest()[:12]
@@ -57,6 +58,7 @@ def cached_urlopen(url, cache_name):
         with open(path, 'wb') as f:
             f.write(response.read())
     return open(path)
+
 
 def parse_wiki_page(page):
     pat = re.compile(r'`[A-Z0-9]+_[A-Z0-9]+`')
@@ -81,6 +83,7 @@ def parse_wiki_page(page):
         data[name] = (desc, pdb_ids)
     return data
 
+
 def fetch_contaminer_protein_acs():
     response = cached_urlopen(CONTAMINER_JSON, -1)
     data = json.load(response)
@@ -89,6 +92,7 @@ def fetch_contaminer_protein_acs():
         for c in category['contaminants']:
             all_acs[c['uniprot_id']] = c['short_name'] + ' ' + c['long_name']
     return all_acs
+
 
 def fetch_pdb_info_from_ebi(pdb_id):
     pdb_id = pdb_id.lower()
@@ -159,6 +163,7 @@ def fetch_pdb_info_from_ebi(pdb_id):
         cell.quality = -20
     return cell
 
+
 def dump_uniprot_tab(pdb_ids):
     query_url = ('http://www.uniprot.org/uniprot/'
                  '?query=database:(type:pdb%%20%s)&sort=score&format=tab')
@@ -171,6 +176,7 @@ def dump_uniprot_tab(pdb_ids):
         print pdb_id
         print text
         print
+
 
 def uniprot_names_to_acs(names):
     query_url = ('http://www.uniprot.org/uniprot/'
@@ -189,6 +195,7 @@ def uniprot_names_to_acs(names):
         else:
             sys.exit(name + ' not in the results of:\n' + query)
     return acs
+
 
 def fetch_uniref_clusters(acs, verbose=False):
     query_url = ('http://www.uniprot.org/uniref/'
@@ -217,6 +224,7 @@ def fetch_uniref_clusters(acs, verbose=False):
             clusters['_' + ac] = [ac]  # we still want to keep this AC
     return clusters
 
+
 def read_current_pdb_entries():
     f = cached_urlopen('http://www.rcsb.org/pdb/rest/getCurrent',
                        'current-rcsb.xml')
@@ -224,6 +232,7 @@ def read_current_pdb_entries():
     entries = set(child.attrib['structureId'] for child in root)
     print 'Current PDB entries: %d' % len(entries)
     return entries
+
 
 def read_sifts_mapping():
     url = 'ftp://ftp.ebi.ac.uk/pub/databases/msd/sifts/csv/uniprot_pdb.csv'
@@ -236,6 +245,7 @@ def read_sifts_mapping():
         for p in pp.split(';'):
             ret.setdefault(p.upper(), []).append(u)
     return ret
+
 
 def get_pdb_clusters(cells):
     ordered = sorted(cells, key=lambda x: (x.symmetry, x.a))
@@ -250,6 +260,7 @@ def get_pdb_clusters(cells):
             for cluster in cluster_by_cell_size(same_sg):
                 yield cluster
 
+
 def cluster_by_cell_size(cells):
     # simplistic clustering
     while cells:
@@ -258,6 +269,7 @@ def cluster_by_cell_size(cells):
             if cell_distance(cells[n], clu[0]) < CLUSTER_CUTOFF:
                 clu.append(cells.pop(n))
         yield clu
+
 
 def cluster_by_cell_size_scipy(cells):
     n = len(cells)
@@ -276,10 +288,12 @@ def cluster_by_cell_size_scipy(cells):
         clu = [c for n, c in enumerate(cells) if r[n] == cluster_number]
         yield clu
 
+
 def cell_distance(a, b):
     if a.symmetry != b.symmetry:
         return float('inf')
     return a.max_shift_in_mapping(b)
+
 
 # Representative entry is picked as a one with at least median "quality"
 # metric that is least dissimilar to other cells.
@@ -293,6 +307,7 @@ def get_representative_unit_cell(cells):
     best = min(cells[:cutoff], key=med_metric)
     #print '===>', med_metric(best)
     return best
+
 
 def write_output_file(representants):
     with open(OUTPUT_PY_FILE, 'w') as out:
@@ -310,6 +325,7 @@ def write_output_file(representants):
             out.write('"%s"), # %s\n' % (cell.uniprot_name, cell.comment))
         out.write(']')
 
+
 def write_json_file(uniprot_acs, extra_info, representants):
     groups = {}
     for r in representants:
@@ -320,14 +336,19 @@ def write_json_file(uniprot_acs, extra_info, representants):
         group.setdefault(ref.symmetry, []).append(leaf)
     data = {'name': '', 'children': []}
     for ac, v in uniprot_acs.iteritems():
-        item = {'name': v, 'ac': ac, 'uniref': extra_info[v][0],
-                'desc': extra_info[v][1]}
+        if v in extra_info.keys():
+            item = {'name': v, 'ac': ac, 'uniref': extra_info[v][0],
+                    'desc': extra_info[v][1]}
+        else:
+            item = {'name': v, 'ac': ac, 'uniref': None,
+                    'desc': None}
         if v in groups:
             item['children'] = [{'name': sg, 'children': pdbs}
                                 for sg, pdbs in groups[v].items()]
         data['children'].append(item)
     with open(OUTPUT_JSON_FILE, 'w') as out:
         json.dump(data, out, indent=1, separators=(',', ': '))
+
 
 def main(verbose=False):
     page = cached_urlopen(WIKI_URL, -1).readlines()
