@@ -204,6 +204,29 @@ def _find_blobs_parser(job):
     else:
         return ""
 
+def _anode_parser(job):
+    if "xyz" not in job.data:
+        job.data["xyz"] = []
+        job.data["height"] = []
+        job.data["sof"] = []
+        job.data["distance"] = []
+        job.data["atom"] = []
+    found_strongest_peaks = False
+    for line in job.out.read_line():
+        if "Strongest unique anomalous peaks" in line:
+            found_strongest_peaks = True
+            continue
+        if found_strongest_peaks:
+            tokens = line.split()
+            if len(tokens) == 8:
+                n, x, y, z, h, s, n, a = tokens
+                job.data["xyz"].append(tuple(float(t) for t in tokens[1:4]))
+                job.data["height"].append(float(tokens[4]))
+                job.data["sof"].append(float(tokens[5]))
+                job.data["distance"].append(float(tokens[6]))
+                job.data["atom"].append(tokens[7])
+    return ""
+
 def _rwcontents_parser(job):
     d = job.data
     for line in job.out.read_line():
@@ -819,6 +842,29 @@ class Workflow:
         job = Job(self, utils.syspath("find-blobs"))
         job.args += ["-c", "-s%g" % sigma, hklin, xyzin]
         job.parser = "_find_blobs_parser"
+        return job
+
+    def mtz2sca(self, mtzin, scaout):
+        job = Job(self, utils.syspath("mtz2sca"))
+        job.args += [mtzin, scaout]
+        return job
+
+    def shelxc(self, scain, cell, symmetry):
+        job = Job(self, utils.syspath("shelxc"))
+        name = os.path.splitext(scain)[0]
+        job.args += [name]
+
+        job.std_input = "\n".join([
+            "SAD %s" % scain,
+            "CELL %s %s %s %s %s %s" % cell,
+            "SPAG %s" % symmetry,
+        ])
+        return job
+
+    def anode(self, name):
+        job = Job(self, utils.syspath("anode"))
+        job.args += [name]
+        job.parser = "_anode_parser"
         return job
 
     def rwcontents(self, xyzin):
