@@ -25,7 +25,7 @@ if __name__ == "__main__" and __package__ is None:
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dimple import utils
 from dimple.utils import comment, put_error
-from dimple.cell import match_symmetry, calculate_difference
+from dimple.cell import Cell, match_symmetry, calculate_difference
 from dimple.mtz import check_freerflags_column, MtzMeta, DEFAULT_FREE_COLS
 from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
 from dimple import workflow
@@ -332,6 +332,25 @@ def dimple(wf, opt):
         comment("\nGiving up (Rfree > %g). No blob search." % BAD_FINAL_RFREE)
         _generate_scripts_and_pictures(wf, opt, None)
 
+    if opt.anode and _have_anomalous_columns(reindexed_mtz_meta):
+        anode_name = 'anode'
+
+        # convert to sca for input to shelxc
+        scaout = '%s.sca' % anode_name
+        ms_job = wf.mtz2sca(prepared_mtz, scaout).run()
+
+        shelxc_job = wf.shelxc(
+            scaout, reindexed_mtz_meta.cell,
+            reindexed_mtz_meta.symmetry).run()
+
+        wf.copy_uncompressed(opt.xyzout, '%s.pdb' % anode_name)
+        anode_job = wf.anode(anode_name).run()
+        cell = Cell(reindexed_mtz_meta.cell, reindexed_mtz_meta.symmetry)
+        # need orthogonal not fractional coordinates to generate coot script
+        anode_job.data['blobs'] = cell.orthogonalize(anode_job.data['xyz'])
+        comment(_anode_anom_peak_lines(anode_job.data))
+        coot_script = _generate_scripts_and_pictures(
+            wf, opt, anode_job.data, pha='%s.pha' % anode_name)
 
 def _find_i_sigi_columns(mtz_meta, opt):
     if opt.icolumn:
@@ -360,6 +379,21 @@ def _refmac_rms_line(data):
     return ('\n    RMS:   bond %.3f -> %.3f' % (rb[0], rb[-1]) +
             '   angle %.2f -> %.2f' % (ra[0], ra[-1]) +
             '   chiral %.2f -> %.2f' % (rc[0], rc[-1]))
+
+def _have_anomalous_columns(mtz_meta):
+    # check if mtz contains I+/- and SIGI+/-
+    k_columns = [k for k, v in mtz_meta.columns.items() if v == 'K']
+    m_columns = [k for k, v in mtz_meta.columns.items() if v == 'M']
+    return len(k_columns) == 2 and len(m_columns) == 2
+
+def _anode_anom_peak_lines(data):
+    if len(data["height"]):
+        return "\n".join([
+            "%s anomalous peaks found:" % len(data["height"]),
+            "Heights (sig): " + " ".join("%s" %h for h in data["height"]),
+        ])
+    else:
+        return ""
 
 def _after_phaser_comments(phaser_job, sg_in):
     phaser_data = phaser_job.data
@@ -443,7 +477,7 @@ def _write_script(path, content, executable=False):
     except (IOError, OSError) as e:
         put_error(e)
 
-def _generate_scripts_and_pictures(wf, opt, data):
+def _generate_scripts_and_pictures(wf, opt, data, pha=None):
     blobs = data["blobs"] if data else []
     coot_path = coots.find_path()
     if not blobs:
@@ -470,34 +504,52 @@ def _generate_scripts_and_pictures(wf, opt, data):
             else:
                 comment("\nRendering 2 largest blobs: at (%.1f, %.1f, %.1f) "
                         "and at (%.1f, %.1f, %.1f)" % (blobs[0]+blobs[1]))
-    com = data and data["center"]
+    com = data and data.get("center")
+
+    if pha:
+        mtz = None
+        blob_prefix = 'anom-blob'
+    else:
+        mtz = opt.hklout
+        blob_prefix = 'blob'
 
     # run-coot.py centers on the biggest blob. It uses relative paths -
     # it can be run only from the output directory, but is not affected
     # by moving that directory to different location.
     # There are blobN-coot.py scripts generated below with absolute paths.
     # write coot script (apart from pictures) that centers on the biggest blob
-    script_path = os.path.join(wf.output_dir, "run-coot.py")
-    script = coots.basic_script(pdb=opt.xyzout, mtz=opt.hklout,
+    if pha:
+        script_path = os.path.join(wf.output_dir, "run-coot-anom.py")
+    else:
+        script_path = os.path.join(wf.output_dir, "run-coot.py")
+    script = coots.basic_script(pdb=opt.xyzout, mtz=mtz,
                                 center=(blobs and blobs[0]), toward=com,
-                                white_bg=opt.white_bg)
+                                white_bg=opt.white_bg,
+                                pha=pha)
     _write_script(script_path, script, executable=True)
 
     # blob images, for now for not more than two blobs
     d = os.path.abspath(wf.output_dir)
     for n, b in enumerate(blobs[:2]):
-        py_path = os.path.join(wf.output_dir, "blob%d-coot.py" % (n+1))
-        content = coots.basic_script(pdb=os.path.join(d, opt.xyzout),
-                                     mtz=os.path.join(d, opt.hklout),
-                                     center=blobs[n], toward=com,
-                                     white_bg=opt.white_bg)
+        py_path = os.path.join(
+            wf.output_dir, "%s%d-coot.py" % (blob_prefix, n+1))
+        content = coots.basic_script(
+            pdb=os.path.join(d, opt.xyzout),
+            mtz=os.path.join(d, mtz) if mtz is not None else None,
+            center=blobs[n], toward=com,
+            white_bg=opt.white_bg,
+            pha=pha,
+        )
         _write_script(py_path, content)
     # coot.sh - one-line script for convenience
     if blobs:
-        coot_sh_text = '{coot} --no-guano {out}/blob1-coot.py\n'
+        coot_sh_text = '{coot} --no-guano {out}/%s1-coot.py\n' % blob_prefix
     else:
         coot_sh_text = '{coot} --no-guano {out}/final.mtz {out}/final.pdb\n'
-    coot_sh_path = os.path.join(wf.output_dir, "coot.sh")
+    if pha:
+        coot_sh_path = os.path.join(wf.output_dir, "coot-anom.sh")
+    else:
+        coot_sh_path = os.path.join(wf.output_dir, "coot.sh")
     _write_script(coot_sh_path, coot_sh_text.format(coot=coot_path or 'coot',
                                                     out=wf.output_dir),
                   executable=True)
@@ -507,11 +559,12 @@ def _generate_scripts_and_pictures(wf, opt, data):
         basenames = []
         # as a workaround for buggy coot the maps are reloaded for each blob
         for n, b in enumerate(blobs[:2]):
-            script += coots.basic_script(pdb=opt.xyzout, mtz=opt.hklout,
+            script += coots.basic_script(pdb=opt.xyzout, mtz=mtz,
                                          center=b, toward=com,
-                                         white_bg=opt.white_bg)
+                                         white_bg=opt.white_bg,
+                                         pha=pha)
             rs, names = coots.r3d_script(center=b, toward=com,
-                                         blobname="blob%s" % (n+1))
+                                         blobname="%s%s" % (blob_prefix, n+1))
             script += rs
             basenames += names
         coot_job = wf.coot_py(script)
@@ -611,6 +664,8 @@ def parse_dimple_commands(args):
     group3.add_argument('--dls-naming', action='store_true',
                         help=argparse.SUPPRESS)
     group3.add_argument('--from-step', metavar='N', type=int, default=0,
+                        help=argparse.SUPPRESS)
+    group3.add_argument('--anode', action='store_true',
                         help=argparse.SUPPRESS)
     parser.add_argument('--version', action='version',
                         version='%(prog)s '+__version__)

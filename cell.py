@@ -60,6 +60,20 @@ class Cell(object):
         trans = self.get_frac_matrix().dot(other.get_orth_matrix())
         return (trans - Mat3.identity()).euclidean_norm()
 
+    def orthogonalize(self, coords):
+        # See also:
+        # cctbx_project/cctbx/uctbx.h: unit_cell.orthogonalize()
+        result = []
+        orth = self.get_orth_matrix()
+        for c in coords:
+            result.append(
+                # take advantage of the fact that orth_ is upper-triangular.
+                (orth[0] * c[0] + orth[1] * c[1] + orth[2] * c[2],
+                 orth[4] * c[1] + orth[5] * c[2],
+                 orth[8] * c[2])
+            )
+        return result
+
     # This affects only primitive orthorhombic (P 2x 2x 2x).
     # Convert the "reference" (symmetry-based) settings to the "standard"
     # (cell-based) settings. See the SETTING keyword in POINTLESS.
