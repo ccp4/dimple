@@ -580,12 +580,17 @@ def _generate_scripts_and_pictures(wf, opt, data, pha=None):
                                   "with the --no-graphics mode.")
             raise
         for n, basename in enumerate(basenames):
-            job = wf.render_r3d(basename, img_format=opt.img_format)
-            if n % 3 == 0:
-                job.run()
-            else: # minimal output
-                job.run(show_progress=False, new_line=False)
-        wf.delete_files([name+".r3d" for name in basenames])
+            try:
+                job = wf.render_r3d(basename, img_format=opt.img_format)
+                if n % 3 == 0:
+                    job.run()
+                else: # minimal output
+                    job.run(show_progress=False, new_line=False)
+                wf.delete_files([basename + ".r3d"])
+            except workflow.JobError as e:
+                # Raster3D may fail saying "increase MAXDET and recompile".
+                # This is not critical, so Dimple doesn't stop.
+                put_error("Rendering failed, no picture", comment=" " + e.note)
     return coot_sh_path
 
 
