@@ -337,11 +337,10 @@ def dimple(wf, opt):
 
         # convert to sca for input to shelxc
         scaout = '%s.sca' % anode_name
-        ms_job = wf.mtz2sca(prepared_mtz, scaout).run()
+        wf.mtz2sca(prepared_mtz, scaout).run()
 
-        shelxc_job = wf.shelxc(
-            scaout, reindexed_mtz_meta.cell,
-            reindexed_mtz_meta.symmetry).run()
+        wf.shelxc(scaout, reindexed_mtz_meta.cell,
+                  reindexed_mtz_meta.symmetry).run()
 
         wf.copy_uncompressed(opt.xyzout, '%s.pdb' % anode_name)
         anode_job = wf.anode(anode_name).run()
@@ -382,18 +381,17 @@ def _refmac_rms_line(data):
 
 def _have_anomalous_columns(mtz_meta):
     # check if mtz contains I+/- and SIGI+/-
-    k_columns = [k for k, v in mtz_meta.columns.items() if v == 'K']
-    m_columns = [k for k, v in mtz_meta.columns.items() if v == 'M']
-    return len(k_columns) == 2 and len(m_columns) == 2
+    column_types = list(mtz_meta.columns.values())
+    return column_types.count('K') == 2 and column_types.count('M') == 2
 
 def _anode_anom_peak_lines(data):
-    if len(data["height"]):
-        return "\n".join([
-            "%s anomalous peaks found:" % len(data["height"]),
-            "Heights (sig): " + " ".join("%s" %h for h in data["height"]),
-        ])
-    else:
-        return ""
+    out = ''
+    for n, height in enumerate(data['height'][:6]):
+        out += '\n' if n % 3 == 0 else '  '
+        out += 'h=%.0f ' % height
+        dist = data['distance'][n]
+        out += ('at ' if dist < 0.5 else '%.0fA from ' % dist) + data['atom'][n]
+    return out
 
 def _after_phaser_comments(phaser_job, sg_in):
     phaser_data = phaser_job.data

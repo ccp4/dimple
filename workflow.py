@@ -219,13 +219,16 @@ def _anode_parser(job):
         if found_strongest_peaks:
             tokens = line.split()
             if len(tokens) == 8:
-                n, x, y, z, h, s, n, a = tokens
                 job.data["xyz"].append(tuple(float(t) for t in tokens[1:4]))
                 job.data["height"].append(float(tokens[4]))
                 job.data["sof"].append(float(tokens[5]))
                 job.data["distance"].append(float(tokens[6]))
                 job.data["atom"].append(tokens[7])
-    return ""
+    if found_strongest_peaks:
+        return ("%s anomalous peaks with height h>4 sigma"
+                % len(job.data["height"]))
+    else:
+        return ""
 
 def _rwcontents_parser(job):
     d = job.data
