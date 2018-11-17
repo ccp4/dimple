@@ -334,22 +334,24 @@ def dimple(wf, opt):
 
     if opt.anode and _have_anomalous_columns(reindexed_mtz_meta):
         anode_name = 'anode'
-
         # convert to sca for input to shelxc
-        scaout = '%s.sca' % anode_name
+        scaout = anode_name + '.sca'
         wf.mtz2sca(prepared_mtz, scaout).run()
 
         wf.shelxc(scaout, reindexed_mtz_meta.cell,
                   reindexed_mtz_meta.symmetry).run()
 
-        wf.copy_uncompressed(opt.xyzout, '%s.pdb' % anode_name)
+        wf.copy_uncompressed(opt.xyzout, anode_name + '.pdb')
         anode_job = wf.anode(anode_name).run()
+        wf.temporary_files |= {scaout, anode_name + '.pdb',
+                               anode_name + '.hkl', anode_name + '.pha',
+                               anode_name + '_sad.cif', anode_name + '_fa.hkl'}
         cell = Cell(reindexed_mtz_meta.cell, reindexed_mtz_meta.symmetry)
         # need orthogonal not fractional coordinates to generate coot script
         anode_job.data['blobs'] = cell.orthogonalize(anode_job.data['xyz'])
         comment(_anode_anom_peak_lines(anode_job.data))
         coot_script = _generate_scripts_and_pictures(
-            wf, opt, anode_job.data, pha='%s.pha' % anode_name)
+            wf, opt, anode_job.data, pha=anode_name+'.pha')
 
 def _find_i_sigi_columns(mtz_meta, opt):
     if opt.icolumn:
