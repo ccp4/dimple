@@ -157,7 +157,8 @@ def dimple(wf, opt):
     elif pdb_meta.symmetry != reindexed_mtz_meta.symmetry:
         comment("\nDifferent space groups.")
     else:
-        comment("\nRigid-body refinement with resolution 3.5 A, 10 cycles.")
+        comment("\nRigid-body refinement with resolution 3.5 A, %d cycles." %
+                opt.rigid_cycles)
         if 'aa_count' in rw_data and 'water_count' in rw_data:
             if rw_data['aa_count'] != 0:
                 comment(" %.1f waters/aa." % (rw_data['water_count'] /
@@ -171,7 +172,8 @@ def dimple(wf, opt):
                    labin=refmac_labin_nofree,
                    libin=None,
                    keys="""refinement type rigidbody resolution 15 3.5
-                           rigidbody ncycle 10""").run(may_fail=True)
+                           rigidbody ncycle %d""" % opt.rigid_cycles
+                  ).run(may_fail=True)
         # if the error is caused by mtz/pdb disagreement, continue with MR
         if wf.jobs[-1].exit_status != 0:
             comment("\nTry MR.")
@@ -647,11 +649,13 @@ def parse_dimple_commands(args):
     group3 = parser.add_argument_group('options customizing the run')
     group3.add_argument('--no-hetatm', action='store_true',
                         help='remove HETATM atoms from the given model')
-    group3.add_argument('--jelly', metavar='N_ITER', type=int,
-                    help='run refmac jelly-body before the final refinement')
-    group3.add_argument('--reso', type=float, help='limit the resolution [A]')
+    group3.add_argument('--rigid-cycles', metavar='N', type=int,
+                        help='cycles of rigid-body refinement (default: 10)')
+    group3.add_argument('--jelly', metavar='N', type=int,
+                        help='cycles of jelly-body refinement (default: 4)')
     group3.add_argument('--restr-cycles', metavar='N', type=int,
                         help='cycles of refmac final refinement (default: 8)')
+    group3.add_argument('--reso', type=float, help='limit the resolution [A]')
     group3.add_argument('--weight', metavar='VALUE', type=float,
                         help='refmac matrix weight (default: auto-weight)')
     group3.add_argument('--mr-prog', choices=['phaser', 'molrep'],
@@ -791,6 +795,8 @@ def parse_dimple_commands(args):
         opt.slow = 0
     elif opt.slow > 2:
         opt.slow = 2
+    if opt.rigid_cycles is None:
+        opt.rigid_cycles = 10
     if opt.restr_cycles is None:
         opt.restr_cycles = [8, 10, 12][opt.slow]
     if opt.jelly is None:
