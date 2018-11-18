@@ -322,17 +322,23 @@ def dimple(wf, opt):
                     prev[0].data["overall_r"], prev[0].data["free_r"],
                     restr_job.data["free_r"] - prev[0].data["free_r"]))
 
-    ####### check blobs and finish #######
-    if restr_job.data["free_r"] <= BAD_FINAL_RFREE:
-        fb_job = wf.find_blobs(opt.hklout, opt.xyzout, sigma=0.8).run()
-        coot_script = _generate_scripts_and_pictures(wf, opt, fb_job.data)
-        if coot_script:
-            comment("\nTo see it in Coot run %s" % coot_script)
-    else:
-        comment("\nGiving up (Rfree > %g). No blob search." % BAD_FINAL_RFREE)
-        _generate_scripts_and_pictures(wf, opt, None)
+    ####### check blobs #######
+    if opt.blob_search:
+        if restr_job.data["free_r"] <= BAD_FINAL_RFREE:
+            fb_job = wf.find_blobs(opt.hklout, opt.xyzout, sigma=0.8).run()
+            coot_script = _generate_scripts_and_pictures(wf, opt, fb_job.data)
+            if coot_script:
+                comment("\nTo see it in Coot run %s" % coot_script)
+        else:
+            comment("\nNo blob search for Rfree > %g." % BAD_FINAL_RFREE)
+            _generate_scripts_and_pictures(wf, opt, None)
 
-    if opt.anode and _have_anomalous_columns(reindexed_mtz_meta):
+    if opt.anode:
+        # check if mtz contains I+/- and SIGI+/-
+        column_types = list(reindexed_mtz_meta.columns.values())
+        if column_types.count('K') != 2 and column_types.count('M') != 2:
+            comment("\nColumns I+/- and SIG+/- not found. Skipping AnoDe.")
+            return
         anode_name = 'anode'
         # convert to sca for input to shelxc
         scaout = anode_name + '.sca'
@@ -380,11 +386,6 @@ def _refmac_rms_line(data):
     return ('\n    RMS:   bond %.3f -> %.3f' % (rb[0], rb[-1]) +
             '   angle %.2f -> %.2f' % (ra[0], ra[-1]) +
             '   chiral %.2f -> %.2f' % (rc[0], rc[-1]))
-
-def _have_anomalous_columns(mtz_meta):
-    # check if mtz contains I+/- and SIGI+/-
-    column_types = list(mtz_meta.columns.values())
-    return column_types.count('K') == 2 and column_types.count('M') == 2
 
 def _anode_anom_peak_lines(data):
     out = ''
@@ -505,7 +506,6 @@ def _generate_scripts_and_pictures(wf, opt, data, pha=None):
                 comment("\nRendering 2 largest blobs: at (%.1f, %.1f, %.1f) "
                         "and at (%.1f, %.1f, %.1f)" % (blobs[0]+blobs[1]))
     com = data and data.get("center")
-
     if pha:
         normal_map = False
         refl = pha
@@ -637,6 +637,13 @@ def parse_dimple_commands(args):
     group2.add_argument('--cleanup', action='store_true',
                         help=argparse.SUPPRESS)  # obsolete
 
+    group_w = parser.add_argument_group('what is calculated')
+    group_w.add_argument('--no-blob-search',
+                         dest='blob_search', action='store_false',
+                         help='do not search for unmodelled blobs')
+    group_w.add_argument('--anode', action='store_true',
+                         help='use SHELX/AnoDe to find peaks in anomalous map')
+
     group3 = parser.add_argument_group('options customizing the run')
     group3.add_argument('--no-hetatm', action='store_true',
                         help='remove HETATM atoms from the given model')
@@ -647,7 +654,6 @@ def parse_dimple_commands(args):
                         help='cycles of refmac final refinement (default: 8)')
     group3.add_argument('--weight', metavar='VALUE', type=float,
                         help='refmac matrix weight (default: auto-weight)')
-
     group3.add_argument('--mr-prog', choices=['phaser', 'molrep'],
                         default='phaser',
                         help='Molecular Replacement program' + dstr)
@@ -664,8 +670,7 @@ def parse_dimple_commands(args):
                         help=argparse.SUPPRESS)
     group3.add_argument('--from-step', metavar='N', type=int, default=0,
                         help=argparse.SUPPRESS)
-    group3.add_argument('--anode', action='store_true',
-                        help='use SHELX/AnoDe to find peaks in anomalous map')
+
     parser.add_argument('--version', action='version',
                         version='%(prog)s '+__version__)
     # customize usage message: get rid of 'positional arguments',
