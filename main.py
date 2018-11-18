@@ -665,7 +665,7 @@ def parse_dimple_commands(args):
     group3.add_argument('--from-step', metavar='N', type=int, default=0,
                         help=argparse.SUPPRESS)
     group3.add_argument('--anode', action='store_true',
-                        help=argparse.SUPPRESS)
+                        help='use SHELX/AnoDe to find peaks in anomalous map')
     parser.add_argument('--version', action='version',
                         version='%(prog)s '+__version__)
     # customize usage message: get rid of 'positional arguments',
