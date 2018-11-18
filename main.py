@@ -507,49 +507,43 @@ def _generate_scripts_and_pictures(wf, opt, data, pha=None):
     com = data and data.get("center")
 
     if pha:
-        mtz = None
-        blob_prefix = 'anom-blob'
+        normal_map = False
+        refl = pha
+        prefix = 'anom-'
     else:
-        mtz = opt.hklout
-        blob_prefix = 'blob'
+        normal_map = True
+        refl = opt.hklout
+        prefix = ''
 
     # run-coot.py centers on the biggest blob. It uses relative paths -
     # it can be run only from the output directory, but is not affected
     # by moving that directory to different location.
     # There are blobN-coot.py scripts generated below with absolute paths.
     # write coot script (apart from pictures) that centers on the biggest blob
-    if pha:
-        script_path = os.path.join(wf.output_dir, "run-coot-anom.py")
-    else:
-        script_path = os.path.join(wf.output_dir, "run-coot.py")
-    script = coots.basic_script(pdb=opt.xyzout, mtz=mtz,
+    script_path = os.path.join(wf.output_dir, prefix + "run-coot.py")
+    script = coots.basic_script(pdb=opt.xyzout, refl=refl,
+                                normal_map=normal_map,
                                 center=(blobs and blobs[0]), toward=com,
-                                white_bg=opt.white_bg,
-                                pha=pha)
+                                white_bg=opt.white_bg)
     _write_script(script_path, script, executable=True)
 
     # blob images, for now for not more than two blobs
     d = os.path.abspath(wf.output_dir)
     for n, b in enumerate(blobs[:2]):
-        py_path = os.path.join(
-            wf.output_dir, "%s%d-coot.py" % (blob_prefix, n+1))
-        content = coots.basic_script(
-            pdb=os.path.join(d, opt.xyzout),
-            mtz=os.path.join(d, mtz) if mtz is not None else None,
-            center=blobs[n], toward=com,
-            white_bg=opt.white_bg,
-            pha=pha,
-        )
+        py_path = os.path.join(wf.output_dir,
+                               "%sblob%d-coot.py" % (prefix, n+1))
+        content = coots.basic_script(pdb=os.path.join(d, opt.xyzout),
+                                     refl=os.path.join(d, refl),
+                                     normal_map=normal_map,
+                                     center=blobs[n], toward=com,
+                                     white_bg=opt.white_bg)
         _write_script(py_path, content)
     # coot.sh - one-line script for convenience
     if blobs:
-        coot_sh_text = '{coot} --no-guano {out}/%s1-coot.py\n' % blob_prefix
+        coot_sh_text = '{coot} --no-guano {out}/%sblob1-coot.py\n' % prefix
     else:
         coot_sh_text = '{coot} --no-guano {out}/final.mtz {out}/final.pdb\n'
-    if pha:
-        coot_sh_path = os.path.join(wf.output_dir, "coot-anom.sh")
-    else:
-        coot_sh_path = os.path.join(wf.output_dir, "coot.sh")
+    coot_sh_path = os.path.join(wf.output_dir, prefix + "coot.sh")
     _write_script(coot_sh_path, coot_sh_text.format(coot=coot_path or 'coot',
                                                     out=wf.output_dir),
                   executable=True)
@@ -559,12 +553,12 @@ def _generate_scripts_and_pictures(wf, opt, data, pha=None):
         basenames = []
         # as a workaround for buggy coot the maps are reloaded for each blob
         for n, b in enumerate(blobs[:2]):
-            script += coots.basic_script(pdb=opt.xyzout, mtz=mtz,
+            script += coots.basic_script(pdb=opt.xyzout, refl=refl,
+                                         normal_map=normal_map,
                                          center=b, toward=com,
-                                         white_bg=opt.white_bg,
-                                         pha=pha)
+                                         white_bg=opt.white_bg)
             rs, names = coots.r3d_script(center=b, toward=com,
-                                         blobname="%s%s" % (blob_prefix, n+1))
+                                         blobname="%sblob%s" % (prefix, n+1))
             script += rs
             basenames += names
         coot_job = wf.coot_py(script)
