@@ -3,7 +3,7 @@
 this_dir="$(cd "$(dirname "$0")" && pwd)"
 if [ -e "$this_dir/main.py" ] && [ "$this_dir" != "$CCP4/bin" ]; then
   # development (source tree) version
-  exec python3 "$this_dir/main.py" "$@"
+  exec python2.7 "$this_dir/main.py" "$@"
 else
   # installed module
   exec "$CCP4/bin/ccp4-python" -m dimple "$@"
