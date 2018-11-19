@@ -36,9 +36,9 @@ from dimple.main import parse_dimple_commands, main
 opt = parse_dimple_commands(sys.argv[1:])
 jobdir = os.path.abspath(opt.output_dir)
 if not os.path.exists(jobdir):
-    os.makedirs(jobdir) # it would be created by dimple, but too late
+    os.makedirs(jobdir)  # it would be created by dimple, but too late
 
-print "_JOB_DIRECTORY:", jobdir
+print("_JOB_DIRECTORY: %s" % jobdir)
 sys.stdout.flush()
 
 input_files = qtrapi.Files()

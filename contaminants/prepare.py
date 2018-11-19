@@ -1,9 +1,10 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 Script that generates data.py - list of unit cells of contaminants
 """
 
+from __future__ import print_function
 import csv
 import hashlib
 import itertools
@@ -12,7 +13,10 @@ import math
 import os
 import re
 import sys
-import urllib2
+try:
+    from urllib2 import urlopen  # Python 2
+except ImportError:
+    from urllib.request import urlopen  # Python 3
 from collections import OrderedDict
 import xml.etree.ElementTree as ET
 import numpy
@@ -25,8 +29,8 @@ if SCIPY_CLUSTERING:
 
 if __name__ == '__main__' and __package__ is None:
     assert os.path.basename(os.getcwd()) == 'contaminants'
-    sys.path.insert(1,
-          os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+    sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                                    '..', '..')))
 import dimple.cell
 
 WIKI_URL = ('https://raw.githubusercontent.com/wiki/'
@@ -52,8 +56,8 @@ def cached_urlopen(url, cache_name):
     if not os.path.exists(path):
         if not os.path.isdir(CACHE_DIR):
             os.mkdir(CACHE_DIR)
-        print '--> %s' % path
-        response = urllib2.urlopen(url)
+        print('--> %s' % path)
+        response = urlopen(url)
         with open(path, 'wb') as f:
             f.write(response.read())
     return open(path)
@@ -113,7 +117,7 @@ def fetch_pdb_info_from_ebi(pdb_id):
     if not any(m in single_crystal_methods for m in exper_method):
         return None
     forms = set(a['form'] for a in summary['assemblies'])
-    assert forms.issubset({'homo', 'hetero'}) # some are both (2EKS)
+    assert forms.issubset({'homo', 'hetero'})  # some are both (2EKS)
     if forms != {'homo'}:
         return None
     entities = summary['number_of_entities']
@@ -132,11 +136,11 @@ def fetch_pdb_info_from_ebi(pdb_id):
     for alt_sum in summaries[1:]:
         assert [alt_sum['cell'][x] for x in par_names] == parameters
         assert alt_sum['spacegroup'] == sg
-    if sg == 'A 1': # pesky 1LKS
+    if sg == 'A 1':  # pesky 1LKS
         return None
     # Correct spacegroup, but in non-standard settings.
     # We could convert it to the reference/standard settings.
-    if sg in ['P 1 1 21']: # only this one for now
+    if sg in ['P 1 1 21']:  # only this one for now
         return None
 
     # Standarize unit cell settings (e.g. 3wai, 1y6e).
@@ -164,13 +168,12 @@ def dump_uniprot_tab(pdb_ids):
                  '?query=database:(type:pdb%%20%s)&sort=score&format=tab')
     pdb_ids = [x.strip(',') for x in sys.stdin.read().split()]
     assert all(len(x) == 4 for x in pdb_ids)
-    print >>sys.stderr, 'Read %d IDs' % len(pdb_ids)
+    print('Read %d IDs' % len(pdb_ids), file=sys.stderr)
     for pdb_id in pdb_ids:
         response = cached_urlopen(query_url % pdb_id, 'up-pdb-%s.tab' % pdb_id)
         text = response.read()
-        print pdb_id
-        print text
-        print
+        print(pdb_id)
+        print(text + '\n')
 
 def uniprot_names_to_acs(names):
     query_url = ('http://www.uniprot.org/uniprot/'
@@ -207,13 +210,13 @@ def fetch_uniref_clusters(acs, verbose=False):
                 continue
             #if key != 'UniRef100_P02931': continue
             if verbose:
-                print '%s -> %s (%s) - %d members, %d residues' % (
-                        ac, key, name, len(members), int(d['Length']))
+                print('%s -> %s (%s) - %d members, %d residues' % (
+                      ac, key, name, len(members), int(d['Length'])))
             if key in clusters:
                 sys.exit('Duplicated cluster: ' + key)
             clusters[key] = members
         if reader.line_num == 0:
-            print 'Not found in UniRef:', ac
+            print('Not found in UniRef:', ac)
             clusters['_' + ac] = [ac]  # we still want to keep this AC
     return clusters
 
@@ -222,7 +225,7 @@ def read_current_pdb_entries():
                        'current-rcsb.xml')
     root = ET.parse(f).getroot()
     entries = set(child.attrib['structureId'] for child in root)
-    print 'Current PDB entries: %d' % len(entries)
+    print('Current PDB entries:', len(entries))
     return entries
 
 def read_sifts_mapping():
@@ -264,8 +267,8 @@ def cluster_by_cell_size_scipy(cells):
     # matrix like from scipy.spatial.distance.pdist(..., metric=func)
     dist_matrix = numpy.zeros(n * (n - 1) // 2, dtype=numpy.double)
     k = 0
-    for i in xrange(0, n-1):
-        for j in xrange(i+1, n):
+    for i in range(0, n-1):
+        for j in range(i+1, n):
             dist_matrix[k] = cells[i].max_shift_in_mapping(cells[j])
             k += 1
     assert k == len(dist_matrix)
@@ -291,7 +294,6 @@ def get_representative_unit_cell(cells):
     def med_metric(c):
         return max(cell_distance(c, other) for other in cells)
     best = min(cells[:cutoff], key=med_metric)
-    #print '===>', med_metric(best)
     return best
 
 def write_output_file(representants):
@@ -319,7 +321,7 @@ def write_json_file(uniprot_acs, extra_info, representants):
         leaf = {'name': leaf_name}
         group.setdefault(ref.symmetry, []).append(leaf)
     data = {'name': '', 'children': []}
-    for ac, v in uniprot_acs.iteritems():
+    for ac, v in uniprot_acs.items():
         item = {'name': v, 'ac': ac, 'uniref': extra_info[v][0],
                 'desc': extra_info[v][1]}
         if v in groups:
@@ -331,48 +333,48 @@ def write_json_file(uniprot_acs, extra_info, representants):
 
 def main(verbose=False):
     page = cached_urlopen(WIKI_URL, -1).readlines()
-    parsed_page = parse_wiki_page(page) # { UniProt name: [some PDB IDs] }
-    uniprot_acs = uniprot_names_to_acs(parsed_page) # { AC: UniProt name }
+    parsed_page = parse_wiki_page(page)  # { UniProt name: [some PDB IDs] }
+    uniprot_acs = uniprot_names_to_acs(parsed_page)  # { AC: UniProt name }
     pdb2up = read_sifts_mapping()
     descriptions_from_wiki = {}
 
     # check for missing PDB IDs that were given explicitely in the wiki
-    for u, (desc, pp) in parsed_page.iteritems():
+    for u, (desc, pp) in parsed_page.items():
         descriptions_from_wiki[u] = desc
         for p in pp:
             if p not in pdb2up:
-                print 'Missing in SIFTS: %s' % p
-                pdb2up[p] = [k for k, v in uniprot_acs.iteritems() if v == u]
+                print('Missing in SIFTS:', p)
+                pdb2up[p] = [k for k, v in uniprot_acs.items() if v == u]
 
     # check for deprecated/removed PDB entries
     current_pdb_entries = read_current_pdb_entries()
     obsolete = [k for k in pdb2up if k not in current_pdb_entries]
-    print 'Obsolete PDB entries in SIFTS:', len(obsolete)
+    print('Obsolete PDB entries in SIFTS:', len(obsolete))
     for k in obsolete:
         del pdb2up[k]
 
     # reverse the PDB->UniProt mapping
     ac2pdb = {}
-    for p, acs in pdb2up.iteritems():
-        if len(acs) == 1: # don't care about heteromers
+    for p, acs in pdb2up.items():
+        if len(acs) == 1:  # don't care about heteromers
             ac2pdb.setdefault(acs[0], []).append(p)
 
     uniref_clusters = fetch_uniref_clusters(uniprot_acs, verbose)
 
     # mapping back uniref id to uniprot name that was used an input
     uniref_sources = {}
-    for uniref_name, uclust in uniref_clusters.iteritems():
+    for uniref_name, uclust in uniref_clusters.items():
         sources = [uniprot_acs[ac] for ac in uclust if ac in uniprot_acs]
         assert len(sources) == 1, sources
         uniref_sources[uniref_name] = sources[0]
 
     representants = []
     empty_cnt = 0
-    for uniref_name, uclust in uniref_clusters.iteritems():
+    for uniref_name, uclust in uniref_clusters.items():
         pdb_set = sum([ac2pdb[ac] for ac in uclust if ac in ac2pdb], [])
-        print '%s -> %s (%d entries) -> %d PDBs' % (
-                uniref_sources[uniref_name], uniref_name,
-                len(uclust), len(pdb_set))
+        print('%s -> %s (%d entries) -> %d PDBs' % (
+              uniref_sources[uniref_name], uniref_name,
+              len(uclust), len(pdb_set)))
         cells = []
         for pdb_id in pdb_set:
             cell = fetch_pdb_info_from_ebi(pdb_id)
@@ -391,35 +393,35 @@ def main(verbose=False):
             r.uniprot_name = uniref_sources[uniref_name]
             r.comment = uniref_name
             if verbose:
-                print ' '.join(p.pdb_id for p in pdb_cluster), '=>', r.pdb_id
+                print(' '.join(p.pdb_id for p in pdb_cluster), '=>', r.pdb_id)
                 print('\t%s %-9s (%6.2f %6.2f %6.2f %5.1f %5.1f %5.1f) %8.2f'
                       % ((r.pdb_id, r.symmetry) + r.cell + (r.quality,)))
             representants.append(r)
         if len(representants) == prev_len:
             empty_cnt += 1
         if not verbose:
-            print '\t-> %d' % (len(representants) - prev_len)
+            print('\t-> %d' % (len(representants) - prev_len))
     representants.sort(key=lambda x: x.a)
     write_output_file(representants)
-    print '%d (incl. %d absent) proteins -> %d unique unit cells -> %s' % (
-            len(uniprot_acs), empty_cnt, len(representants), OUTPUT_PY_FILE)
+    print('%d (incl. %d absent) proteins -> %d unique unit cells -> %s' % (
+          len(uniprot_acs), empty_cnt, len(representants), OUTPUT_PY_FILE))
     write_json_file(uniprot_acs,
                     dict((v, (k, descriptions_from_wiki[v]))
                          for k, v in uniref_sources.items()),
                     representants)
     a, b = min(itertools.combinations(representants, 2),
                key=lambda x: cell_distance(*x))
-    print 'Min. dist: %.2f%% between %s and %s' % (100*cell_distance(a, b),
-                                                   a.pdb_id, b.pdb_id)
+    print('Min. dist: %.2f%% between %s and %s' % (
+          100*cell_distance(a, b), a.pdb_id, b.pdb_id))
     contaminer_acs = fetch_contaminer_protein_acs()
     for ac in contaminer_acs:
         if not any(ac in uclust for uclust in uniref_clusters.values()):
-            print 'Only in ContaBase: %s %s' % (ac, contaminer_acs[ac])
-    for uniref_name, uclust in uniref_clusters.iteritems():
-        if len(set(uclust).intersection(contaminer_acs.viewkeys())) == 0:
+            print('Only in ContaBase:', ac, contaminer_acs[ac])
+    for uniref_name, uclust in uniref_clusters.items():
+        if len(set(uclust).intersection(contaminer_acs.keys())) == 0:
             src = uniref_sources[uniref_name]
-            if src not in NOT_IN_CONTABASE: # these are not news
-                print 'Not in ContaBase:', src
+            if src not in NOT_IN_CONTABASE:  # these are not news
+                print('Not in ContaBase:', src)
 
 if __name__ == '__main__':
     verbose = ('-v' in sys.argv[1:])

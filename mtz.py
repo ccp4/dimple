@@ -7,15 +7,15 @@ from dimple.cell import Cell, match_symmetry
 DEFAULT_FREE_COLS = ['FreeR_flag', 'FREE', 'RFREE', 'FREER']
 
 class MtzMeta(Cell):
-    d_eps = 0.00051 # dmax precision (so low b/c it is read from mtzdump)
+    d_eps = 0.00051  # dmax precision (so low b/c it is read from mtzdump)
     def __init__(self, cell, symmetry, sg_number, dmin, dmax, columns,
                  filename):
-        assert isinstance(columns[0], tuple)
+        #assert isinstance(columns[0], tuple)
         Cell.__init__(self, cell, symmetry)
         self.sg_number = sg_number
         self.dmin = dmin
         self.dmax = dmax
-        assert dmin >= dmax # yes, min > max here
+        assert dmin >= dmax  # yes, min > max here
         self.columns = OrderedDict(columns)
         self.filename = filename
 
@@ -25,7 +25,7 @@ class MtzMeta(Cell):
             'cell: (%s)' % self.parameters_as_str(),
             'resolution range: %s - %s' % (self.dmin, self.dmax),
             'columns: ' + ' '.join('%s:%s' % kv for kv in self.columns.items())
-            ])
+            ])  # noqa: E123 - bracket indentation
 
     def check_col_type(self, label, expected_type):
         if label not in self.columns:
@@ -41,41 +41,41 @@ class MtzMeta(Cell):
 
 def _run_mtzdump(hklin, keys):
     retcode, out, _ = silently_run(['mtzdump', 'HKLIN', hklin],
-                                   stdin_text="\n".join(keys + ['END']))
+                                   stdin_text='\n'.join(keys + ['END']))
     if retcode != 0:
-        raise RuntimeError("mtzdump of %s failed" % hklin)
+        raise RuntimeError('mtzdump of %s failed' % hklin)
     return out
 
 
 def read_metadata(hklin):
-    "for now using mtzdump, directly calling libccp4/mtzlib would be better"
-    lines = _run_mtzdump(hklin, ["HEAD"]).splitlines()
+    'for now using mtzdump, directly calling libccp4/mtzlib would be better'
+    lines = _run_mtzdump(hklin, ['HEAD']).splitlines()
     cell = None
     for n, line in enumerate(lines):
-        if not line.startswith(" * "):
+        if not line.startswith(b' * '):
             continue
-        if line.startswith(" * Dataset ID, project/crystal/dataset names, ce"):
+        if line.startswith(b' * Dataset ID, project/crystal/dataset names, ce'):
             try:
                 cell = tuple(float(x) for x in lines[n + 5].split())
             except ValueError:
                 pass
-        elif line.startswith(" * Cell Dimensions :") and cell is None:
+        elif line.startswith(b' * Cell Dimensions :') and cell is None:
             try:
                 cell = tuple(float(x) for x in lines[n + 2].split())
             except ValueError:
                 pass
-        elif line.startswith(" * Space group = "):
-            symmetry = line.split("'")[1].strip()
-            sg_number = int(line.split()[-1].rstrip(")"))
-        elif line.startswith(" *  Resolution Range"):
+        elif line.startswith(b' * Space group = '):
+            symmetry = line.split(b"'")[1].strip().decode()
+            sg_number = int(line.split()[-1].rstrip(b')'))
+        elif line.startswith(b' *  Resolution Range'):
             res_line = lines[n+2]
             #    0.00125    0.48742     (     28.339 -      1.432 A )
             lower_resol = float(res_line[28:40])
             upper_resol = float(res_line[41:53])
-        elif line.startswith(" * Column Labels"):
-            column_names = lines[n+2].split()
-        elif line.startswith(" * Column Types"):
-            column_types = lines[n+2].split()
+        elif line.startswith(b' * Column Labels'):
+            column_names = lines[n+2].decode().split()
+        elif line.startswith(b' * Column Types'):
+            column_types = lines[n+2].decode().split()
     columns = zip(column_names, column_types)
     return MtzMeta(cell, symmetry=symmetry, sg_number=sg_number,
                    dmin=lower_resol, dmax=upper_resol, columns=columns,
@@ -84,7 +84,7 @@ def read_metadata(hklin):
 def check_freerflags_column(free_mtz, expected_symmetry, column):
     rfree_meta = read_metadata(free_mtz)
     if expected_symmetry and not match_symmetry(rfree_meta, expected_symmetry):
-        comment("\nWARNING: R-free flag reference file is %s not %s." %
+        comment('\nWARNING: R-free flag reference file is %s not %s.' %
                 (rfree_meta.symmetry, expected_symmetry.symmetry))
     if column is not None:
         if not rfree_meta.check_col_type(column, 'I'):
@@ -94,18 +94,18 @@ def check_freerflags_column(free_mtz, expected_symmetry, column):
         if name in rfree_meta.columns:
             rfree_meta.check_col_type(name, 'I')
             return name
-    put_error("free-R column not found in %s" % free_mtz)
+    put_error('free-R column not found in %s' % free_mtz)
     sys.exit(1)
 
 def get_num_missing(hklin, col):
     # for now using mtzdump
-    out = _run_mtzdump(hklin, ["NREF 0"])
+    out = _run_mtzdump(hklin, ['NREF 0'])
     try:
-        start = out.index('\n Col Sort')
-        end = out.index('\n No. of reflections')
+        start = out.index(b'\n Col Sort')
+        end = out.index(b'\n No. of reflections')
         lines = out[start+1:end].splitlines()[3:-1]
         for line in lines:
-            sp = line.split()
+            sp = line.decode().split()
             if sp[-1] == col:
                 return int(sp[4])
     except ValueError:
@@ -114,16 +114,16 @@ def get_num_missing(hklin, col):
 # for testing only
 def main():
     if len(sys.argv) < 2:
-        sys.stderr.write("No filenames.\n")
+        sys.stderr.write('No filenames.\n')
         sys.exit(1)
     if sys.argv[1] == '-m' and len(sys.argv) >= 3:
         col = sys.argv[2]
         for arg in sys.argv[3:]:
-            print arg, get_num_missing(arg, col)
+            print('%s %s' % (arg, get_num_missing(arg, col)))
     else:
         for filename in sys.argv[1:]:
-            print "File: %s" % filename
-            print read_metadata(filename)
+            print('File: %s' % filename)
+            print(read_metadata(filename))
 
 if __name__ == '__main__':
     main()

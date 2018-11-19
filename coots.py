@@ -8,14 +8,14 @@ M_SQRT1_2 = 0.5**0.5
 
 def find_path():
     if os.name == 'nt':
-        for path in ["C:/WinCoot/wincoot.bat",     # since WinCoot 0.8.8
-                     "C:/WinCoot/runwincoot.bat",  # WinCoot prior to 0.8.8
-                     utils.cbin("coot.bat")]:      # CCP4 script added in 2018
+        for path in ['C:/WinCoot/wincoot.bat',     # since WinCoot 0.8.8
+                     'C:/WinCoot/runwincoot.bat',  # WinCoot prior to 0.8.8
+                     utils.cbin('coot.bat')]:      # CCP4 script added in 2018
             if os.path.exists(path):
                 return path
-        utils.comment("\nNote: WinCoot not found.\n")
+        utils.comment('\nNote: WinCoot not found.\n')
     else:
-        return utils.syspath("coot")
+        return utils.syspath('coot')
 
 # returns version string
 def find_version(coot_path):
@@ -27,7 +27,7 @@ def find_version(coot_path):
     if os.name == 'nt':
         return 'WinCoot, with python'
     try:
-        return subprocess.check_output([coot_path, "--version"])
+        return subprocess.check_output([coot_path, '--version']).decode()
     except (subprocess.CalledProcessError, OSError):
         return None
 
@@ -96,8 +96,9 @@ def mult_quat(q1, q2):
 def r3d_script(center, toward, blobname):
     #quat0 = (0., 0., 0., 1.)
     quat0 = view_as_quat(center, toward)
-    quaternions = [quat0, mult_quat(quat0, (0., M_SQRT1_2, 0., M_SQRT1_2)),
-                          mult_quat(quat0, (M_SQRT1_2, 0., 0., M_SQRT1_2))]
+    quaternions = [quat0,
+                   mult_quat(quat0, (0., M_SQRT1_2, 0., M_SQRT1_2)),
+                   mult_quat(quat0, (M_SQRT1_2, 0., 0., M_SQRT1_2))]
 
     # Coot function raster3d() creates file.r3d, make_image_raster3d() also
     # calls render program and opens image (convenient for testing)
@@ -108,11 +109,9 @@ set_zoom(30.)""" % center
     for n, quat in enumerate(quaternions):
         script += """
 set_view_quaternion(%g, %g, %g, %g)""" % quat
-        basename = "%sv%d" % (blobname, n+1)
+        basename = '%sv%d' % (blobname, n+1)
         script += """
 graphics_draw() # this is needed only for coot in --no-graphics mode
 raster3d("%s.r3d")""" % basename
         basenames.append(basename)
     return script, basenames
-
-

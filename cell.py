@@ -31,8 +31,8 @@ class Cell(object):
             if x == 90.: return '90'
             else:        return '%.2f' % x
         return '%.2f, %.2f, %.2f,  %s, %s, %s' % (
-                self.a, self.b, self.c,
-                angle(self.alpha), angle(self.beta), angle(self.gamma))
+               self.a, self.b, self.c,
+               angle(self.alpha), angle(self.beta), angle(self.gamma))
 
     def __str__(self):
         return '%-12s (%s)' % (self.symmetry, self.parameters_as_str())
@@ -105,7 +105,7 @@ class Cell(object):
         return ' '.join(a[0] for a in self.symmetry.split())
 
 class Mat3(object):
-    "Matrix 3x3"
+    'Matrix 3x3'
     def __init__(self, *args):
         if len(args) == 1:
             self.m = tuple(args[0])
@@ -116,16 +116,16 @@ class Mat3(object):
     def __getitem__(self, index):
         return self.m[index]
     def __str__(self):
-        return "[%g %g %g; %g %g %g; %g %g %g]" % self.m
+        return '[%g %g %g; %g %g %g; %g %g %g]' % self.m
     def __repr__(self):
-        return "Mat3" + str(self.m)
+        return 'Mat3' + str(self.m)
 
     def __add__(self, other):
         assert isinstance(other, Mat3)
-        return Mat3(a+b for a,b in zip(self.m, other.m))
+        return Mat3(a+b for a, b in zip(self.m, other.m))
     def __sub__(self, other):
         assert isinstance(other, Mat3)
-        return Mat3(a-b for a,b in zip(self.m, other.m))
+        return Mat3(a-b for a, b in zip(self.m, other.m))
     # scalar must be float
     def __mul__(self, scalar):
         assert isinstance(scalar, float)
@@ -136,7 +136,6 @@ class Mat3(object):
         return Mat3(1, 0, 0,
                     0, 1, 0,
                     0, 0, 1)
-
 
     def transpose(self):
         m = self.m
@@ -164,7 +163,7 @@ class Mat3(object):
     def inverse(self):
         d = self.det()
         if d == 0:
-            raise ValueError("Matrix is not invertible")
+            raise ValueError('Matrix is not invertible')
         m = self.m
         return Mat3(( m[4] * m[8] - m[5] * m[7]) / d,
                     (-m[1] * m[8] + m[2] * m[7]) / d,
@@ -212,7 +211,6 @@ def calculate_difference(meta1, meta2):
         return sys.float_info.max
     if match is False:
         return sys.float_info.max / 2
-    #return sum(abs(a-b) for a,b in zip(meta1.cell, meta2.cell))
     return meta1.to_standard().max_shift_in_mapping(meta2.to_standard())
 
 # space group utils
@@ -223,7 +221,7 @@ def match_symmetry(meta1, meta2):
     def sig(sym):
         first_chars = [a[0] for a in sym.split()]
         s = first_chars[0] + ''.join(sorted(first_chars[1:]))
-        if s == 'I112': # I2 is equivalent to C2
+        if s == 'I112':  # I2 is equivalent to C2
             return 'C112'
         # note: I see names such as 'H 3' used in ccp4, never 'R 3'
         if s[0] == 'R':
@@ -246,7 +244,7 @@ _pg_symop = {'1': 1,
              '622': 12,
              '23': 12,
              '432': 24,
-            }
+             }
 
 
 # the list of space group names extracted from symop.lib with this script:
@@ -261,7 +259,7 @@ _pg_symop = {'1': 1,
 #         sg = sgtbx.space_group(sgs.hall())
 #         if sg.is_chiral():
 #             print '"%s": "%s",' % (fields[3], spacegroups[0])
-_short_spg_names = {
+_short_spg_names = {  # noqa: E122
 "P1": "P 1", "P2": "P 1 2 1", "P21": "P 1 21 1", "C2": "C 1 2 1",
 "P222": "P 2 2 2", "P2221": "P 2 2 21", "P21212": "P 21 21 2",
 "P212121": "P 21 21 21", "C2221": "C 2 2 21", "C222": "C 2 2 2",
@@ -290,4 +288,3 @@ _short_spg_names = {
 def calculate_z_order(hm):
     pg = ''.join(a[0] for a in hm.split()[1:])
     return _centering_n[hm[0]] * _pg_symop[pg]
-

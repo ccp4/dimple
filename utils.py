@@ -1,4 +1,7 @@
-import ConfigParser
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
 import errno
 import hashlib
 import json
@@ -19,8 +22,8 @@ _dimple_dir = os.path.abspath(os.path.dirname(__file__))
 
 # start log in ini-like format,
 # readable for humans and easily parsed in Python:
-#   import ConfigParser
-#   log = ConfigParser.RawConfigParser()
+#   import configparser
+#   log = configparser.RawConfigParser()
 #   log.read('dimple.log')
 # and then, for example:
 #   ini_free_r = log.getfloat('refmac5 restr', 'ini_free_r')
@@ -31,29 +34,29 @@ _dimple_dir = os.path.abspath(os.path.dirname(__file__))
 def start_log(filename, output_dir):
     global _logfile  # pylint: disable=global-statement
     global _logfile_sections  # pylint: disable=global-statement
-    _logfile = open(filename, "w")
-    _logfile.write("# workflow log (compatible with Python ConfigParser)\n")
+    _logfile = open(filename, 'w')
+    _logfile.write('# workflow log (compatible with Python configparser)\n')
     _logfile_sections = set()
-    log_section("workflow")
-    log_value("host", platform.node())
-    log_value("platform", platform.platform())
-    log_value("cwd", os.getcwd())
-    log_value("prog", sys.argv[0])
+    log_section('workflow')
+    log_value('host', platform.node())
+    log_value('platform', platform.platform())
+    log_value('cwd', os.getcwd())
+    log_value('prog', sys.argv[0])
     if len(sys.argv) > 1:
-        _logfile.write("args:\n")
+        _logfile.write('args:\n')
         for arg in sys.argv[1:]:
-            _logfile.write(" %s\n" % arg)
-    log_value("output_dir", output_dir)
-    log_value("CCP4", os.getenv("CCP4", ""))
-    log_value("CCP4_SCR", os.getenv("CCP4_SCR", ""))
+            _logfile.write(' %s\n' % arg)
+    log_value('output_dir', output_dir)
+    log_value('CCP4', os.getenv('CCP4', ''))
+    log_value('CCP4_SCR', os.getenv('CCP4_SCR', ''))
     _logfile.flush()
 
 def _log_comment(text):
     global _logfile  # pylint: disable=global-variable-not-assigned
     if _logfile:
-        _logfile.write("# ")
-        _logfile.write(text.rstrip("\n").replace("\n", "\n# "))
-        _logfile.write("\n")
+        _logfile.write('# ')
+        _logfile.write(text.rstrip('\n').replace('\n', '\n# '))
+        _logfile.write('\n')
 
 def log_section(name):
     global _logfile  # pylint: disable=global-variable-not-assigned
@@ -65,7 +68,7 @@ def log_section(name):
                 counter += 1
             name = '%s %d' % (name, counter)
         _logfile_sections.add(name)
-        _logfile.write("\n[%s]\n" % name)
+        _logfile.write('\n[%s]\n' % name)
         _logfile.flush()
 
 def log_value(key, value):
@@ -75,18 +78,18 @@ def log_value(key, value):
             value = json.dumps(value)
         else:
             value = str(value).rstrip()
-        value = value.rstrip().replace("\n", "\n ")
-        _logfile.write("%s: %s\n" % (key, value.replace('\n', '\n ')))
+        value = value.rstrip().replace('\n', '\n ')
+        _logfile.write('%s: %s\n' % (key, value.replace('\n', '\n ')))
 
 def log_time(key, timestamp):
-    log_value(key, time.strftime("%Y-%m-%d %H:%M:%S",
+    log_value(key, time.strftime('%Y-%m-%d %H:%M:%S',
                                  time.localtime(timestamp)))
 
 def read_section_from_log(logfile, section):
-    conf = ConfigParser.RawConfigParser()
+    conf = configparser.RawConfigParser()
     try:
         conf.read(logfile)
-    except ConfigParser.MissingSectionHeaderError:
+    except configparser.MissingSectionHeaderError:
         return
     if conf.has_section(section):
         d = {}
@@ -112,14 +115,14 @@ def put(text, ansi_code=None):
     _log_screen(text)
     if (ansi_code is not None and os.name != 'nt' and
             hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()):
-        sys.stdout.write("\033[%dm%s\033[0m" % (ansi_code, text))
+        sys.stdout.write('\033[%dm%s\033[0m' % (ansi_code, text))
     else:
         sys.stdout.write(text)
 
 def put_temporarily(text):
     sys.stdout.write(text)
     sys.stdout.flush()
-    sys.stdout.write("\b"*len(text))
+    sys.stdout.write('\b'*len(text))
 
 def put_green(text):
     put(text, ansi_code=92)
@@ -132,20 +135,20 @@ def comment(text):
 def reset_color():
     if hasattr(sys.stdout, 'isatty') and sys.stdout.isatty():
         if os.name != 'nt':
-            sys.stdout.write("\033[0m")
+            sys.stdout.write('\033[0m')
 
 def put_error(err, comment=None):  # pylint: disable=redefined-outer-name
-    _log_comment("Error: %s." % err)
-    _log_screen("\nError: %s.\n" % err)
+    _log_comment('Error: %s.' % err)
+    _log_screen('\nError: %s.\n' % err)
     if hasattr(sys.stderr, 'isatty') and sys.stderr.isatty():
         if os.name != 'nt':
-            err = "\033[91m%s\033[0m" % err  # in bold red
+            err = '\033[91m%s\033[0m' % err  # in bold red
     sys.stdout.flush()
-    sys.stderr.write("\nError: %s.\n" % err)
+    sys.stderr.write('\nError: %s.\n' % err)
     if comment is not None:
         _log_comment(comment)
-        _log_screen(comment + "\n")
-        sys.stderr.write(comment + "\n")
+        _log_screen(comment + '\n')
+        sys.stderr.write(comment + '\n')
 
 
 def check_prog(dirname, prog):
@@ -160,21 +163,21 @@ def cbin(prog):
     """$CCP4/bin unless prog or prog.exe is found in the dimple directory.
     Return value: path with filename without extension.
     """
-    assert os.environ.get("CCP4")
-    return check_prog(_dimple_dir, prog) or \
-            os.path.join(os.environ["CCP4"], "bin", prog)
+    assert os.environ.get('CCP4')
+    return (check_prog(_dimple_dir, prog) or
+            os.path.join(os.environ['CCP4'], 'bin', prog))
 
 
 def syspath(prog):
     """Search prog(.exe) in the dimple directory and in the system $PATH.
     Return value: path with filename without extension.
     """
-    dirs = [_dimple_dir] + os.environ["PATH"].split(os.pathsep)
+    dirs = [_dimple_dir] + os.environ['PATH'].split(os.pathsep)
     for d in dirs:
         path = check_prog(d, prog)
         if path:
             return path
-    put_error("Program not found: %s" % prog)
+    put_error('Program not found: %s' % prog)
 
 
 # Use relpath if possible, absolute paths clutter commands and make
@@ -250,15 +253,15 @@ def _get_sum(filename):
             buf = f.read(65536)
         return algo.hexdigest()
 
-def filter_out_duplicate_files(filenames, relto=""):
+def filter_out_duplicate_files(filenames, relto=''):
     unique = []
     hashes = set()
     # exclude empty files, here is md5 of nothing
-    hashes.add("d41d8cd98f00b204e9800998ecf8427e")
+    hashes.add('d41d8cd98f00b204e9800998ecf8427e')
     for filename in filenames:
         try:
             h = _get_sum(os.path.join(relto, filename))
-            _log_comment("%s %s" % (h, filename))
+            _log_comment('%s %s' % (h, filename))
             if h not in hashes:
                 hashes.add(h)
                 unique.append(filename)
@@ -266,24 +269,23 @@ def filter_out_duplicate_files(filenames, relto=""):
             unique.append(filename)  # to be on the safe side
     return unique
 
-def silently_run(args, stdin_text="", cwd=None):
+def silently_run(args, stdin_text='', cwd=None):
     try:
         process = Popen(args, stdin=PIPE, stdout=PIPE, stderr=PIPE, cwd=cwd)
     except OSError as e:
         if e.errno == errno.ENOENT:
-            raise RuntimeError("Program not found: %s\n" % args[0])
+            raise RuntimeError('Program not found: %s\n' % args[0])
         else:
             raise
     try:
-        out, err = process.communicate(input=stdin_text)
+        out, err = process.communicate(input=stdin_text.encode())
     except KeyboardInterrupt:
-        raise RuntimeError("Interrupted silent running of %s" % args[0])
+        raise RuntimeError('Interrupted silent running of %s' % args[0])
     return process.poll(), out, err
 
 
-
 if __name__ == '__main__':
-    print '--- testing report_disk_space() ---'
+    print('--- testing report_disk_space() ---')
     path_args = sys.argv[1:] if len(sys.argv) > 1 else ['.']
     report_disk_space(path_args)
-    print
+    print('')
