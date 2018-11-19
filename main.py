@@ -130,8 +130,13 @@ def dimple(wf, opt):
         wf.temporary_files.add(f_mtz)
         i_sigi_cols = _find_i_sigi_columns(mtz_meta, opt)
         if opt.ItoF_prog == 'ctruncate' or (opt.ItoF_prog is None and opt.slow):
+            colano = None
+            if opt.anode and all(col in mtz_meta.columns for col in
+                                 ['I(+)', 'SIGI(+)', 'I(-)', 'SIGI(-)']):
+                colano = '/*/*/[I(+),SIGI(+),I(-),SIGI(-)]'
             wf.ctruncate(hklin=reindexed_mtz, hklout=f_mtz,
-                         colin='/*/*/[%s,%s]' % i_sigi_cols).run()
+                         colin='/*/*/[%s,%s]' % i_sigi_cols,
+                         colano=colano).run()
         else:
             wf.truncate(hklin=reindexed_mtz, hklout=f_mtz,
                         labin='IMEAN=%s SIGIMEAN=%s' % i_sigi_cols,

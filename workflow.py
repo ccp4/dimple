@@ -794,9 +794,11 @@ class Workflow:
                             'NOHARVEST'],
                         parser='_truncate_parser')
 
-    def ctruncate(self, hklin, hklout, colin):
+    def ctruncate(self, hklin, hklout, colin, colano):
         job = Job(self, 'ctruncate')
         job.args += ['-hklin', hklin, '-hklout', hklout, '-colin', colin]
+        if colano:
+            job.args += ['-colano', colano]
         job.parser = '_ctruncate_parser'
         return job
 
