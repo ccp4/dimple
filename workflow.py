@@ -623,6 +623,7 @@ class Workflow:
             utils.log_value('input', job.std_input)
         utils.log_value('prog', job.args[0])
         utils.log_value('args', ' '.join(pipes.quote(a) for a in job.args[1:]))
+        utils.log_flush()
         # job.args[0] = 'true'  # for debugging
         try:
             process = Popen(job.args, stdin=PIPE, stdout=PIPE, stderr=PIPE,

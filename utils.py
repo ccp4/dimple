@@ -69,6 +69,8 @@ def log_section(name):
             name = '%s %d' % (name, counter)
         _logfile_sections.add(name)
         _logfile.write('\n[%s]\n' % name)
+
+def log_flush():
         _logfile.flush()
 
 def log_value(key, value):
