@@ -226,7 +226,7 @@ def dimple(wf, opt):
                            root='phaser').run(may_fail=True)
             if not _after_phaser_comments(wf.jobs[-1],
                                           sg_in=reindexed_mtz_meta.symmetry):
-                return
+                raise RuntimeError('No phaser solution.')
             refmac_xyzin = 'phaser.1.pdb'
             f_mtz = 'phaser.1.mtz'
 
