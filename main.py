@@ -354,8 +354,7 @@ def dimple(wf, opt):
 
         wf.copy_uncompressed(opt.xyzout, anode_name + '.pdb')
         anode_job = wf.anode(anode_name).run()
-        wf.temporary_files |= {scaout, anode_name + '.pdb',
-                               anode_name + '.hkl', anode_name + '.pha',
+        wf.temporary_files |= {scaout, anode_name + '.pdb', anode_name + '.hkl',
                                anode_name + '_sad.cif', anode_name + '_fa.hkl'}
         cell = Cell(reindexed_mtz_meta.cell, reindexed_mtz_meta.symmetry)
         # need orthogonal not fractional coordinates to generate coot script
