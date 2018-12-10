@@ -31,12 +31,13 @@ pointing to unmodelled electron density blobs -- potential ligand sites.
 Simplifying a bit:
 the pipeline runs macromolecular refinement after a few usual
 preparatory steps (I to F, choosing Rfree set, reindexing if needed).
-Sometimes it needs to run Molecular Replacement before refinement.
+Sometimes it needs to run Molecular Replacement before the refinement.
 And at the end it checks for unmodelled blobs -- suspected ligands.
 
 <script type="text/javascript" src="https://asciinema.org/a/awg0n6qr6ez14oe8ugverg4bb.js" id="asciicast-awg0n6qr6ez14oe8ugverg4bb" async data-size="13"></script>
 
-It's quick. Run time depends of course on the data, such as resolution, size of unit cell, etc., the model and computer,
+It's quick. Run time depends of course on the data (resolution,
+ size of the unit cell, etc.), the model and computer,
 but about 3 minutes is typical. With MR it is usually 3-10 minutes,
 but from time to time much, much longer.
 
@@ -50,7 +51,7 @@ DIMPLE has a lot of options (`dimple -h` lists all of them),
 but since the goal of the pipeline is to make things simple,
 we present here only three of them:
 
- `--slow` (or `-s` for short) -- recommended if you are not in hurry.
+`--slow` (or `-s` for short) -- recommended if you are not in hurry.
 DIMPLE will take twice as long, spending more time on extra cycles
 of refinement. If this is still too fast, give this option twice --
 to get 100 cycles of jelly-body refinement.
@@ -136,6 +137,14 @@ better results than other combinations within the same time limit.
 
 **Scoring blobs** --
 it is rather simplistic now, we need to work on it
+
+**Anomalous difference map** --
+instead (or in addition) to searching for unmodelled blobs,
+Dimple may be used to find blobs in anomalous difference map
+(option `--anode`).
+The map, which is generated with SHELX/AnoDe, highlights metal
+and sulfur atoms. It is used to validate MR results or to check
+for the presence of metals.
 
 **Generating pictures** --
 we have an option (`-f`) to generate static
