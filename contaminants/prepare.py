@@ -116,9 +116,8 @@ def fetch_pdb_info_from_ebi(pdb_id):
     #                'Electron Microscopy', 'Electron crystallography']
     if not any(m in single_crystal_methods for m in exper_method):
         return None
-    forms = set(a['form'] for a in summary['assemblies'])
-    assert forms.issubset({'homo', 'hetero'})  # some are both (2EKS)
-    if forms != {'homo'}:
+    # possible form values are 'homo',  'hetero', 'Non-polymer only'
+    if any(a['form'] != 'homo' for a in summary['assemblies']):
         return None
     entities = summary['number_of_entities']
     big_molecules = ['polypeptide', 'dna', 'dna/rna', 'rna']
