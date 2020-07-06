@@ -99,11 +99,11 @@ def fetch_pdb_info_from_ebi(pdb_id):
     # We tried to remove heteromers when quering Uniprot, but we still have
     # things like 4TTD (Hetero 3-mer with a single link to UniProt AC).
     # An assembly that is a monomer can also be classified as "hetero", e.g.
-    # http://www.ebi.ac.uk/pdbe/api/pdb/entry/summary/2war
+    # https://www.ebi.ac.uk/pdbe/api/pdb/entry/summary/2war
     # From what I understand such forms are unlikely as contaminants?
     # The same about "homo" monomeric assemblies that contain 2 distinct
     # polypeptide molecules (e.g. 5AQ9) or polypeptide and DNA or RNA.
-    entry_url = "http://www.ebi.ac.uk/pdbe/api/pdb/entry/"
+    entry_url = "https://www.ebi.ac.uk/pdbe/api/pdb/entry/"
     response = cached_urlopen(entry_url + 'summary/' + pdb_id,
                               'ebi-summary-%s.json' % pdb_id)
     summary = json.load(response)[pdb_id]
@@ -123,7 +123,7 @@ def fetch_pdb_info_from_ebi(pdb_id):
     big_molecules = ['polypeptide', 'dna', 'dna/rna', 'rna']
     if sum(entities[x] for x in big_molecules) > 1:
         return None
-    # now http://www.ebi.ac.uk/pdbe/api/pdb/entry/experiment/:pdbid
+    # now https://www.ebi.ac.uk/pdbe/api/pdb/entry/experiment/:pdbid
     response = cached_urlopen(entry_url + 'experiment/' + pdb_id,
                               'ebi-exper-%s.json' % pdb_id)
     summaries = json.load(response)[pdb_id]
@@ -383,7 +383,7 @@ def main(verbose=False):
         # FIXME: should we exclude some mutants? Especially if many entries
         # are deposited for the same protein.
         # Maybe remove those with "Engineered mutation". We could use
-        # http://www.ebi.ac.uk/pdbe/api/pdb/entry/mutated_AA_or_NA/:pdbid
+        # https://www.ebi.ac.uk/pdbe/api/pdb/entry/mutated_AA_or_NA/:pdbid
         # Or Wild Type Search from RCSB.
 
         prev_len = len(representants)
