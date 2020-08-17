@@ -98,8 +98,9 @@ def dimple(wf, opt):
     ####### pointless - reindexing #######
     if match_symmetry(mtz_meta, pdb_meta) and opt.mr_when_r > 0 and (
             0.7 < mtz_meta.get_volume() / pdb_meta.get_volume() < 1.4):
-        reindexed_mtz = 'pointless.mtz'
-        wf.temporary_files.add(reindexed_mtz)
+        reindexed_mtz = 'reindexed.mtz'
+        # Reindexed file can be useful for further refinement, don't delete it.
+        #wf.temporary_files.add(reindexed_mtz)
         wf.pointless(hklin=opt.mtz, xyzin=rb_xyzin, hklout=reindexed_mtz,
                      keys='TOLERANCE 5').run(may_fail=True)
         alt_reindex = wf.jobs[-1].data.get('alt_reindex')
