@@ -98,8 +98,7 @@ def download_pdb(pdb_id, output_dir):
         comment('%s: using existing file %s\n' % (pdb_id, filename))
     else:
         comment('Downloading %s from RCSB...  ' % pdb_id)
-        url = ('http://www.rcsb.org/pdb/download/downloadFile.do'
-               '?fileFormat=pdb&compression=NO&structureId=' + pdb_id.upper())
+        url = 'https://files.rcsb.org/download/%s.pdb' % pdb_id.lower()
         try:
             u = urlopen(url)
         except HTTPError as e:
