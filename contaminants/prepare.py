@@ -152,8 +152,7 @@ def fetch_pdb_info_from_ebi(pdb_id):
 
     cell.pdb_id = pdb_id
     # Estimate the model quality (cell.quality). Higher is better.
-    # Use simplistic criterium, similar to the one from
-    # http://www.rcsb.org/pdb/statistics/clusterStatistics.do
+    # Use simplistic criterium, similar to the one from RCSB clusterStatistics.
     try:
         cell.quality = 1.0 / summary['resolution'] - summary['r_free']
     except (ValueError, TypeError):
@@ -220,10 +219,10 @@ def fetch_uniref_clusters(acs, verbose=False):
     return clusters
 
 def read_current_pdb_entries():
-    f = cached_urlopen('http://www.rcsb.org/pdb/rest/getCurrent',
-                       'current-rcsb.xml')
-    root = ET.parse(f).getroot()
-    entries = set(child.attrib['structureId'] for child in root)
+    f = cached_urlopen('https://data.rcsb.org/rest/v1/holdings/current/entry_ids',
+                       'current-rcsb.json')
+    entries = json.load(f)
+    assert isinstance(entries, list)
     print('Current PDB entries:', len(entries))
     return entries
 
