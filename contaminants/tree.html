@@ -65,9 +65,8 @@ function describe(d) {
   if (d.depth === 3) {
     var pdb = d.data.name.slice(0, 4);
     return pdb +
-      ' <a href="http://www.rcsb.org/pdb/explore/explore.do?structureId=' +
-      pdb + '">RCSB</a> <a href="https://www.ebi.ac.uk/pdbe/entry/pdb/' +
-      pdb + '">PDBe</a>';
+      ' <a href="https://www.rcsb.org/structure/' + pdb + '">RCSB</a>' +
+      ' <a href="https://www.ebi.ac.uk/pdbe/entry/pdb/' + pdb + '">PDBe</a>';
   }
   return ''
 }
