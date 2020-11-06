@@ -14,9 +14,10 @@ import os
 import re
 import sys
 try:
-    from urllib2 import urlopen  # Python 2
+    from urllib2 import urlopen, HTTPError  # Python 2
 except ImportError:
     from urllib.request import urlopen  # Python 3
+    from urllib.error import HTTPError
 from collections import OrderedDict
 import xml.etree.ElementTree as ET
 import numpy
@@ -411,7 +412,13 @@ def main(verbose=False):
                key=lambda x: cell_distance(*x))
     print('Min. dist: %.2f%% between %s and %s' % (
           100*cell_distance(a, b), a.pdb_id, b.pdb_id))
-    contaminer_acs = fetch_contaminer_protein_acs()
+
+    try:
+        contaminer_acs = fetch_contaminer_protein_acs()
+    except HTTPError as e:
+        print('At this point we would compare our entries with ContaBase,\n'
+              'but it could not be fetched:', e, file=sys.stderr)
+        return
     for ac in contaminer_acs:
         if not any(ac in uclust for uclust in uniref_clusters.values()):
             print('Only in ContaBase:', ac, contaminer_acs[ac])
@@ -420,6 +427,7 @@ def main(verbose=False):
             src = uniref_sources[uniref_name]
             if src not in NOT_IN_CONTABASE:  # these are not news
                 print('Not in ContaBase:', src)
+
 
 if __name__ == '__main__':
     verbose = ('-v' in sys.argv[1:])
