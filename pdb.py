@@ -30,7 +30,7 @@ class PdbMeta(Cell):
 
 def read_metadata(pdb, print_errors):
     if pdb.endswith('.gz'):
-        f = gzip.open(pdb, 'rb')
+        f = gzip.open(pdb, 'rt')
     else:
         f = open(pdb)
     meta = None
