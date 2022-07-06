@@ -100,13 +100,13 @@ class Output:
     def summary(self):
         n = len(self.lines)
         if 0 < n <= 3:
-            return ''.join(self.lines)
+            return b''.join(self.lines)
         elif self.saved_to:
             return '-> %s' % self.saved_to
         elif n == 0:
             return ''
         else:  # n > 3
-            return ''.join(self.lines[:3]) + ('%s more lines' % (n-3))
+            return b''.join(self.lines[:3]) + ('%s more lines' % (n-3))
 
 
 class Job:
@@ -154,7 +154,7 @@ class Job:
                 notes += ['stdout -> %s/%s' % (self.workflow.output_dir,
                                                self.out.saved_to)]
             if self.err:
-                notes += ['stderr:', self.err.summary()]
+                notes += ['stderr:', str(self.err.summary())]
             raise JobError('%s failed (exit status %d)' % (self.name,
                                                            self.exit_status),
                            note='\n'.join(notes))
