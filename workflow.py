@@ -106,7 +106,7 @@ class Output:
         elif n == 0:
             return ''
         else:  # n > 3
-            return b''.join(self.lines[:3]) + ('%s more lines' % (n-3))
+            return b''.join(self.lines[:3]) + (b'%d more lines' % (n-3))
 
 
 class Job:
