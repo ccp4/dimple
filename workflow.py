@@ -214,6 +214,25 @@ def _find_blobs_parser(job):
     else:
         return ''
 
+def _gemmi_blobs_parser(job):
+    if 'blobs' not in job.data:
+        job.data['blobs'] = []
+        job.data['scores'] = []
+    for line in job.out.read_line():
+        if line.startswith(b'#'):
+            score = float(line.split()[1])
+            x, y, z = line.split(b'(')[1].split(b')')[0].split(b',')
+            job.data['blobs'].append((float(x), float(y), float(z)))
+            job.data['scores'].append(score)
+        elif line.startswith(b'Center of mass:'):
+            ctr = tuple(float(x) for x in line.split()[3:])
+            job.data['center'] = ctr
+    scores = job.data['scores']
+    if scores:
+        return 'Blob scores: ' + ' '.join('%.1f' % sc for sc in scores[:8])
+    else:
+        return ''
+
 def _anode_parser(job):
     if 'xyz' not in job.data:
         job.data['xyz'] = []
@@ -857,6 +876,14 @@ class Workflow:
         job = Job(self, utils.syspath('find-blobs'))
         job.args += ['-c', '-s%g' % sigma, hklin, xyzin]
         job.parser = '_find_blobs_parser'
+        return job
+
+    # alternative to find_blobs
+    def gemmi_blobs(self, hklin, xyzin, sigma=1.0):
+        job = Job(self, utils.cbin('gemmi'))
+        job.name += ' ' + 'blobs'
+        job.args += ['blobs', '--dimple', '--sigma=%g' % sigma, hklin, xyzin]
+        job.parser = '_gemmi_blobs_parser'
         return job
 
     def mtz2sca(self, mtzin, scaout):

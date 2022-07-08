@@ -331,7 +331,10 @@ def dimple(wf, opt):
     ####### check blobs #######
     if opt.blob_search:
         if restr_job.data['free_r'] <= BAD_FINAL_RFREE:
-            fb_job = wf.find_blobs(opt.hklout, opt.xyzout, sigma=0.8).run()
+            if opt.gemmi_blobs:
+                fb_job = wf.gemmi_blobs(opt.hklout, opt.xyzout, sigma=0.8).run()
+            else:
+                fb_job = wf.find_blobs(opt.hklout, opt.xyzout, sigma=0.8).run()
             coot_script = _generate_scripts_and_pictures(wf, opt, fb_job.data)
             if coot_script:
                 comment('\nTo see it in Coot run %s' % coot_script)
@@ -673,6 +676,8 @@ def parse_dimple_commands(args):
                              '(if >10 interpreted as eLLG)' + dstr)
     group3.add_argument('--ItoF-prog', choices=['truncate', 'ctruncate'],
                         help='program to calculate amplitudes')
+    group3.add_argument('--gemmi-blobs', action='store_true',
+                        help=argparse.SUPPRESS)
     group3.add_argument('--seed-freerflag', action='store_true',
                         help=argparse.SUPPRESS)
     group3.add_argument('--dls-naming', action='store_true',
