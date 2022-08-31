@@ -549,10 +549,11 @@ def _generate_scripts_and_pictures(wf, opt, data, pha=None):
                                      white_bg=opt.white_bg)
         _write_script(py_path, content)
     # coot.sh - one-line script for convenience
+    coot_sh_text = '{coot} --no-guano '
     if blobs:
-        coot_sh_text = '{coot} --no-guano {out}/%sblob1-coot.py\n' % prefix
+        coot_sh_text += '--script {out}/%sblob1-coot.py\n' % prefix
     else:
-        coot_sh_text = '{coot} --no-guano {out}/final.mtz {out}/final.pdb\n'
+        coot_sh_text += '{out}/final.mtz {out}/final.pdb\n'
     coot_sh_path = os.path.join(wf.output_dir, prefix + 'coot.sh')
     _write_script(coot_sh_path, coot_sh_text.format(coot=coot_path or 'coot',
                                                     out=wf.output_dir),
