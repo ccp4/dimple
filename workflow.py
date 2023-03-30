@@ -909,6 +909,11 @@ class Workflow:
         job.parser = '_anode_parser'
         return job
 
+    def shelx2map(self, hklin, mapout, symmetry):
+        job = Job(self, utils.syspath('shelx2map'))
+        job.args += [hklin, "-o", mapout, "-s", symmetry]
+        return job
+
     def rwcontents(self, xyzin):
         return ccp4_job(self, 'rwcontents', logical=dict(xyzin=xyzin),
                         parser='_rwcontents_parser')

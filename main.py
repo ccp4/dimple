@@ -366,6 +366,7 @@ def dimple(wf, opt):
         comment(_anode_anom_peak_lines(anode_job.data))
         coot_script = _generate_scripts_and_pictures(
             wf, opt, anode_job.data, pha=anode_name+'.pha')
+        wf.shelx2map(anode_name+'.pha', anode_name+'.map', opt.xyzout).run()
 
 def _find_i_sigi_columns(mtz_meta, opt):
     if opt.icolumn:
