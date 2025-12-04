@@ -3,7 +3,7 @@ import sys
 from subprocess import Popen, PIPE
 import gzip
 import errno
-import pipes
+import shlex
 import re
 import threading
 try:
@@ -106,7 +106,7 @@ class Output:
         elif n == 0:
             return ''
         else:  # n > 3
-            return b''.join(self.lines[:3]) + (b'%d more lines' % (n-3))
+            return b''.join(self.lines[:3]) + ('%d more lines' % (n-3)).encode()
 
 
 class Job:
@@ -137,7 +137,7 @@ class Job:
         return '<Job %s%s>' % (self.name, t)
 
     def args_as_str(self):
-        s = ' '.join(pipes.quote(a) for a in self.args)
+        s = ' '.join(shlex.quote(a) for a in self.args)
         if self.stdin_file:
             s += ' < ' + self.stdin_file
         elif self.std_input:
@@ -641,7 +641,7 @@ class Workflow:
         elif job.std_input:
             utils.log_value('input', job.std_input)
         utils.log_value('prog', job.args[0])
-        utils.log_value('args', ' '.join(pipes.quote(a) for a in job.args[1:]))
+        utils.log_value('args', ' '.join(shlex.quote(a) for a in job.args[1:]))
         utils.log_flush()
         # job.args[0] = 'true'  # for debugging
         try:
@@ -997,7 +997,7 @@ def _write_workflow_steps(wf, output):
 
 def show_workflow_info(wf, mesg_dict):
     sys.stdout.write('%s\n' % wf)
-    sys.stdout.write('Command:\n' + ' '.join(pipes.quote(a) for a in wf.argv))
+    sys.stdout.write('Command:\n' + ' '.join(shlex.quote(a) for a in wf.argv))
     _write_workflow_steps(wf, sys.stdout)
     sys.stderr.write("""
 To see details, specify step(s):
