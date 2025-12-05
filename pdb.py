@@ -1,8 +1,8 @@
-import gzip
 import os
 import sys
 from urllib.request import urlopen
 from urllib.error import HTTPError
+import gemmi
 
 if __name__ == '__main__' and __package__ is None:
     sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.abspath(__file__
@@ -12,36 +12,14 @@ from dimple.utils import comment, put_error
 
 
 class PdbMeta(Cell):
-    def __init__(self, cryst1_line):
-        assert cryst1_line.startswith('CRYST1')
-        a = float(cryst1_line[6:15])
-        b = float(cryst1_line[15:24])
-        c = float(cryst1_line[24:33])
-        alpha = float(cryst1_line[33:40])
-        beta = float(cryst1_line[40:47])
-        gamma = float(cryst1_line[47:54])
-        symmetry = cryst1_line[55:66].strip()
-        Cell.__init__(self, (a, b, c, alpha, beta, gamma), symmetry)
+    def __init__(self, st):
+        Cell.__init__(self, st.cell.parameters, st.spacegroup_hm)
         self.has_hetatm_x = None
 
 
 def read_metadata(pdb, print_errors):
-    if pdb.endswith('.gz'):
-        f = gzip.open(pdb, 'rt')
-    else:
-        f = open(pdb)
-    meta = None
-    for line in f:
-        if line.startswith('CRYST1'):
-            meta = PdbMeta(line)
-            break
-    if meta is None and print_errors:
-        if f.tell() == 0:
-            put_error('empty file: %s' % pdb)
-        else:
-            put_error('CRYST1 line not found in %s' % pdb)
-    f.close()
-    return meta
+    st = gemmi.read_structure(pdb)
+    return PdbMeta(st)
 
 
 def check_hetatm_x(filename, meta):
@@ -95,6 +73,7 @@ def download_pdb(pdb_id, output_dir):
         comment('%s: using existing file %s\n' % (pdb_id, filename))
     else:
         comment('Downloading %s from RCSB...  ' % pdb_id)
+        #url = gemmi.get_url_for_code(pdb_id)
         url = 'https://files.rcsb.org/download/%s.pdb' % pdb_id.lower()
         try:
             u = urlopen(url)

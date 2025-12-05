@@ -1,7 +1,6 @@
 import os
 import sys
 from subprocess import Popen, PIPE
-import gzip
 import errno
 import shlex
 import re
@@ -9,7 +8,6 @@ import threading
 import queue
 import time
 import pickle
-import shutil
 if __name__ == '__main__' and __package__ is None:
     sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.abspath(__file__
                                                                        ))))
@@ -937,16 +935,8 @@ class Workflow:
     def copy_uncompressed(self, src, dst):
         src_fullpath = self.path(src)
         dst_fullpath = self.path(dst)
-        if src.endswith('.gz'):
-            with gzip.open(src_fullpath, 'rb') as fsrc:
-                content = fsrc.read()
-            with open(dst_fullpath, 'wb') as fdst:
-                fdst.write(content)
-        else:
-            try:
-                shutil.copyfile(src_fullpath, dst_fullpath)
-            except shutil.Error:  # == SameFileError in Python 3.4+
-                pass
+        st = gemmi.read_structure(src_fullpath)
+        st.write_pdb(dst_fullpath)
 
     def delete_files(self, filenames):
         for f in filenames:

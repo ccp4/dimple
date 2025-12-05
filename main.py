@@ -29,7 +29,7 @@ from dimple import workflow
 from dimple import coots
 from dimple import contaminants
 
-__version__ = '2.6.2'
+__version__ = '2.7'
 
 PROG = 'dimple'
 USAGE_SHORT = '%s [options...] input.mtz input.pdb output_dir' % PROG
@@ -761,7 +761,9 @@ def parse_dimple_commands(args):
         if is_pdb_id(a):
             opt.pdbs[n] = download_pdb(a, opt.output_dir)
         elif not any(a.lower().endswith(ext) for ext in ['.pdb', '.pdb.gz',
-                                                         '.ent', '.ent.gz']):
+                                                         '.ent', '.ent.gz',
+                                                         '.cif', '.cif.gz',
+                                                         '.mmcif', '.mmcif.gz']):
             put_error('unexpected arg (neither mtz nor pdb): %s' % a)
             sys.exit(1)
     if len(opt.pdbs) == 0:
