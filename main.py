@@ -304,7 +304,7 @@ def dimple(wf, opt):
                                                         opt.restr_cycles))
     if opt.jelly:
         wf.temporary_files |= {'jelly.pdb', 'jelly.mtz'}
-        wf.refmac5(hklin=prepared_mtz, xyzin=refmac_xyzin,
+        wf.refmacat(hklin=prepared_mtz, xyzin=refmac_xyzin,
                    hklout='jelly.mtz', xyzout='jelly.pdb',
                    labin=refmac_labin, libin=opt.libin,
                    keys=restr_ref_keys + 'ridge distance sigma 0.01\n'
@@ -313,7 +313,7 @@ def dimple(wf, opt):
                                          opt.extra_ref_keys).run()
         comment(_refmac_rms_line(wf.jobs[-1].data))
         refmac_xyzin = 'jelly.pdb'
-    restr_job = wf.refmac5(hklin=prepared_mtz, xyzin=refmac_xyzin,
+    restr_job = wf.refmacat(hklin=prepared_mtz, xyzin=refmac_xyzin,
                            hklout=opt.hklout, xyzout=opt.xyzout,
                            labin=refmac_labin, libin=opt.libin,
                            keys=(restr_ref_keys +

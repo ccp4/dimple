@@ -847,6 +847,25 @@ class Workflow:
                 job.data['ncyc'] = int(words[n+1])
         return job
 
+    def refmacat(self, hklin, xyzin, hklout, xyzout, labin, libin, keys):
+        inp = ['labin %s' % labin] + keys.splitlines()
+        #inp += ['free 6']  # for testing
+        job = ccp4_job(self, 'refmacat', logical=locals(), ki=inp,
+                       parser='_refmac_parser')
+        words = keys.split()
+        ref_type = '?'
+        for n, w in enumerate(words[:-2]):
+            if w == 'refinement' and words[n+1] == 'type':
+                ref_type = words[n+2][:5]
+            elif w == 'ridge':
+                ref_type = 'jelly'
+        job.name += ' ' + ref_type
+        job.data['ncyc'] = -1
+        for n, w in enumerate(words[:-1]):
+            if w.startswith('ncyc'):
+                job.data['ncyc'] = int(words[n+1])
+        return job
+
     def get_final_refinement_job(self):
         for job in reversed(self.jobs):
             if job.name in ('refmac5 restr', 'refmac5 jelly'):
