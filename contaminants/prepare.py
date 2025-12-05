@@ -13,11 +13,8 @@ import math
 import os
 import re
 import sys
-try:
-    from urllib2 import urlopen, HTTPError  # Python 2
-except ImportError:
-    from urllib.request import urlopen  # Python 3
-    from urllib.error import HTTPError
+from urllib.request import urlopen
+from urllib.error import HTTPError
 from collections import OrderedDict
 import xml.etree.ElementTree as ET
 import numpy

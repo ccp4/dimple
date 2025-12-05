@@ -6,29 +6,18 @@ import errno
 import shlex
 import re
 import threading
-try:
-    import Queue as queue  # Python 2
-except ImportError:
-    import queue  # Python 3
+import queue
 import time
-try:
-    import cPickle as pickle  # Python 2
-except ImportError:
-    import pickle  # Python 3
+import pickle
 import shutil
 if __name__ == '__main__' and __package__ is None:
     sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.abspath(__file__
                                                                        ))))
+import gemmi
 from dimple import coots
 from dimple import mtz
 from dimple import pdb
 from dimple import utils
-
-# Python 2 and 3 compatibility
-try:
-    basestring
-except NameError:
-    basestring = str
 
 _jobindex_fmt = '%3d '
 _jobname_fmt = '%-15s'
@@ -491,7 +480,7 @@ def ccp4_job(workflow, prog, logical=None, ki='', parser=None, add_end=True):
         for a in ['hklin', 'hklout', 'hklref', 'xyzin', 'xyzout', 'libin']:
             if logical.get(a):
                 job.args += [a.upper(), logical[a]]
-    lines = ki.splitlines() if isinstance(ki, basestring) else ki
+    lines = ki.splitlines() if isinstance(ki, str) else ki
     stripped = [a.strip() for a in lines if a and not a.isspace()]
     if add_end and not (stripped and stripped[-1].lower() == 'end'):
         stripped.append('end')

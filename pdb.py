@@ -1,11 +1,8 @@
 import gzip
 import os
 import sys
-try:
-    from urllib2 import urlopen, HTTPError  # Python 2
-except ImportError:
-    from urllib.request import urlopen  # Python 3
-    from urllib.error import HTTPError
+from urllib.request import urlopen
+from urllib.error import HTTPError
 
 if __name__ == '__main__' and __package__ is None:
     sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.abspath(__file__
