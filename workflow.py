@@ -292,7 +292,7 @@ def _cad_parser(job):
     return '#refl  %s -> %s' % (d.get('refl_in1', ''), d.get('refl_out', ''))
 
 
-class Ccp4LogTable(object):
+class Ccp4LogTable:
     def __init__(self, title_line):
         assert b'$TABLE:' in title_line
         self.title = title_line.split(b':')[1].decode()

@@ -2,7 +2,7 @@ from math import radians, sin, cos, acos, sqrt, pi
 import sys
 
 
-class Cell(object):
+class Cell:
     def __init__(self, parameters, symmetry):
         self.cell = parameters
         if parameters:
@@ -104,7 +104,7 @@ class Cell(object):
     def unscrewed_symmetry(self):
         return ' '.join(a[0] for a in self.symmetry.split())
 
-class Mat3(object):
+class Mat3:
     'Matrix 3x3'
     def __init__(self, *args):
         if len(args) == 1:
