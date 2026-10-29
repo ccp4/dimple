@@ -21,7 +21,7 @@ if __name__ == '__main__' and __package__ is None:
     sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.abspath(__file__
                                                                        ))))
 from dimple import utils
-from dimple.utils import comment, put_error
+from dimple.utils import comment, put_error, put_warning
 from dimple.cell import Cell, match_symmetry, calculate_difference
 from dimple.mtz import check_freerflags_column, MtzMeta, DEFAULT_FREE_COLS
 from dimple.pdb import is_pdb_id, download_pdb, check_hetatm_x
@@ -71,7 +71,7 @@ def dimple(wf, opt):
     wf.copy_uncompressed(opt.pdbs[0], ini_pdb)
     pdb_meta = wf.file_info[opt.pdbs[0]]
     if pdb_meta is None:
-        put_error('PDB file missing CRYST1 record, starting from MR')
+        put_warning('PDB file missing CRYST1 record, starting from MR')
     if opt.no_hetatm or check_hetatm_x(wf.path(ini_pdb), pdb_meta):
         if not opt.no_hetatm:
             comment('\nHETATM marked as element X would choke many programs.')

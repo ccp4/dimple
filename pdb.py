@@ -19,6 +19,10 @@ class PdbMeta(Cell):
 
 def read_metadata(pdb, print_errors):
     st = gemmi.read_structure(pdb)
+    # Standard placeholder cell for models with no unit cell information
+    placeholder_cell = (1.0, 1.0, 1.0, 90.0, 90.0, 90.0)
+    if st.cell.parameters == placeholder_cell:
+        return None
     return PdbMeta(st)
 
 
