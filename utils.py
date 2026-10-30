@@ -150,6 +150,20 @@ def put_error(err, comment=None):  # pylint: disable=redefined-outer-name
         sys.stderr.write(comment + '\n')
 
 
+def put_warning(warning, comment=None):  # pylint: disable=redefined-outer-name
+    _log_comment('Warning: %s.' % warning)
+    _log_screen('\nWarning: %s.\n' % warning)
+    if hasattr(sys.stderr, 'isatty') and sys.stderr.isatty():
+        if os.name != 'nt':
+            warning = '\033[93m%s\033[0m' % warning  # in yellow
+    sys.stdout.flush()
+    sys.stderr.write('\nWarning: %s.\n' % warning)
+    if comment is not None:
+        _log_comment(comment)
+        _log_screen(comment + '\n')
+        sys.stderr.write(comment + '\n')
+
+
 def check_prog(dirname, prog):
     """If prog(.exe) is in dirname return the path (without extension)."""
     exe = '.exe' if os.name == 'nt' else ''
